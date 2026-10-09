@@ -2,7 +2,7 @@
 
 阶段 1：Codex 插件包装、透明 Electron 挂件、C#/Win32 owner 与 WinEvent 跟随。只有原创 CSS 占位角色和点击计数；尚不读取额度、凭据或会话，也不实现图片、音频和统计。
 
-当前窗口交互已通过本机 150% 实测，跨 DPI 切换与重启后 MCP 加载仍待验收，不能把单元测试通过当作六项窗口验收全部通过。详见 `docs/stage-1-verification.md`。
+当前鼠标交互验收失败：focusable:false 会丢弃鼠标按下，去掉它后输入恢复但抢 Codex 焦点。已停止挂件，等待用户决定下一条验证路线；跨 DPI 切换与重启后 MCP 加载也待验收。详见 `docs/stage-1-verification.md`。
 
 ## 安装
 
@@ -33,7 +33,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 透明窗口覆盖 Codex 客户区。C# 只控制物理位置和 owner；Electron 只同步 Chromium 的 DIP 视口。形状仅包含 96×80 DIP 的占位角色；窗口外的点击、滚动和文本选择交给宿主。空、非法、超限及整窗形状统一回退 1×1，绝不传入空形状。没有托盘、任务栏挂件。
 
-点击计数用于首次点击验收，拖动保存客户区坐标。`toolbar` 单独使用在本机实测会抢焦点，当前使用 `focusable:false`、`showInactive()` 和鼠标转发；不调用窗口 focus。用户真实鼠标已确认点击计数变化并保留 Codex 焦点。自动化工具会排除无任务栏工具窗口，不能以被工具拒绝的点击作为验证证据。
+点击计数用于首次点击验收，拖动保存客户区坐标。`toolbar` 单独使用在本机实测会抢焦点；当前保留 `focusable:false`、`showInactive()` 和鼠标转发，但 Win32 SendInput 对照实验确认此配置丢弃点击。**尚未同时满足“能点击/拖动”和“不抢焦点”。** 原先的通过记录已撤回。`tests/Invoke-MouseProbe.ps1` 是显式交互回归入口，实际注入鼠标，只应在准备好验收时运行；它不属于插件运行时。
 
 **只承诺避让窗口外侧滚动条**，内部各分栏的滚动条不做承诺：外部进程无法可靠获取宿主 DOM 中全部滚动条位置。角色与右侧、底侧外缘保留至少 24 DIP；可拖到合适位置。
 
