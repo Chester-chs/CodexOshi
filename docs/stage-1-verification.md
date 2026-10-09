@@ -2,15 +2,15 @@
 
 日期：2026-10-09。Windows x64；Codex Desktop 26.1007.2314.0；CLI 0.162.0-alpha.17.2；Electron 44.3.0；Node.js 24.19.0；Windows PowerShell 5.1。
 
-**2026-10-09 缺陷复核：撤回门槛 4 的“通过”结论。当前配置不接收点击/拖动；去掉 focusable:false 后输入恢复，但抢宿主焦点。门槛 4 未通过，实验配置已还原、挂件已停止，等待架构方向决定。跨 DPI 切换与重启后 MCP 加载也仍待验收。没有进入阶段 2。**
+**2026-10-09 路线 A 修复：按新授权采用 focusable:true + C# 激活事件恢复，允许短暂激活，要求点击后 300ms 内回到宿主。立即恢复会打断输入；仅改为延后 80ms 后，点击、拖动、形状外穿透与切走防护均通过原生探针。跨 DPI 切换与重启后 MCP 加载仍待验收。没有进入阶段 2。此前 focusable:false 的通过结论仍已撤回，不将“短暂激活后恢复”等同于“从不激活”。**
 
 | 条件 | 当前证据 | 结论 |
 |---|---|---|
 | 1. 安装与自动跟随 | 实际运行安装脚本；CLI `plugin add` 返回安装路径，`plugin list` 显示 installed/enabled。C# owner 为当前 Codex HWND，WinEvent 跟随启用；用户确认移动跟随正常。首次完整重开 Codex、新建聊天尚未进行。 | 窗口与 CLI 安装已验证；重启后的 MCP 加载待确认 |
-| 2. 无托盘、任务栏 | 无 Tray 对象；BrowserWindow 设置 skipTaskbar、toolbar、focusable:false，原生扩展样式包含 TOOLWINDOW、没有 APPWINDOW，且 owner 是 Codex。无独立挂件任务栏窗口。 | 通过 |
+| 2. 无托盘、任务栏 | 无 Tray 对象；BrowserWindow 设置 skipTaskbar、toolbar、focusable:true，原生扩展样式包含 TOOLWINDOW、没有 APPWINDOW，且 owner 是 Codex。无独立挂件任务栏窗口。 | 通过 |
 | 3. 移动、最小化/还原、DPI | 用户明确确认移动、最小化消失和还原出现正常。诊断记录 DPI=144，即 150%；100%/150%/200% 的物理尺寸→DIP 单元测试通过。用户确认只有 150% 显示环境。 | 生命周期通过；跨 DPI 切换未实测 |
-| 4. 首次点击、拖动、不抢焦点 | 新增 Win32 SendInput 回归探针推翻此前通过记录：focusable:false 时 clicks 0→0、位置不变、WM_MOUSEACTIVATE=4；仅去掉此参数后 clicks 0→1、拖动持久化成功，但前台由 Codex 328082 变成挂件 5375684。此前点击 7 次等旧记录不足以证明当前配置同时满足条件。 | **不通过，缺陷尚未修复**；未引入原生适配 |
-| 5. 宿主输入穿透 | 用户确认角色区域外能点击输入框、滚动聊天和选择文字。窗口区域只裁剪到角色，右侧/底侧保留 24 DIP。自动化的目标保护拒绝无任务栏挂件点击，拒绝结果不计成功证据。 | 通过用户实测；不把有限采样等同于全部像素穷举 |
+| 4. 首次点击、拖动、恢复宿主焦点 | 路线 A 延后 80ms 后 clicks 0→1；复测 1→2、2→3，约 112～113ms 时已回到宿主 HWND=328082。完整 10 步拖动 (499,382)→(539,406)，position.json 同步。切走测试在定时器到期前将前台转到测试窗口，随后保持该窗口，未被拉回。用户确认“操作正常，闪烁可接受”。 | **按新授权的 300ms 恢复判据通过**；用户接受瞬间闪烁 |
+| 5. 宿主输入穿透 | 用户此前确认角色区域外能点击输入框、滚动聊天和选择文字。本次原生 WindowFromPoint 网格采样排除角色形状后全部命中宿主；窗口区域只裁剪到角色，右侧/底侧保留 24 DIP。 | 通过用户实测与窗口命中对照；不把有限采样等同于全部像素穷举 |
 | 6. 异常形状 1×1 | Node 测试覆盖空、非法、负尺寸、非整数、坐标超限、65 个矩形、越界及整窗形状；全部输出 1×1 DIP。真实隐藏 Electron 窗口顺序应用五类异常输入后，Win32 GetWindowRgn 返回简单矩形；150% 下是 2×2 物理像素，即 1×1 DIP，未恢复全窗。 | 通过 |
 
 ## 实际落盘位置
@@ -51,16 +51,16 @@ Electron 运行时已下载并运行：
 
 原建议远端：`Chester-chs/codex-quota-widget`，private。当前 Git 已配置 origin 为 `https://github.com/Chester-chs/codex-quota-widget.git`；本轮未创建或修改远端、未执行 push。远端可见性未在本轮核验；每次 push 仍须用户明确确认。
 
-## 本次鼠标输入缺陷：最小变量实验
+## 历史鼠标输入缺陷：最小变量实验（5970180）
 
 只修改 BrowserWindow 的 `focusable:false` 一项，不修改 type、showInactive、形状、光标轮询、渲染器或原生跟随。每次根据最新 region、DPI 与物理窗口原点计算中心，准备 Codex 为前台，注入 SendInput 点击；等待 1.5 秒后读取点击计数和 GetForegroundWindow。拖动前再次准备 Codex 为前台，执行按下、10 步移动、松开，再等待 1.5 秒，检查 widget 和 position.json。
 
 | 实验 | 点击计数 | 点击前/后前台 HWND | 拖动 widget/position.json | WM_MOUSEACTIVATE | 综合结论 |
 |---|---|---|---|---|---|
-| A，原配置 focusable:false | 0 → 0，SendInput 返回 2 | 328082 → 328082 | widget 保持 (8,8)，position.json 保持 (1586,915) | 4：MA_NOACTIVATEANDEAT | 保持焦点，但点击和拖动失败 |
-| B，仅去掉 focusable:false | 0 → 1，SendInput 返回 2 | 328082 → 5375684 | widget (1586,915) → (1550,894)，position.json 写入 {"x":1550,"y":894} | 1：MA_ACTIVATE | 输入恢复，但抢焦点 |
+| 对照 1，原配置 focusable:false | 0 → 0，SendInput 返回 2 | 328082 → 328082 | widget 保持 (8,8)，position.json 保持 (1586,915) | 4：MA_NOACTIVATEANDEAT | 保持焦点，但点击和拖动失败 |
+| 对照 2，仅去掉 focusable:false | 0 → 1，SendInput 返回 2 | 328082 → 5375684 | widget (1586,915) → (1550,894)，position.json 写入 {"x":1550,"y":894} | 1：MA_ACTIVATE | 输入恢复，但抢焦点 |
 
-B 的点击返回瞬间前台仍是 328082，1.5 秒后为 5375684；说明不能只检查 SendInput 刚返回时的瞬间。拖动前重置前台为 328082，拖动立即结束时以及 1.5 秒后均为 5375684。用户也在 B 运行期间反馈“现在可以点击了”，与输入恢复相符，但不撤销不抢焦点的要求。
+对照 2 的点击返回瞬间前台仍是 328082，1.5 秒后为 5375684；说明不能只检查 SendInput 刚返回时的瞬间。拖动前重置前台为 328082，拖动立即结束时以及 1.5 秒后均为 5375684。用户也在对照 2 运行期间反馈“现在可以点击了”，与输入恢复相符，但不撤销不抢焦点的要求。
 
 原始 JSON 证据保存在用户数据目录（不提交）：`mouse-probe-focusable-false.json`、`mouse-probe-focusable-default.json`。当前位置记录保留本次拖动结果 (1550,894)。基线启动时 widget=(8,8)，与旧 position.json 不同；重启 B 后加载已保存坐标，探针始终现读实际 region，未假设固定点击坐标。
 
@@ -80,8 +80,38 @@ B 的点击返回瞬间前台仍是 328082，1.5 秒后为 5375684；说明不�
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.ps1 -Label baseline -RequirePass
 ```
 
-该回归要求点击计数增加一次、拖动及位置持久化改变、点击和拖动后宿主仍为前台。A、B 均以非零退出码失败，分别准确捕获输入失败与焦点失败。日常 Node 测试通过不意味着这个回归通过。
+当时的回归要求点击计数增加一次、拖动及位置持久化改变、点击和拖动后宿主仍为前台。两个对照均以非零退出码失败，分别准确捕获输入失败与焦点失败。日常 Node 测试通过不意味着这个回归通过。新授权后的判据与测量升级见下文。
 
 对照实验重装使用：先 `scripts/stop.ps1`，再对已配置的个人市场执行 `codex plugin add codex-quota-widget@personal --json` 更新 0.1.0 缓存，核对源码与缓存 main.cjs SHA256，一致后 `scripts/start.ps1` 重启监督进程。此版本 launcher 的 supervisor 路径实际指向稳定源码目录，缓存仍同步更新，避免以后 MCP 载入旧文件。Electron 依赖未变，不重复下载或替换运行时 DLL。
 
-交付时已还原实验的 main.cjs（与 a182d12 相同），停止自身监督进程，enabled.json=false；登录任务注册保留。待用户决定后再验证输入转发或激活处理方向，不把去掉 focusable:false 当作修复提交。
+5970180 交付时已还原实验的 main.cjs（与 a182d12 相同），停止自身监督进程，enabled.json=false；登录任务注册保留。以下为之后获得授权的新实验与交付状态。
+
+## 新授权：路线 A 激活恢复
+
+跨进程 C# 无法用 WH_CALLWNDPROC 可靠改写 Electron/Chromium WndProc 的返回值；本轮没有安装 SetWindowsHookEx 钩子、替换 WndProc 或注入 DLL。采用独立进程的 [SetWinEventHook](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwineventhook) OUTOFCONTEXT 通知，回调运行在已有 C# 消息循环。只观察挂件进程的 EVENT_SYSTEM_FOREGROUND / EVENT_OBJECT_FOCUS，恢复前检查当前前台仍为挂件、host/overlay PID 与 owner 未变、宿主可见且启用且未最小化。直接 SetForegroundWindow 被拒绝时才临时 AttachThreadInput，finally 总是解除；停止时清理事件钩子与定时器。
+
+先把 focusable 设为 true，测无恢复逻辑的失败基线；再只增加 C# 恢复逻辑；立即恢复失败后，只增加 80ms 延迟。该延迟合并事件、不因事件突发而重置到期时间，不阻塞窗口跟随循环，也不修改任何鼠标激活返回值。WM_MOUSEACTIVATE 仍为 1。
+
+| 实验 | clicks（1.5s 后） | 100 / 300 / 1000ms 前台（括号为实际采样 ms） | 拖动/穿透 | 结果 |
+|---|---|---|---|---|
+| route-a-control，无恢复钩子，overlay=2230788 | 3→4 | 挂件(111) / 挂件(313) / 挂件(1010) | 拖动、25 点穿透成功 | 焦点失败，探针退出 1 |
+| route-a-immediate，overlay=15796778 | 0→0 | 宿主(112) / 宿主(313) / 宿主(1013) | 拖动不动，24 点穿透成功 | 恢复太早打断输入，探针退出 1 |
+| route-a-delay80，overlay=2949170 | 0→1 | 宿主(113) / 宿主(314) / 宿主(1012) | (1514,873)→(1478,852)，24 点穿透成功 | 三条判据通过 |
+| route-a-repeat2，overlay=1903400 | 1→2 | 宿主(112) / 宿主(314) / 宿主(1009) | (463,361)→(499,382)，25 点穿透成功 | 通过，观测到 112ms 恢复 |
+| route-a-switch-away，overlay=1903400 | 2→3 | 宿主(113) / 宿主(302) / 宿主(1001) | (499,382)→(539,406)，position.json={"x":539,"y":406}，25 点穿透成功 | 通过，观测到 113ms 恢复 |
+
+表中宿主 HWND 均为 328082。每次先将 Codex 置前台，再从最新 region、DPI 与原生窗口原点计算中心；SendInput 均返回 2。测试同时记录前台变化曲线，必须在实际经过不超过 300ms 时观测到宿主，并在后续样本及 1.5s 时维持宿主，不能把约 314ms 的采样单独当成“300ms 内”证据。拖动由按下、10 步移动、松开组成；末步留出 40ms 投递时间后才松开，确认完整 40×24 DIP 的移动与持久化。
+
+route-a-switch-away 额外点击后，在恢复定时器到期前切到测试自有窗口 HWND=721144；58ms 时已经切走，104 / 306 / 1005ms 的前台仍为该窗口，clicks 3→4，防止迟到恢复把用户从其他应用拉回的测试通过。测试结束销毁自有窗口并恢复 Codex，不操控第三方应用界面。
+
+复测中两次中心命中 ShellExperienceHost 的系统通知窗口，均在 SendInput 前中止，未计成功；随后将本挂件移到客户区内部再测。启动后旧诊断短暂残留的准备失败也未注入输入，探针增加最多 5 秒等待真实进程和附着完成。一次复测实际在 117ms 恢复，但初版探针只接受 100ms 样本，误判失败；已按新授权使用前台变化曲线修正，随后重跑通过。证据保存在用户数据目录的 mouse-probe-route-a-*.json，不提交用户数据。
+
+路线 A 已满足用户给定的点击/300ms 恢复/形状外穿透判据，用户随后明确确认“操作正常，闪烁可接受”。路线 B 未尝试；路线 C 未实施，当前无需原生注入或架构调整；路线 D 无需取舍。
+
+`desktop/geometry.cjs` 与读取允许清单未改；阶段 1 仍禁止账户/会话读取，没有模型、agent turn、codex exec 或 review 操作，没有 MSVC 依赖。普通 9 项测试与真实隐藏 Electron 的 5 类异常形状测试通过，150% 下仍为 2×2 物理像素（1×1 DIP）。
+
+复现命令：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.ps1 -Label route-a-acceptance -RequirePass -VerifySwitchAway
+```

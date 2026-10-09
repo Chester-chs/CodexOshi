@@ -10,7 +10,7 @@ function status(){
   try{window=JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));}catch{}
   let running=false;
   if(isFresh(window)){try{process.kill(window.pid,0);running=true;}catch{}}
-  return {stage:1,dataReadsEnabled:false,running,acceptance:'blocked-mouse-input-and-host-focus',window:running?window:null};
+  return {stage:1,dataReadsEnabled:false,running,acceptance:'pending-cross-dpi-and-restart',window:running?window:null};
 }
 function dispatch(message){
   if(!message || message.jsonrpc!=='2.0' || typeof message.method!=='string')return {error:{code:-32600,message:'Invalid request'}};

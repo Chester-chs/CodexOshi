@@ -23,7 +23,7 @@ function updateShape(){
 }
 app.whenReady().then(async()=>{
   win=new BrowserWindow({title:'Codex Quota Widget',width:1,height:1,type:'toolbar',transparent:true,frame:false,thickFrame:false,
-    resizable:false,maximizable:false,fullscreenable:false,hasShadow:false,skipTaskbar:true,focusable:false,show:false,backgroundColor:'#00000000',
+    resizable:false,maximizable:false,fullscreenable:false,hasShadow:false,skipTaskbar:true,focusable:true,show:false,backgroundColor:'#00000000',
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
   win.setShape([{x:0,y:0,width:1,height:1}]);
   win.setIgnoreMouseEvents(true,{forward:true});
