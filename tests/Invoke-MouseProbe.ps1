@@ -27,7 +27,8 @@ function Prepare($state,$point) {
     [QuotaMouseProbe]::Move($point.x,$point.y)
     Start-Sleep -Milliseconds 150
     $hit=[QuotaMouseProbe]::Hit($point.x,$point.y)
-    if($hit -ne [long]$state.hwnd){throw ('Center is not hitting the widget; no input sent. '+(@{point=$point;hit=$hit;audit=[QuotaWindows]::Audit([long]$state.hwnd)} | ConvertTo-Json -Depth 5 -Compress))}
+    $cursor=[QuotaMouseProbe]::Cursor()
+    if($hit -ne [long]$state.hwnd -or $cursor.x -ne $point.x -or $cursor.y -ne $point.y){throw ('Center is not hitting the widget or cursor moved; no input sent. '+(@{point=$point;cursor=$cursor;hit=$hit;audit=[QuotaWindows]::Audit([long]$state.hwnd)} | ConvertTo-Json -Depth 5 -Compress))}
 }
 function Outside-Hits($state) {
     $bounds=[QuotaWindows]::Audit([long]$state.hwnd).bounds

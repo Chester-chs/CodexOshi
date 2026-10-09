@@ -99,12 +99,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.
 | route-a-delay80，overlay=2949170 | 0→1 | 宿主(113) / 宿主(314) / 宿主(1012) | (1514,873)→(1478,852)，24 点穿透成功 | 三条判据通过 |
 | route-a-repeat2，overlay=1903400 | 1→2 | 宿主(112) / 宿主(314) / 宿主(1009) | (463,361)→(499,382)，25 点穿透成功 | 通过，观测到 112ms 恢复 |
 | route-a-switch-away，overlay=1903400 | 2→3 | 宿主(113) / 宿主(302) / 宿主(1001) | (499,382)→(539,406)，position.json={"x":539,"y":406}，25 点穿透成功 | 通过，观测到 113ms 恢复 |
+| route-a-reinstalled，overlay=6752232 | 27→28 | 挂件(110) / 宿主(315) / 宿主(1015) | (1516,650)→(1476,626)，position.json 同步，25 点穿透成功 | 通过，变化曲线在 **125ms** 观测到宿主 |
 
 表中宿主 HWND 均为 328082。每次先将 Codex 置前台，再从最新 region、DPI 与原生窗口原点计算中心；SendInput 均返回 2。测试同时记录前台变化曲线，必须在实际经过不超过 300ms 时观测到宿主，并在后续样本及 1.5s 时维持宿主，不能把约 314ms 的采样单独当成“300ms 内”证据。拖动由按下、10 步移动、松开组成；末步留出 40ms 投递时间后才松开，确认完整 40×24 DIP 的移动与持久化。
 
 route-a-switch-away 额外点击后，在恢复定时器到期前切到测试自有窗口 HWND=721144；58ms 时已经切走，104 / 306 / 1005ms 的前台仍为该窗口，clicks 3→4，防止迟到恢复把用户从其他应用拉回的测试通过。测试结束销毁自有窗口并恢复 Codex，不操控第三方应用界面。
 
 复测中两次中心命中 ShellExperienceHost 的系统通知窗口，均在 SendInput 前中止，未计成功；随后将本挂件移到客户区内部再测。启动后旧诊断短暂残留的准备失败也未注入输入，探针增加最多 5 秒等待真实进程和附着完成。一次复测实际在 117ms 恢复，但初版探针只接受 100ms 样本，误判失败；已按新授权使用前台变化曲线修正，随后重跑通过。证据保存在用户数据目录的 mouse-probe-route-a-*.json，不提交用户数据。
+
+重装后准备阶段遇到 DSH 为前台、Codex 最小化及实际光标被移走，均中止测试而未向错误目标点击。测试辅助程序的宿主准备步骤增加临时 AttachThreadInput 与最小化还原；连接在注入和测量前全部解除，不介入被测的焦点恢复。用户确认暂停鼠标后，最终 route-a-reinstalled 回归成功。切走防护的自有窗口为 HWND=920066，52ms 时切走，105 / 306 / 1005ms 仍为该窗口，clicks 28→29。
+
+重装过程的一次监督进程在 22:33:23 UTC 退出，exitCode=-1，launcher 的尾日志仅有既有 True 输出，应用日志无匹配崩溃记录，现有证据未定位退出原因；未将其归因于焦点恢复。重新启动后监控正常运行，最终交互验收通过。这一独立的退出记录保存在用户数据目录 launcher-error.json，不以重启成功掩盖该观测。
 
 路线 A 已满足用户给定的点击/300ms 恢复/形状外穿透判据，用户随后明确确认“操作正常，闪烁可接受”。路线 B 未尝试；路线 C 未实施，当前无需原生注入或架构调整；路线 D 无需取舍。
 
@@ -115,3 +120,9 @@ route-a-switch-away 额外点击后，在恢复定时器到期前切到测试自
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.ps1 -Label route-a-acceptance -RequirePass -VerifySwitchAway
 ```
+
+## 本轮交付与缓存核验
+
+本轮仍为 32 个源码文件，首轮通过 CLI plugin add 重装后，逐文件 SHA256 核对 32/32 一致。补充最终探针和记录后，交付前再次按相同流程停止、重装、核对、启动，不重复下载 Electron。用户数据、临时测试窗口、日志及编译产物不进入源码或插件缓存。中文本地提交，不执行 push。最终挂件保持启用；跨 DPI 切换和完整重启后的 MCP 加载继续标记待验收。
+
+最终检查包括 9 项 Node 测试、5 类原生异常形状、8 个 PowerShell 文件解析、10 个 JS 文件语法与 git diff --check。几何函数和 runtime/read-policy.cjs 均无 diff。自查确认只在挂件激活后恢复已验证宿主，迟到事件不恢复其他前台窗口；没有宿主 WndProc 注入、MSVC 或阶段 2 功能。

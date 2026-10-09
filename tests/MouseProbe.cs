@@ -14,11 +14,14 @@ public static class QuotaMouseProbe {
     [StructLayout(LayoutKind.Sequential)] struct Message { public IntPtr Hwnd;public uint Id;public UIntPtr WParam;public IntPtr LParam;public uint Time;public Point Position;public uint Private; }
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern bool ShowWindowAsync(IntPtr hwnd,int command);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hwnd,out uint pid);
     [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
     [DllImport("user32.dll")] static extern bool AttachThreadInput(uint source,uint target,bool attach);
     [DllImport("user32.dll")] static extern bool PeekMessage(out Message message,IntPtr hwnd,uint first,uint last,uint remove);
     [DllImport("user32.dll")] static extern bool SetCursorPos(int x,int y);
+    [DllImport("user32.dll")] static extern bool GetCursorPos(out Point point);
     [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(Point point);
     [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr hwnd,uint flag);
     [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr context);
@@ -26,6 +29,7 @@ public static class QuotaMouseProbe {
     [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr hwnd,uint msg,IntPtr w,IntPtr l,uint flags,uint timeout,out IntPtr result);
     public static long Foreground() { return GetForegroundWindow().ToInt64(); }
     public static bool ActivateHost(long hwnd) {
+        if(IsIconic(new IntPtr(hwnd))){ShowWindowAsync(new IntPtr(hwnd),9);Thread.Sleep(200);}
         if (Foreground()==hwnd) return true;
         SetForegroundWindow(new IntPtr(hwnd)); Thread.Sleep(200);
         if (Foreground()==hwnd) return true;
@@ -56,6 +60,11 @@ public static class QuotaMouseProbe {
         var old=SetThreadDpiAwarenessContext(new IntPtr(-4));
         try { return GetAncestor(WindowFromPoint(new Point(x,y)),2).ToInt64(); }
         finally { if(old!=IntPtr.Zero) SetThreadDpiAwarenessContext(old); }
+    }
+    public static object Cursor() {
+        var old=SetThreadDpiAwarenessContext(new IntPtr(-4));
+        try {Point point;if(!GetCursorPos(out point))throw new Win32Exception();return new {x=point.X,y=point.Y};}
+        finally {if(old!=IntPtr.Zero)SetThreadDpiAwarenessContext(old);}
     }
     static uint Buttons(params uint[] flags) {
         var inputs=new Input[flags.Length];
