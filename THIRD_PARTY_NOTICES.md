@@ -1,0 +1,19 @@
+# Third-party notices
+
+`desktop/WindowApi.cs` and `desktop/WidgetLauncher.cs` adapt code from
+[MeteorNOX/DeepSeek-Balance-Whale-Widget](https://github.com/MeteorNOX/DeepSeek-Balance-Whale-Widget),
+branch `For-Codex`, commit `7fa45961c0e0bacc9bb08737f73b4491399956b0`.
+Copyright (c) 2026 MeteorNOX. Codex adaptation: Yang-huai406.
+
+Changes include project identifiers, local diagnostics and a reduced stage 1 supervisor.
+Other window design borrows its owner / WinEvent / viewport architecture. Reference artwork and audio are not copied or redistributed.
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Electron and its locked runtime dependencies are downloaded outside the repository. Their license files are retained in that runtime installation.
