@@ -1,0 +1,21 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# Credentials and user data must never enter this source repository.
+auth.json
+*.token
+.env
+.env.*
+userdata/
+cache/
+dist/
+build/
+.codex/
+.agents/
+codex-quota-widget/
+
+# User uploads are persisted outside the source repository.
+assets/user/
+assets/uploads/
