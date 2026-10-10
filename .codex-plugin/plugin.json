@@ -1,12 +1,12 @@
 {
   "name": "codex-quota-widget",
   "version": "0.1.0",
-  "description": "Codex 小伴：桌面角色陪伴、额度进度与 token 用量柱状图",
+  "description": "Codi：桌面角色陪伴、额度进度与 token 用量柱状图",
   "author": { "name": "Chester-chs" },
   "license": "MIT",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Codex 小伴",
+    "displayName": "Codi",
     "shortDescription": "单张本机立绘与点击反馈，额度进度条及 token 用量",
     "developerName": "Chester-chs",
     "category": "Productivity"

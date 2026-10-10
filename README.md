@@ -1,4 +1,4 @@
-# Codex 小伴
+# Codi
 
 你的 Codex 桌面小伙伴：看额度、查用量、自定义角色与对话。插件标识为 `codex-quota-widget`。
 
