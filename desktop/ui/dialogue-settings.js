@@ -2,10 +2,22 @@
   const fields=['dialogue-address','dialogue-first','dialogue-second'].map(id=>document.getElementById(id)),[address,first,second]=fields;
   const message=document.getElementById('dialogue-message'),save=document.getElementById('dialogue-save');
   let saved=null,editing=false;
-  const fill=value=>{address.value=value.address;first.value=value.lines[0];second.value=value.lines[1];};
+  const groups=[first,second].map(field=>{const group=document.createElement('div');group.id=field.id+'-presets';group.className='dialogue-presets';group.setAttribute('role','group');field.closest('label').after(group);return group;});
+  const help=document.createElement('p');help.className='character-help';help.dataset.i18n='{重置时间} 仅为时长，例如 3天21小时；“再过”和“后重置”由句子填写。选择预设后可继续编辑，保存后生效。';document.querySelector('.dialogue-actions').before(help);
+  function paintPresets(){for(const [i,group]of groups.entries())for(const button of group.querySelectorAll('button')){button.disabled=!saved;button.setAttribute('aria-pressed',String([first,second][i].value===button.dataset.template));}}
+  function renderPresets(){
+    for(const [i,rows]of window.dialogueModel.presets(window.uiText.language).entries()){
+      const group=groups[i];group.replaceChildren();group.setAttribute('aria-label',window.uiText.t(i?'第二段预设':'第一段预设'));
+      for(const preset of rows){const button=document.createElement('button');button.type='button';button.dataset.preset=preset.id;button.dataset.template=preset.template;button.textContent=window.uiText.t(preset.label);button.setAttribute('aria-controls',[first,second][i].id);button.addEventListener('click',()=>{if(!saved)return;finish();[first,second][i].value=preset.template;paintPresets();show('预设已填入，可以继续编辑；保存后生效。');});group.append(button);}
+    }
+    help.textContent=window.uiText.t(help.dataset.i18n);paintPresets();
+  }
+  const fill=value=>{address.value=value.address;first.value=value.lines[0];second.value=value.lines[1];paintPresets();};
   const show=text=>{message.dataset.i18n=text;message.textContent=window.uiText.t(text);};
   for(const field of fields)field.disabled=true;
   window.widget.dialogueRead().then(value=>{if(!value)return;saved=value;fill(value);for(const field of fields)field.disabled=false;}).catch(()=>show('对话设置读取失败。'));
+  renderPresets();window.addEventListener('languagechange',renderPresets);
+  for(const field of [first,second])field.addEventListener('input',paintPresets);
   function finish(){if(!editing)return;editing=false;window.widget.dialogueFocus(false).catch(()=>{});}
   async function activate(field){
     if(editing||!saved)return;editing=true;

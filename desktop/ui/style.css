@@ -147,6 +147,9 @@ article{padding:18px;margin-bottom:14px}.card-row{margin:12px 0 14px;align-items
 @container(max-width:340px){#token-chart svg{height:185px}.language-setting{flex-wrap:wrap}.segmented button{padding:8px 6px;font-size:12px}.palette-options{grid-template-columns:1fr}.chart-total{flex-wrap:wrap}nav button{font-size:12px}.card-row strong{font-size:20px}}
 .dialogue-actions{display:flex;gap:8px}.dialogue-settings input,.dialogue-settings textarea{cursor:text}
 #character-panel .dialogue-actions button{background:var(--bg-elevated);color:var(--text-primary);font-weight:400}
+.dialogue-presets{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 18px}
+#character-panel .dialogue-presets button{color:var(--text-secondary);background:var(--bg-elevated);border:1px solid var(--border-subtle);padding:6px 10px;font-size:12px;line-height:18px;font-weight:400}
+#character-panel .dialogue-presets button[aria-pressed="true"]{color:var(--accent-ink);background:var(--accent-soft);border-color:var(--accent)}
 .card-row .quota-remaining{font-size:14px;font-weight:400;letter-spacing:0;white-space:nowrap}
 .quota-percent,#status{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",sans-serif;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:0}
 .quota-percent{font-size:26px;line-height:1.2}

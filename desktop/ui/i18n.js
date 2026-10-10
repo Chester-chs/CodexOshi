@@ -1,6 +1,9 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '第一段预设':'First dialogue presets','第二段预设':'Second dialogue presets','温柔提醒':'Gentle reminder','简洁播报':'Brief update','耐心等待':'Take your time','积极鼓励':'Encouragement','专注向前':'Stay focused','休息关怀':'Take a break','温柔陪伴':'Together',
+    '预设已填入，可以继续编辑；保存后生效。':'Preset filled in. You can edit it; save to apply.',
+    '{重置时间} 仅为时长，例如 3天21小时；“再过”和“后重置”由句子填写。选择预设后可继续编辑，保存后生效。':'{重置时间} is a duration, such as 3d 21h. Add surrounding words in your sentence. Presets are editable; save to apply.',
     '保存对话':'Save dialogue','取消编辑':'Cancel edits','在此编辑称呼和两段文本，保存后生效。关闭气泡后重新从第一段开始。':'Edit the address and two messages here, then save. Closing the bubble restarts the first message.',
     '向外拖动调整大小':'Drag outward to enlarge',
     '立绘设置':'Portrait','上传一张图片，调整角色的大小与取景':'Upload one image, then adjust size and framing.',
