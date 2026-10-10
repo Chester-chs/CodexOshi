@@ -42,5 +42,11 @@ app.whenReady().then(async()=>{
     await store.importFile('白裙几何','ready',path.join(__dirname,'fixtures',file));win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,350));const m=await metrics();assert.equal(m.width,width);assert.equal(m.height,height);assert.equal(m.barInside,true);extremes.push(m);
   }
   await store.importFile('白裙几何','ready',path.join(__dirname,'fixtures/portrait-white.png'));win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,350));update(false);await capture('after-resident.png');
-  await fs.writeFile(path.join(output,'portrait-ui-smoke.json'),JSON.stringify({initial,sizes,panels,whiteGarment,extremes,content:currentContent},null,2));app.quit();
+  await win.webContents.executeJavaScript(`window.heavyRenders=0;window.originalRender=window.render;window.render=(...args)=>{window.heavyRenders++;return window.originalRender(...args)};undefined`);
+  for(let i=0;i<120;i++)win.webContents.send('layout',{...layout({x:550-i,y:60},900,700,false,2,current),dragging:true});
+  await new Promise(r=>setTimeout(r,80));
+  const draggingUI=await win.webContents.executeJavaScript(`({renders:window.heavyRenders,left:document.querySelector('#widget').style.left})`);
+  assert.equal(draggingUI.renders,0,'drag layout must only move UI, not rebuild quota cards');assert.equal(draggingUI.left,'431px');update(false);
+  await new Promise(r=>setTimeout(r,50));assert.ok(await win.webContents.executeJavaScript('window.heavyRenders')>0,'end layout must resume full render');
+  await fs.writeFile(path.join(output,'portrait-ui-smoke.json'),JSON.stringify({initial,sizes,panels,whiteGarment,extremes,content:currentContent,draggingUI},null,2));app.quit();
 }).catch(e=>{process.stderr.write(e.stack||String(e));app.exit(1);});

@@ -23,19 +23,40 @@ let tokens={values:null,coverage:'indexing',filesIndexed:0,filesDiscovered:0};
 let savedQuota=null;
 let characterSize={...COMPACT};
 let panelScroll=null;
+let diagnosticTimer,layoutTimer,checkpointTimer;
+let pendingQuota=null,pendingTokens=null;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
 const stateFile=path.join(data,'window-state.json');
-function diagnostic(){
+function writeDiagnostic(){
   fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
+}
+function diagnostic(){
+  if(dragging){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
+  clearTimeout(diagnosticTimer);diagnosticTimer=null;writeDiagnostic();
+}
+function savePosition(){fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
+function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,dragging});}
+function notifyLayout(){
+  if(dragging){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
+  clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
+}
+function beginDrag(){
+  if(dragging)return;dragging=true;
+  checkpointTimer=setTimeout(function checkpoint(){
+    if(!dragging)return;savePosition();checkpointTimer=setTimeout(checkpoint,1000);
+  },3000);
+}
+function saveSnapshot(file,value){
+  try{const temp=path.join(data,file+'.tmp');fs.writeFileSync(temp,JSON.stringify(value,null,2));fs.renameSync(temp,path.join(data,file));}catch{}
 }
 function updateShape(){
   const previous=widget;
   viewLayout=layout(widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize);widget=viewLayout.widget;
-  if(ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));
+  if(!dragging&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
-  if(ready)win.webContents.send('layout',viewLayout);
+  notifyLayout();
 }
 function wheelInput(wheel,host,region){
   if(!wheel||!Number.isFinite(host.dpi)||host.dpi<48||host.dpi>768||!['x','y','delta'].every(k=>Number.isInteger(wheel[k]))||wheel.x<0||wheel.y<0||wheel.x>32768||wheel.y>32768||Math.abs(wheel.delta)>32767)return null;
@@ -86,11 +107,13 @@ app.whenReady().then(async()=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object')return;
     if(value.type==='drag'){
       if(!Number.isFinite(value.x)||!Number.isFinite(value.y))return;
-      dragging=true;widget={x:value.x,y:value.y};updateShape();
+      beginDrag();widget={x:value.x,y:value.y};updateShape();diagnostic();return;
     } else if(value.type==='end'){
       if(dragging){widget=snap(widget,dip.width,dip.height,viewLayout.sizes[0]);updateShape();}
-      dragging=false;
-      fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));
+      dragging=false;clearTimeout(checkpointTimer);checkpointTimer=null;
+      savePosition();notifyLayout();
+      if(pendingQuota){saveSnapshot('quota-state.json',pendingQuota);pendingQuota=null;}
+      if(pendingTokens){saveSnapshot('tokens-state.json',pendingTokens);pendingTokens=null;}
     } else if(value.type==='click'){clicks++;expanded=!expanded;updateShape();}
     diagnostic();
   });
@@ -101,7 +124,7 @@ app.whenReady().then(async()=>{
       const worker=tokenWorker=new Worker(path.join(__dirname,'../runtime/token-worker.cjs'),{workerData:{cacheFile:path.join(data,'token-index.json')}});
       worker.on('message',message=>{
         if(message?.type!=='tokens'||win.isDestroyed())return;tokens=message.value;
-        try{const temp=path.join(data,'tokens-state.json.tmp');fs.writeFileSync(temp,JSON.stringify(tokens,null,2));fs.renameSync(temp,path.join(data,'tokens-state.json'));}catch{}
+        if(dragging)pendingTokens=tokens;else saveSnapshot('tokens-state.json',tokens);
         if(ready)win.webContents.send('tokens',tokens);diagnostic();
       });
       worker.on('error',()=>{tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);});
@@ -112,7 +135,7 @@ app.whenReady().then(async()=>{
   readTokens();tokenTimer=setInterval(readTokens,30000);
   async function refresh(){
     const quota=await reader.refresh();if(win.isDestroyed())return;
-    try{const temp=path.join(data,'quota-state.json.tmp');fs.writeFileSync(temp,JSON.stringify(quota,null,2));fs.renameSync(temp,path.join(data,'quota-state.json'));}catch{}
+    if(dragging)pendingQuota=quota;else saveSnapshot('quota-state.json',quota);
     if(ready){win.webContents.send('quota',quota);updateShape();}diagnostic();
   }
   refresh().catch(()=>{});pollTimer=setInterval(()=>refresh().catch(()=>{}),30000);
@@ -155,4 +178,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
+app.on('before-quit',()=>{clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});

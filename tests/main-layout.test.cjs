@@ -4,7 +4,7 @@ test('real main relayout saves viewport-clamped position instead of retaining an
   const filename=path.resolve(__dirname,'../desktop/main.cjs'),localRequire=createRequire(filename),writes=new Map();
   // Do not start app/network/worker lifecycles: exercise the real relayout body.
   const electron={app:{setPath(){},disableHardwareAcceleration(){},commandLine:{appendSwitch(){}},whenReady(){return {then(){}};},on(){}},protocol:{registerSchemesAsPrivileged(){}}};
-  const context=vm.createContext({process:{argv:['node','main','--data','C:/widget-test-data']},Buffer,console,setInterval,clearInterval,require:name=>{
+  const context=vm.createContext({process:{argv:['node','main','--data','C:/widget-test-data']},Buffer,console,setInterval,clearInterval,setTimeout,clearTimeout,require:name=>{
     if(name==='electron')return electron;
     if(name==='node:fs')return {readFileSync(){throw Error('No saved quota');},writeFileSync(file,value){writes.set(path.basename(file),value);}};
     if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}}};

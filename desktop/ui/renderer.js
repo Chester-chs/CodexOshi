@@ -1,6 +1,6 @@
 const button=document.getElementById('widget'),details=document.getElementById('details');
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
-let wheelEvents=0,scrollReportPending=false;
+let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
 function reportScroll(){
   if(scrollReportPending)return;scrollReportPending=true;
   requestAnimationFrame(()=>{
@@ -13,8 +13,10 @@ details.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
+  layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
-  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);render();reportScroll();
+  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
+  if(!layoutDragging){render();reportScroll();}
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
@@ -28,6 +30,7 @@ for(const name of ['quota','token','character'])document.getElementById(name+'-t
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
+  if(layoutDragging)return;
   const view=window.quotaView.present(quota,width);
   window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;
