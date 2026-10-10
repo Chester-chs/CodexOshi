@@ -2,6 +2,8 @@
 
 ## 1.0版本回退点
 
+后续角色操作栏、七组经典灵感配色、自定义颜色和完整立绘修复见 [补充验收记录](ui-portrait-palette-verification.md)。
+
 界面修改前工作区干净，已创建本地注释标签 `v1.0`（注释“1.0版本”），指向 `d5de6b83cd19afc7b81077f3243546e2fa1f25e6`。没有推送标签或代码。
 
 独立备份：`C:\Users\Chester\.codex\codex-quota-widget\backups\1.0-20261010-223541`，包含 `source-1.0.zip`、完整安装缓存 `cache/` 和本机界面设置 `preferences/`。没有备份 auth.json、会话内容或把用户角色素材放入仓库。备份位置另记于运行目录的 `version-1.0-backup-path.txt`。

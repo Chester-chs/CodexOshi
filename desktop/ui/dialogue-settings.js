@@ -1,5 +1,6 @@
 (()=>{
   const fields=['dialogue-address','dialogue-first','dialogue-second'].map(id=>document.getElementById(id)),[address,first,second]=fields;
+  const editableFields=[...fields,...['custom-base-hex','custom-accent-hex'].map(id=>document.getElementById(id))];
   const message=document.getElementById('dialogue-message'),save=document.getElementById('dialogue-save');
   let saved=null,editing=false;
   const groups=[first,second].map(field=>{const group=document.createElement('div');group.id=field.id+'-presets';group.className='dialogue-presets';group.setAttribute('role','group');field.closest('label').after(group);return group;});
@@ -23,14 +24,14 @@
     if(editing||!saved)return;editing=true;
     try{const result=await window.widget.dialogueFocus(true);if(!result.ok){editing=false;field.blur();}else if(editing)field.focus();}catch{editing=false;field.blur();show('对话保存失败。');}
   }
-  for(const field of fields){
+  for(const field of editableFields){
     field.addEventListener('pointerdown',()=>activate(field));
     field.addEventListener('focus',()=>activate(field));
-    field.addEventListener('blur',()=>queueMicrotask(()=>{if(!fields.includes(document.activeElement))finish();}));
+    field.addEventListener('blur',()=>queueMicrotask(()=>{if(!editableFields.includes(document.activeElement))finish();}));
   }
-  document.addEventListener('pointerdown',event=>{if(!fields.includes(event.target)){finish();if(fields.includes(document.activeElement))document.activeElement.blur();}},true);
-  window.widget.layout(value=>{if(!value.expanded){finish();if(fields.includes(document.activeElement))document.activeElement.blur();}});
-  window.addEventListener('blur',()=>{finish();if(fields.includes(document.activeElement))document.activeElement.blur();});
+  document.addEventListener('pointerdown',event=>{if(!editableFields.includes(event.target)){finish();if(editableFields.includes(document.activeElement))document.activeElement.blur();}},true);
+  window.widget.layout(value=>{if(!value.expanded){finish();if(editableFields.includes(document.activeElement))document.activeElement.blur();}});
+  window.addEventListener('blur',()=>{finish();if(editableFields.includes(document.activeElement))document.activeElement.blur();});
   save.addEventListener('click',async()=>{
     if(!saved)return;finish();save.disabled=true;
     try{const value=window.dialogueModel.validate({address:address.value,lines:[first.value,second.value]});const result=await window.widget.dialogueSave(value);if(result.ok){saved=value;fill(value);}show(result.ok?'对话已保存。':result.error||'对话保存失败。');}

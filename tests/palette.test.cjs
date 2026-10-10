@@ -13,3 +13,12 @@ test('legacy appearance maps to a curated palette without rewriting the input',(
   assert.deepEqual(model.migrate({mode:'dark',accent:'#007aff',surface:'theme'}),{palette:'midnight'});
   assert.deepEqual(model.migrate({palette:'rose'}),{palette:'rose'});
 });
+
+test('custom card colors persist exactly while derived text remains readable on light and dark surfaces',()=>{
+  for(const [base,accent] of [['#fafafa','#eeeeee'],['#101010','#181818'],['#ff0000','#00ff00'],['#808080','#808080']]){
+    const value={palette:'custom',base,accent},theme=model.resolve(value);
+    assert.deepEqual(theme.settings,value);assert.equal(theme.variables['--bg-base'],base);
+    for(const [text,backgrounds] of theme.contrastPairs)for(const background of backgrounds)assert.ok(model.contrast(text,background)>=4.5);
+  }
+  for(const value of [{palette:'custom',base:'red',accent:'#ffffff'},{palette:'custom',base:'#ffffff',accent:'url(x)'},{palette:'custom',base:'#ffffff'},{palette:'oat',base:'#ffffff',accent:'#000000'}])assert.throws(()=>model.validate(value));
+});

@@ -2,6 +2,22 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {prepareImage}=require('../desktop/ui/image-processing.js');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {CharacterStore}=require('../runtime/characters.cjs');
+test('full portrait at fit scale keeps every edge and panning stays within unused space',()=>{
+  const {portraitFrame}=require('../desktop/ui/portrait-size.js');
+  for(const [width,height] of [[90,128],[199,228],[300,368],[672,1]])for(const [bw,bh] of [[627,882],[100,1],[1,100]])for(const settings of [{zoom:1,x:-.025,y:.756},{zoom:1,x:1,y:-1},{zoom:.5,x:-1,y:1}]){
+    const r=portraitFrame(width,height,bw,bh,settings);
+    assert.ok(r.x>=0&&r.y>=0);assert.ok(r.x+r.width<=width+1e-8);assert.ok(r.y+r.height<=height+1e-8);
+    assert.ok(Math.abs(r.width/r.height-bw/bh)<1e-8,'full-image aspect ratio must survive');
+  }
+  assert.deepEqual(portraitFrame(200,300,100,200,{zoom:1,x:0,y:1}),{x:27,y:4,width:146,height:292});
+});
+test('zoom can frame the upper half without moving the drawn viewport onto the footer',()=>{
+  const {portraitFrame}=require('../desktop/ui/portrait-size.js');
+  const r=portraitFrame(200,300,100,200,{zoom:2,x:0,y:1});
+  assert.ok(r.source,'enlarged view must crop the chosen source area');assert.equal(r.source.y,0);assert.equal(r.source.height,100);
+  assert.equal(r.y,4);assert.equal(r.height,292);assert.ok(r.source.width<100);
+  for(const x of [-1,0,1])for(const y of [-1,0,1]){const q=portraitFrame(200,300,100,200,{zoom:3,x,y});assert.ok(q.source.x>=0&&q.source.y>=0);assert.ok(q.source.x+q.source.width<=100+.001);assert.ok(q.source.y+q.source.height<=200+.001);}
+});
 test('content ratio determines dimensions, with bounded width and global fallback for extreme proportions',()=>{
   const {portraitSize}=require('../desktop/ui/portrait-size.js');
   assert.deepEqual(portraitSize(627,882,280),{width:199,height:280});

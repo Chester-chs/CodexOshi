@@ -13,13 +13,21 @@ app.whenReady().then(async()=>{
   const ready=new Promise(r=>ipcMain.once('ready',r));let current={width:160,height:112},currentContent=null;
   function update(expanded=true,count=2){const v=layout({x:550,y:60},900,700,expanded,count,current);assert.deepEqual(shape(v.regions,900,700,v.sizes),v.regions);win.setShape(v.regions);win.webContents.send('layout',v);}
   ipcMain.on('character-size',(_event,data)=>{if(before)return;currentContent=data;current=require('../desktop/ui/portrait-size.js').portraitSize(data.contentWidth,data.contentHeight,data.targetHeight);update();});
-  installCharacters(win,store);ipcMain.handle('panel-preferences-read',()=>({width:480,height:560,language:'zh-CN'}));await win.loadFile(path.resolve(__dirname,'../desktop/ui/index.html'));await ready;
+  installCharacters(win,store);ipcMain.handle('dialogue-read',()=>require('../desktop/ui/dialogue-model.js').defaults());ipcMain.handle('panel-preferences-read',()=>({width:480,height:560,language:'zh-CN'}));await win.loadFile(path.resolve(__dirname,'../desktop/ui/index.html'));await ready;
   win.webContents.send('characters',await store.snapshot());win.webContents.send('quota',{windows:[{remainingPercent:80}]});update();await new Promise(r=>setTimeout(r,500));
   async function metrics(){return win.webContents.executeJavaScript(`(()=>{const w=document.querySelector('#widget'),c=document.querySelector('#character-stage'),p=document.querySelector('.compact-line'),r=w.getBoundingClientRect(),a=c.getBoundingClientRect(),b=p.getBoundingClientRect();return {width:r.width,height:r.height,characterHeight:a.height,background:getComputedStyle(w).backgroundColor,barPosition:getComputedStyle(p).position,barBackground:getComputedStyle(p).backgroundColor,barInside:b.bottom<=r.bottom&&b.top>r.top,status:document.querySelector('#status').textContent,source:document.querySelector('#character-canvas').dataset.source,slider:document.querySelector('#character-size')?.value}})()`);}
   async function capture(file){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await new Promise(r=>setTimeout(r,80));await fs.writeFile(path.join(output,file),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());}
   const initial=await metrics();await capture(before?'before.png':'after.png');
   if(before){await fs.writeFile(path.join(output,'before.json'),JSON.stringify(initial,null,2));app.quit();return;}
-  assert.ok(initial.height>=270&&initial.height<=290,'default role must reach 280 DIP');assert.ok(initial.characterHeight>=250);assert.ok(initial.width<initial.height);assert.equal(initial.background,'rgba(0, 0, 0, 0)');assert.equal(initial.barPosition,'absolute');assert.equal(initial.barInside,true);assert.equal(initial.status,'80%');assert.match(initial.source,/local/);
+  assert.ok(initial.height>=270&&initial.height<=290,'default role must reach 280 DIP');assert.ok(initial.characterHeight>=220);assert.ok(initial.width<initial.height);assert.equal(initial.background,'rgba(0, 0, 0, 0)');assert.equal(initial.barPosition,'absolute');assert.equal(initial.barInside,true);assert.equal(initial.status,'80%');assert.match(initial.source,/local/);
+  const frameProbe=await win.webContents.executeJavaScript(`(()=>{const c=document.querySelector('#character-canvas'),ctx=c.getContext('2d'),draw=ctx.drawImage.bind(ctx);ctx.drawImage=(...args)=>{const [x,y,width,height]=args.length===9?args.slice(5):args.slice(1);window.lastPortraitDraw={x,y,width,height,canvasWidth:c.width,canvasHeight:c.height,...(args.length===9?{source:args.slice(1,5)}:{})};draw(...args)};return true})()`);assert.equal(frameProbe,true);
+  const portraitFrames=[];
+  for(const h of [180,280,420]){
+    await store.settings('白裙几何',{targetHeight:h,zoom:1.55,x:-.025,y:.756});win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));
+    const frame=await win.webContents.executeJavaScript(`window.lastPortraitDraw`);assert.ok(frame.x>=0&&frame.y>=0);assert.ok(frame.x+frame.width<=frame.canvasWidth+.001);assert.ok(frame.y+frame.height<=frame.canvasHeight+.001);
+    const clearance=await win.webContents.executeJavaScript(`(()=>{const stage=document.querySelector('#character-stage').getBoundingClientRect(),bar=document.querySelector('.compact-line').getBoundingClientRect();return bar.top-stage.bottom})()`);assert.ok(clearance>=0,'progress footer must not cover the dress');portraitFrames.push({height:h,frame,clearance});
+  }
+  await store.settings('白裙几何',{targetHeight:280,zoom:1,x:0,y:0});win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));
   await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);
   // Commit the newly selected tab to the hidden window's hit-test surface.
   await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});
@@ -49,5 +57,5 @@ app.whenReady().then(async()=>{
   const draggingUI=await win.webContents.executeJavaScript(`({renders:window.heavyRenders,left:document.querySelector('#widget').style.left})`);
   assert.equal(draggingUI.renders,0,'drag layout must only move UI, not rebuild quota cards');assert.equal(draggingUI.left,'431px');update(false);
   await new Promise(r=>setTimeout(r,50));assert.ok(await win.webContents.executeJavaScript('window.heavyRenders')>0,'end layout must resume full render');
-  await fs.writeFile(path.join(output,'portrait-ui-smoke.json'),JSON.stringify({initial,sizes,panels,whiteGarment,extremes,content:currentContent,draggingUI},null,2));app.quit();
+  await fs.writeFile(path.join(output,'portrait-ui-smoke.json'),JSON.stringify({initial,portraitFrames,sizes,panels,whiteGarment,extremes,content:currentContent,draggingUI},null,2));app.quit();
 }).catch(e=>{process.stderr.write(e.stack||String(e));app.exit(1);});

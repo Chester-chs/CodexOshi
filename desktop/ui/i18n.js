@@ -1,6 +1,10 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '色相':'Hue','1× 显示完整立绘；放大后可拖动取景。':'At 1× the full portrait is shown. Zoom in and drag to frame it.',
+    '已优化强调色对比，选择自动保存。':'Accent contrast adjusted. Your choice is saved automatically.',
+    '莫兰迪':'Morandi','暖灰 × 燕麦':'Warm grey × Oat','克莱因蓝':'Klein Blue','群青 × 纸白':'Ultramarine × Paper','莫奈睡莲':'Monet Lilies','雾绿 × 淡紫':'Mist green × Violet','蒂芙尼蓝':'Tiffany Blue','蓝绿 × 珍珠白':'Teal × Pearl','黑白经典':'Black & White','墨黑 × 乳白':'Ink × Ivory','梵高星夜':'Starry Night','夜蓝 × 星金':'Night blue × Gold','爱马仕橙':'Hermès Orange','暖橙 × 鞍棕':'Orange × Saddle brown',
+    '自定义配色':'Custom colors','强调色':'Accent color','底色色值':'Background hex','强调色色值':'Accent hex','选择颜色或填写色值，自动保存。':'Pick colors or enter hex values. Saved automatically.','请输入六位十六进制颜色，如 #336699。':'Enter a six-digit hex color, e.g. #336699.','完整显示立绘；拖动预览可调整位置。':'The full portrait stays visible. Drag the preview to position it.','立绘缩放':'Portrait scale',
     '第一段预设':'First dialogue presets','第二段预设':'Second dialogue presets','温柔提醒':'Gentle reminder','简洁播报':'Brief update','耐心等待':'Take your time','积极鼓励':'Encouragement','专注向前':'Stay focused','休息关怀':'Take a break','温柔陪伴':'Together',
     '预设已填入，可以继续编辑；保存后生效。':'Preset filled in. You can edit it; save to apply.',
     '预设可编辑，保存生效；{重置时间}如 3天21小时。':'Edit presets, then save. {重置时间} is a duration, e.g. 3d 21h.',
