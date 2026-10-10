@@ -1,6 +1,6 @@
-const button=document.getElementById('widget'),details=document.getElementById('details'),panelBody=document.getElementById('panel-body'),text=(value,args)=>window.uiText.t(value,args);
+const button=document.getElementById('widget'),resident=document.getElementById('resident-content'),details=document.getElementById('details'),panelBody=document.getElementById('panel-body'),text=(value,args)=>window.uiText.t(value,args);
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
-let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
+let wheelEvents=0,scrollReportPending=false,layoutDragging=false,residentDocked=false;
 let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
 let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
@@ -21,8 +21,11 @@ panelBody.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
+  const base=value.residentSize||value.regions[0],scale=Math.min(value.regions[0].width/base.width,value.regions[0].height/base.height);
+  width=base.width;
+  resident.style.width=base.width+'px';resident.style.height=base.height+'px';resident.style.transform=`scale(${scale})`;residentDocked=Boolean(value.docked);button.style.cursor=residentDocked?'pointer':'grab';
   layoutDragging=Boolean(value.dragging);
-  window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
+  window.resizeCharacter?.(base.width,base.height);
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}
   if(!layoutDragging&&!value.resizing){render();reportScroll();}
@@ -114,7 +117,7 @@ button.addEventListener('pointermove',event=>{
   if(!start)return;
   const dx=event.clientX-start.x,dy=event.clientY-start.y;
   if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
-  if(moved)window.widget.gesture({type:'drag',x:start.left+dx,y:start.top+dy});
+  if(moved&&!residentDocked)window.widget.gesture({type:'drag',x:start.left+dx,y:start.top+dy});
 });
 function end(event){if(!start)return;if(!moved&&event.type==='pointerup'){clickFeedback();window.widget.gesture({type:'click'});}window.widget.gesture({type:'end'});start=null;}
 button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);

@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),{mainHarness}=require('./main-harness.cjs'),{layout,shape}=require('../desktop/geometry.cjs');
 const point=h=>JSON.parse(h.run('JSON.stringify(widget)'));
-const attach=h=>h.run('host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};ready=true;characterSize={width:199,height:280};updateShape();');
+const attach=h=>h.run('panelPreferences={...panelPreferences,dockBottomRight:false};host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};ready=true;characterSize={width:199,height:280};updateShape();');
 test('first placement waits for real viewport and stays bottom-right through image decoding',async()=>{
   const h=await mainHarness(undefined,{prepare:false});h.run('ready=true;updateShape();');assert.equal(point(h),null,'1x1 placeholder must not become a saved top-left coordinate');
   attach(h);assert.deepEqual(point(h),{x:577,y:296});

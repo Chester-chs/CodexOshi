@@ -22,6 +22,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 #widget,#details{position:absolute;box-sizing:border-box;overflow:hidden}
 #widget{left:8px;top:8px;width:199px;height:280px;color:inherit;display:block;cursor:grab;touch-action:none;padding:0;border:0;border-radius:0;background:var(--clear)}
 #character-stage{width:100%;height:max(1px,calc(100% - 52px));position:absolute;inset:0 auto auto 0}
+#resident-content{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0}
+.framing-adjust{display:flex;align-items:center;gap:8px;margin-top:8px}.framing-adjust button{min-width:40px}.framing-adjust input{width:88px;text-align:center;border:1px solid var(--border-subtle);border-radius:var(--radius-control);background:var(--bg-elevated);padding:8px;color:var(--text-primary)}.framing-adjust span{color:var(--text-secondary)}
 #character-canvas{width:100%;height:100%;display:block;transform-origin:50% 60%;filter:drop-shadow(0 2px 2px var(--shadow-character))}
 #window-label{position:absolute;overflow:hidden;width:1px;height:1px;clip-path:inset(50%)}
 #widget:active{cursor:grabbing;background:var(--clear)}
@@ -62,6 +64,7 @@ article>strong{font-size:15px;font-weight:500;line-height:20px}
 #character-panel button:hover{background:var(--bg-hover)}
 #character-panel button:active,#close:active{transform:scale(.97)}
 #character-panel button[aria-pressed="true"]{color:var(--accent-ink);background:var(--accent-soft);border-color:var(--accent)}
+#character-panel #character-framing button[aria-pressed="true"],#character-panel #character-framing button[aria-pressed="true"]:hover{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);font-weight:600}
 #character-upload{width:100%;color:var(--accent-contrast);background:var(--accent)!important;border-color:var(--accent)!important;font-weight:500}
 #character-upload:hover{background:var(--accent-hover)!important}
 #character-list{display:flex;flex-wrap:wrap;gap:var(--space-2)}

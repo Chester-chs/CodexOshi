@@ -4,6 +4,9 @@
   let directions={x:1,y:1};
   function showLanguage(language){window.uiText.setLanguage(language);select.value=language;for(const button of select.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.language===language));}
   function showError(text){error.dataset.i18n=text;error.textContent=window.uiText.t(text);}
+  const dock=document.getElementById('resident-dock');
+  dock.addEventListener('change',async()=>{const value=dock.checked;try{const result=await window.widget.panelDock(value);if(!result.ok){dock.checked=!value;showError(result.error||'卡片设置未能保存，请检查本机文件权限。');}}catch{dock.checked=!value;showError('卡片设置未能保存，请检查本机文件权限。');}});
+  window.widget.layout(value=>{dock.checked=value.panelPreferences?.dockBottomRight!==false;dock.disabled=Boolean(value.dragging||value.resizing);});
   window.widget.panelError(showError);
   window.widget.layout(value=>{if(value.panelPreferences)showLanguage(value.panelPreferences.language);if(value.expanded){const r=value.regions[1];size.textContent=r.width+' × '+r.height;if(!start){directions={x:r.x<value.widget.x?-1:1,y:r.y<value.widget.y?-1:1};const d=document.getElementById('details');d.dataset.resizeX=directions.x<0?'left':'right';d.dataset.resizeY=directions.y<0?'top':'bottom';}}});
   window.widget.panelPreferencesRead().then(value=>{if(revision===0&&value)showLanguage(value.language);}).catch(()=>{});

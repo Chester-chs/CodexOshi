@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('widget',{
   dialogueSave:value=>ipcRenderer.invoke('dialogue-save',value),
   panelPreferencesRead:()=>ipcRenderer.invoke('panel-preferences-read'),
   panelLanguage:value=>ipcRenderer.invoke('panel-language',value),
+  panelDock:value=>ipcRenderer.invoke('panel-dock',value),
   panelResize:value=>ipcRenderer.send('panel-resize',value),
   panelError:callback=>ipcRenderer.on('panel-error',(_event,value)=>callback(value)),
   appearanceRead:()=>ipcRenderer.invoke('appearance-read'),

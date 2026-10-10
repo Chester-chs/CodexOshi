@@ -37,6 +37,11 @@ test('main accepts bounded close-up size reports and rejects invalid zoom values
   assert.deepEqual(JSON.parse(h.run('JSON.stringify(characterSize)')),{width:448,height:280});
   const before=h.shapes.length;for(const zoom of [4.01,-1,NaN,Infinity,'4'])h.ipc('character-size',{...value,zoom});assert.equal(h.shapes.length,before);
 });
+test('explicit resident width survives framing changes without distorting the saved height',async()=>{
+  const {mainHarness}=require('./main-harness.cjs'),h=await mainHarness();
+  for(const zoom of [1,2,4]){h.ipc('character-size',{contentWidth:627,contentHeight:882/zoom,targetHeight:301,targetWidth:240,zoom});assert.deepEqual(JSON.parse(h.run('JSON.stringify(characterSize)')),{width:240,height:301});}
+  const before=h.shapes.length;for(const targetWidth of [125,673,200.5,NaN,'240'])h.ipc('character-size',{contentWidth:627,contentHeight:220.5,targetHeight:301,targetWidth,zoom:4});assert.equal(h.shapes.length,before);
+});
 test('content ratio determines dimensions, with bounded width and global fallback for extreme proportions',()=>{
   const {portraitSize}=require('../desktop/ui/portrait-size.js');
   assert.deepEqual(portraitSize(627,882,280),{width:199,height:280});
@@ -62,5 +67,6 @@ test('target height persists per role and invalid values cannot enlarge the over
     assert.equal((await store.read('B')).targetHeight,280);await store.select('A');const reload=new CharacterStore(root);await reload.init();assert.equal((await reload.read('A')).targetHeight,420);
     for(const value of [179,421,Infinity,NaN,'280'])await assert.rejects(store.settings('A',{targetHeight:value}));
     await store.settings('A',{zoom:4});assert.equal((await reload.read('A')).zoom,4);await assert.rejects(store.settings('A',{zoom:4.01}));
+    await store.settings('A',{targetWidth:240});assert.equal((await reload.read('A')).targetWidth,240);for(const targetWidth of [125,673,240.5,'240'])await assert.rejects(store.settings('A',{targetWidth}));
   }finally{assert.equal(path.dirname(root),os.tmpdir());await fs.rm(root,{recursive:true,force:true});}
 });

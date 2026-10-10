@@ -27,7 +27,7 @@ async function mainHarness(source,options={}){
     if(name==='./characters.cjs')return {installCharacters(){}};return localRequire(name);
   }});
   vm.runInContext(source||fs.readFileSync(filename,'utf8'),context,{filename});await start();
-  if(options.prepare!==false)vm.runInContext('ready=true;host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};widget={x:300,y:200};if(typeof defaultPlacement!=="undefined")defaultPlacement=false;characterSize={width:199,height:280};updateShape();',context);
+  if(options.prepare!==false)vm.runInContext('panelPreferences={...panelPreferences,dockBottomRight:false};ready=true;host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};widget={x:300,y:200};if(typeof defaultPlacement!=="undefined")defaultPlacement=false;characterSize={width:199,height:280};updateShape();',context);
   const event=vm.runInContext('({sender:win.webContents})',context);
   const bridgeInfo=JSON.parse(writes.find(w=>w.file==='bridge.json').value);
   function reset(){writes.length=0;layouts.length=0;shapes.length=0;stringifies=0;}

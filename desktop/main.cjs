@@ -28,6 +28,7 @@ let savedQuota=null;
 let characterSize={...COMPACT};
 let panelScroll=null;
 let defaultPlacement=true;
+let freePosition=null;
 let diagnosticTimer,layoutTimer,checkpointTimer;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
@@ -50,8 +51,9 @@ function diagnostic(){
   if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
   clearTimeout(diagnosticTimer);diagnosticTimer=null;writeDiagnostic();
 }
-function savePosition(){fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
+const docked=()=>panelPreferences.dockBottomRight!==false;
+function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
+function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,residentSize:characterSize,docked:docked(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
 function notifyLayout(){
   if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
@@ -69,7 +71,9 @@ function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   const previous=widget;
-  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,characterSize,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
+  const scale=docked()?Math.min(1,dip.width*.25/characterSize.width,dip.height*.30/characterSize.height):1;
+  const resident={width:Math.max(1,Math.round(characterSize.width*scale)),height:Math.max(1,Math.round(characterSize.height*scale))};
+  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
@@ -112,6 +116,12 @@ app.whenReady().then(async()=>{
     panelPreferences={...panelPreferences,language};notifyLayout();
     try{await panelStore.save({...panelPreferences});return {ok:true};}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
   });
+  ipcMain.handle('panel-dock',async(event,value)=>{
+    if(event.sender!==win.webContents||typeof value!=='boolean'||dragging||panelResizing)return {ok:false};
+    const next={...panelPreferences,dockBottomRight:value};
+    try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+    panelPreferences=next;if(!value){widget=freePosition;defaultPlacement=widget===null;}updateShape();diagnostic();return {ok:true};
+  });
   ipcMain.on('panel-resize',(event,value)=>{
     if(event.sender!==win.webContents||!value||!expanded||dragging)return;
     if(value.type==='begin'&&viewLayout?.regions[1]){panelOffset=null;panelResizing=true;}
@@ -141,6 +151,7 @@ app.whenReady().then(async()=>{
     if(event.sender!==win.webContents||!value||!['contentWidth','contentHeight'].every(k=>Number.isFinite(value[k])&&value[k]>0&&value[k]<=4096)||!Number.isFinite(value.targetHeight)||value.targetHeight<180||value.targetHeight>420)return;
     if(value.zoom!==undefined&&(!Number.isFinite(value.zoom)||value.zoom<.5||value.zoom>4))return;
     const next=portraitSize(value.contentWidth,value.contentHeight,value.targetHeight,value.zoom>1);
+    if(value.targetWidth!==undefined){if(!Number.isInteger(value.targetWidth)||value.targetWidth<126||value.targetWidth>672)return;next.width=value.targetWidth;next.height=Math.round(value.targetHeight);}
     if(next.width===characterSize.width&&next.height===characterSize.height)return;
     characterSize=next;
     // Decoding can finish before the host handshake; retain the saved position
@@ -155,9 +166,11 @@ app.whenReady().then(async()=>{
   ipcMain.on('gesture',(event,value)=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object')return;
     if(value.type==='drag'){
+      if(docked())return;
       if(!Number.isFinite(value.x)||!Number.isFinite(value.y))return;
       beginDrag();widget={x:value.x,y:value.y};updateShape();diagnostic();return;
     } else if(value.type==='end'){
+      if(docked())return;
       if(dragging){widget=snap(widget,dip.width,dip.height,viewLayout.sizes[0]);updateShape();}
       dragging=false;clearTimeout(checkpointTimer);checkpointTimer=null;
       savePosition();notifyLayout();
@@ -166,7 +179,7 @@ app.whenReady().then(async()=>{
     } else if(value.type==='click'){setTextEditing(false);if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=speechVisible?(speechIndex+1)%2:0;expanded=false;speechVisible=true;updateShape();}
     diagnostic();
   });
-  try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=saved;defaultPlacement=false;}}catch{}
+  try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=freePosition=saved;defaultPlacement=false;}}catch{}
   await win.loadFile(path.join(__dirname,'ui','index.html'));
   function readTokens(){
     if(!tokenWorker){

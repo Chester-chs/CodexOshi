@@ -13,6 +13,6 @@ test('real main relayout saves viewport-clamped position instead of retaining an
   }});
   const source=process.env.WIDGET_LAYOUT_BASELINE?require('node:child_process').execFileSync('git',['show','78122d3:desktop/main.cjs'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'}):fs.readFileSync(filename,'utf8');
   vm.runInContext(source,context,{filename});context.testWindow={setShape(){},webContents:{send(){}}};
-  vm.runInContext(`win=testWindow;ready=true;host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};widget={x:900,y:700};if(typeof defaultPlacement!=='undefined')defaultPlacement=false;characterSize={width:199,height:280};updateShape();`,context);
+  vm.runInContext(`win=testWindow;ready=true;host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};widget={x:900,y:700};if(typeof panelPreferences!=='undefined')panelPreferences={...panelPreferences,dockBottomRight:false};if(typeof defaultPlacement!=='undefined')defaultPlacement=false;characterSize={width:199,height:280};updateShape();`,context);
   assert.ok(writes.has('position.json'),'viewport clamping must update persisted position');assert.deepEqual(JSON.parse(writes.get('position.json')),{x:577,y:296});
 });

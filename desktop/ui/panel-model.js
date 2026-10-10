@@ -2,7 +2,7 @@
   const DEFAULT={width:480,height:560},MIN={width:360,height:360},MAX={width:760,height:800},LANGUAGES=['zh-CN','en-US'];
   const defaults=()=>({...DEFAULT,language:'zh-CN'});
   function validSize(value){return value&&['width','height'].every(k=>Number.isInteger(value[k])&&value[k]>=MIN[k]&&value[k]<=MAX[k]);}
-  function validate(value){if(!validSize(value)||!LANGUAGES.includes(value.language)||Object.keys(value).some(k=>!['width','height','language'].includes(k)))throw Error('卡片设置无效。');return {width:value.width,height:value.height,language:value.language};}
+  function validate(value){if(!validSize(value)||!LANGUAGES.includes(value.language)||Object.keys(value).some(k=>!['width','height','language','dockBottomRight'].includes(k))||value.dockBottomRight!==undefined&&typeof value.dockBottomRight!=='boolean')throw Error('卡片设置无效。');return {width:value.width,height:value.height,language:value.language,...(value.dockBottomRight===undefined?{}:{dockBottomRight:value.dockBottomRight})};}
   const clamp=(width,height)=>({width:Math.round(Math.max(MIN.width,Math.min(MAX.width,width))),height:Math.round(Math.max(MIN.height,Math.min(MAX.height,height)))});
   return {DEFAULT,MIN,MAX,LANGUAGES,defaults,validate,validSize,clamp};
 });
