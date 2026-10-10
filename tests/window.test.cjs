@@ -32,9 +32,9 @@ test('large role layout uses its actual budget, keeps panel separate, and reject
   assert.deepEqual(shape(v.regions,1000,800,v.sizes),v.regions);
   assert.ok(v.regions.every(r=>r.x>=8&&r.y>=8&&r.x+r.width<=976&&r.y+r.height<=776));
   const enlarged=v.regions.map(r=>({...r}));enlarged[0].width++;assert.deepEqual(shape(enlarged,1000,800,v.sizes),tiny);
-  for(const sizes of [[{width:673,height:420}],[{width:672,height:421}],[{width:672,height:420},{width:501,height:560}],[{width:672,height:420},{width:500,height:561}]])assert.deepEqual(shape([{x:8,y:8,width:10,height:10}],2000,2000,sizes),tiny);
+  for(const sizes of [[{width:673,height:420}],[{width:672,height:421}],[{width:672,height:420},{width:761,height:800}],[{width:672,height:420},{width:760,height:801}]])assert.deepEqual(shape([{x:8,y:8,width:10,height:10}],2000,2000,sizes),tiny);
   const max=layout({x:9999,y:9999},1200,800,false,0,{width:672,height:420});assert.deepEqual(shape(max.regions,1200,800,max.sizes),max.regions);
-  assert.deepEqual(shape([{x:8,y:8,width:672,height:420},{x:8,y:8,width:672,height:420}],2000,2000,[{width:672,height:420},{width:672,height:420}]),tiny);
+  assert.deepEqual(shape([{x:8,y:8,width:672,height:420},{x:8,y:8,width:761,height:800}],2000,2000,[{width:672,height:420},{width:761,height:800}]),tiny);
 });
 test('physical native bounds become Chromium DIP at 100, 150 and 200 percent', () => {
   assert.deepEqual(viewport(1200,900,96),{width:1200,height:900});

@@ -1,4 +1,4 @@
-const button=document.getElementById('widget'),details=document.getElementById('details');
+const button=document.getElementById('widget'),details=document.getElementById('details'),panelBody=document.getElementById('panel-body'),text=(value,args)=>window.uiText.t(value,args);
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
 let feedbackAnimation;
@@ -11,18 +11,18 @@ function reportScroll(){
   if(scrollReportPending)return;scrollReportPending=true;
   requestAnimationFrame(()=>{
     scrollReportPending=false;const r=document.querySelector('#character-tab').getBoundingClientRect();
-    window.widget.panelScroll?.({top:Math.max(0,Math.round(details.scrollTop)),height:details.scrollHeight,clientHeight:details.clientHeight,wheelEvents,tab:document.querySelector('nav [aria-selected="true"]').id.replace('-tab',''),roleTab:{x:Math.max(0,Math.round(r.x+r.width/2)),y:Math.max(0,Math.round(r.y+r.height/2))}});
+    window.widget.panelScroll?.({top:Math.max(0,Math.round(panelBody.scrollTop)),height:panelBody.scrollHeight,clientHeight:panelBody.clientHeight,wheelEvents,tab:document.querySelector('nav [aria-selected="true"]').id.replace('-tab',''),roleTab:{x:Math.max(0,Math.round(r.x+r.width/2)),y:Math.max(0,Math.round(r.y+r.height/2))}});
   });
 }
-details.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+1);reportScroll();},{passive:true});
-details.addEventListener('scroll',reportScroll,{passive:true});
+panelBody.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+1);reportScroll();},{passive:true});
+panelBody.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
   layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
-  if(!layoutDragging){render();reportScroll();}
+  if(!layoutDragging&&!value.resizing){render();reportScroll();}
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
@@ -32,7 +32,7 @@ function selectTab(name){
     document.getElementById(tab+'-panel').hidden=tab!==name;
     document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
   }
-  details.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
+  panelBody.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
 }
 for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>selectTab(name));
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
@@ -40,27 +40,27 @@ document.getElementById('position-reset').addEventListener('click',()=>window.wi
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
   if(layoutDragging)return;
-  const view=window.quotaView.present(quota,width);
+  const view=window.quotaView.present(quota,width,Date.now(),window.uiText.language);
   window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;
-  button.setAttribute('aria-label',view.compact.label+'，剩余 '+view.compact.text+'，点击详情，拖动移动');
+  button.setAttribute('aria-label',text('{label}，剩余 {value}，点击详情，拖动移动',{label:view.compact.label,value:view.compact.text}));
   document.getElementById('status').textContent=view.compact.text;
   document.getElementById('compact-track').hidden=!view.showCompactBar;
   bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);
-  button.title=view.compact.label+' · '+(quota.stale?'数据待更新':'实时额度');
+  button.title=view.compact.label+' · '+text(quota.stale?'数据待更新':'实时额度');
   const cards=document.getElementById('cards');cards.replaceChildren();
   if(view.empty){const empty=document.createElement('p');empty.textContent=view.empty;cards.append(empty);}
   for(const card of view.cards){
     const article=document.createElement('article'),title=document.createElement('strong'),row=document.createElement('div'),reset=document.createElement('span'),remaining=document.createElement('strong'),track=document.createElement('div'),fill=document.createElement('div');
-    title.textContent=card.label;row.className='card-row';reset.textContent=card.resetText;remaining.textContent='剩余 '+card.percentText;row.append(reset,remaining);fill.className='fill';track.append(fill);bar(track,fill,card.remainingPercent,card.tone);article.append(title,row,track);cards.append(article);
+    title.textContent=card.label;row.className='card-row';reset.textContent=card.resetText;remaining.textContent=text('剩余 {value}',{value:card.percentText});row.append(reset,remaining);fill.className='fill';track.append(fill);bar(track,fill,card.remainingPercent,card.tone);article.append(title,row,track);cards.append(article);
   }
   const age=Number.isFinite(quota.observedAt)?Math.max(0,Math.floor((Date.now()-quota.observedAt)/1000)):null;
-  const ageText=age===null?'尚未更新':age<60?age+' 秒前更新':Math.floor(age/60)+' 分钟前更新';
+  const ageText=age===null?text('尚未更新'):age<60?text('{value} 秒前更新',{value:age}):text('{value} 分钟前更新',{value:Math.floor(age/60)});
   const source={http:'接口',local:'本地额度快照',rpc:'额度 RPC',none:'暂无来源'}[quota.source] || '暂无来源';
-  document.getElementById('metadata').textContent='套餐：'+(quota.planType || '未知')+' · '+source+'\n'+ageText+(quota.stale?' · 数据待更新':'');
+  document.getElementById('metadata').textContent=text('套餐：{plan} · {source}',{plan:quota.planType||text('未知'),source:text(source)})+'\n'+ageText+(quota.stale?' · '+text('数据待更新'):'');
 }
 function renderTokens(){
-  const view=window.quotaView.presentTokens(tokens),chart=document.getElementById('token-chart'),exact=document.getElementById('token-exact-values');chart.replaceChildren();exact.replaceChildren();
+  const view=window.quotaView.presentTokens(tokens,window.uiText.language),chart=document.getElementById('token-chart'),exact=document.getElementById('token-exact-values');chart.replaceChildren();exact.replaceChildren();
   document.getElementById('token-coverage').textContent=view.coverageText;
   const indexing=document.getElementById('token-status');indexing.textContent=view.coverageText.split(' · ')[0];indexing.hidden=tokens?.coverage==='complete';
   chart.setAttribute('aria-label',view.rows.map(row=>row.label+'：'+row.text+' token').join('，'));
@@ -70,7 +70,7 @@ function renderTokens(){
     bar.className='token-bar';bar.style.width=row.percent+'%';plot.append(bar);item.append(label,value,plot);chart.append(item);
     const term=document.createElement('dt'),count=document.createElement('dd');term.textContent=label.textContent;count.textContent=row.text;exact.append(term,count);
   }
-  document.getElementById('token-updated').textContent=Number.isFinite(tokens?.observedAt)?'截至 '+new Date(tokens.observedAt).toLocaleTimeString('zh-CN',{hour12:false})+' · 5 分钟缓存':'历史正在补齐，当前为部分覆盖';
+  document.getElementById('token-updated').textContent=Number.isFinite(tokens?.observedAt)?text('截至 {time} · 5 分钟缓存',{time:new Date(tokens.observedAt).toLocaleTimeString(window.uiText.language,{hour12:false})}):text('历史正在补齐，当前为部分覆盖');
 }
 button.addEventListener('pointerdown',event=>{
   if(event.button!==0)return;
@@ -85,4 +85,4 @@ button.addEventListener('pointermove',event=>{
 });
 function end(event){if(!start)return;if(!moved&&event.type==='pointerup'){clickFeedback();window.widget.gesture({type:'click'});}window.widget.gesture({type:'end'});start=null;}
 button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
-setInterval(render,1000);render();renderTokens();
+window.addEventListener('languagechange',()=>{render();renderTokens();});setInterval(render,1000);render();renderTokens();

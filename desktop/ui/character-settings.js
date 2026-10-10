@@ -1,19 +1,19 @@
 (()=>{
   const $=id=>document.getElementById(id);
   let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='';
-  const active=()=>snapshot.characters.find(c=>c.name===snapshot.active),error=text=>$('character-error').textContent=text;
+  const active=()=>snapshot.characters.find(c=>c.name===snapshot.active),error=text=>{$('character-error').dataset.i18n=text;$('character-error').textContent=window.uiText.t(text);};
   function reportSize(view){
     const dimensions=content?.key===view.url+'|'+view.settings.background?content:{contentWidth:199,contentHeight:280};
     const value={contentWidth:dimensions.contentWidth,contentHeight:dimensions.contentHeight,targetHeight:view.settings.targetHeight??280},key=JSON.stringify(value);
     if(key!==lastSize){lastSize=key;window.widget.characterSize(value);}
   }
-  const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));}),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').textContent=text;if(bad)error(text);});
+  const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));}),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').dataset.i18n=text;$('character-processing').textContent=window.uiText.t(text);if(bad)error(text);});
   window.resizeCharacter=(width,height)=>{const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(height*.92*scale)));};
-  async function action(value){try{const q=await window.widget.characterAction(value);if(!q.ok)error(q.error);else error('');}catch{error('角色操作失败，请重试。');}}
+  async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');}catch{error('角色操作失败，请重试。');}}
   window.renderCharacter=()=>{const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
-    const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent='上传立绘，即可添加角色';list.append(hint);}
+    const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent=window.uiText.t('上传立绘，即可添加角色');list.append(hint);}
     for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.tabIndex=-1;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
     for(const id of ['character-rename','character-delete','character-background','character-zoom','character-size','character-reset'])$(id).disabled=!role;
     $('character-background').checked=role?.settings.background??true;$('character-zoom').value=role?.settings.zoom||1;$('character-zoom-value').textContent=(role?.settings.zoom||1).toFixed(2)+'×';$('character-size').value=role?.settings.targetHeight??280;$('character-size-value').textContent=(role?.settings.targetHeight??280)+'px';renderPreview();window.renderCharacter();
@@ -29,7 +29,7 @@
   const canvas=$('character-processed');canvas.onpointerdown=event=>{const role=active();if(!role||event.button!==0)return;event.preventDefault();canvas.setPointerCapture(event.pointerId);panStart={clientX:event.clientX,clientY:event.clientY,x:role.settings.x,y:role.settings.y};};
   canvas.onpointermove=event=>{if(!panStart)return;const r=canvas.getBoundingClientRect();changed({x:Math.max(-1,Math.min(1,panStart.x+2*(event.clientX-panStart.clientX)/r.width)),y:Math.max(-1,Math.min(1,panStart.y+2*(event.clientY-panStart.clientY)/r.height))});};
   canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=()=>{if(panStart){panStart=null;flush();}};
-  render();
+  window.addEventListener('languagechange',render);render();
   // All quota/token/character listeners must exist before the startup snapshots.
   window.widget.ready();
 })();

@@ -13,7 +13,7 @@ async function mainHarness(source,options={}){
     setShape(value){shapes.push(value);}setIgnoreMouseEvents(){}getNativeWindowHandle(){const b=Buffer.alloc(8);b.writeBigUInt64LE(1n);return b;}
     getSize(){return [800,600];}setSize(){}getBounds(){return {x:0,y:0};}isVisible(){return true;}isFocused(){return false;}isDestroyed(){return false;}showInactive(){}hide(){}async loadFile(){}
   }
-  const electron={app:{setPath(){},disableHardwareAcceleration(){},commandLine:{appendSwitch(){}},whenReady(){return {then(fn){start=fn;}};},on:(name,fn)=>appHandlers.set(name,fn),quit(){}},BrowserWindow:FakeWindow,ipcMain:{on:(name,fn)=>handlers.set(name,fn)},screen:{getCursorScreenPoint:()=>({x:0,y:0})},protocol:{registerSchemesAsPrivileged(){}}};
+  const electron={app:{setPath(){},disableHardwareAcceleration(){},commandLine:{appendSwitch(){}},whenReady(){return {then(fn){start=fn;}};},on:(name,fn)=>appHandlers.set(name,fn),quit(){}},BrowserWindow:FakeWindow,ipcMain:{on:(name,fn)=>handlers.set(name,fn),handle:(name,fn)=>handlers.set(name,fn)},screen:{getCursorScreenPoint:()=>({x:0,y:0})},protocol:{registerSchemesAsPrivileged(){}}};
   const testFs={readFileSync(file){if(path.basename(file)==='position.json'&&options.savedPosition!==undefined)return options.savedPosition;throw Error('No prior data');},writeFileSync(file,value){writes.push({at:now,file:path.basename(file),value});},renameSync(){}};
   class FakeDate extends Date{static now(){return now;}}
   const context=vm.createContext({process:{argv:['node','main','--data','C:/drag-fixture']},Buffer,console,...clock,Date:FakeDate,JSON:{parse:JSON.parse,stringify(...args){stringifies++;return JSON.stringify(...args);}},__dirname:path.dirname(filename),require:name=>{
@@ -21,6 +21,7 @@ async function mainHarness(source,options={}){
     if(name==='node:net')return {createServer(fn){connect=fn;return {listen(_name,fn){fn();},close(){}};}};
     if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}refresh(){return new Promise(()=>{});}}};
     if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};
+    if(name==='../runtime/panel-preferences.cjs')return {PanelPreferencesStore:class{async read(){return options.savedPanel||{width:480,height:560,language:'zh-CN'};}async save(value){writes.push({at:now,file:'panel-preferences.json',value:JSON.stringify(value)});return value;}}};
     if(name==='../runtime/characters.cjs')return {CharacterStore:class{async init(){}}};
     if(name==='./characters.cjs')return {installCharacters(){}};return localRequire(name);
   }});

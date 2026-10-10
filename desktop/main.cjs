@@ -10,6 +10,8 @@ const {Worker}=require('node:worker_threads');
 const {visibility}=require('./visibility.cjs');
 const {CharacterStore}=require('../runtime/characters.cjs');
 const {installCharacters}=require('./characters.cjs');
+const panelModel=require('./ui/panel-model.js');
+const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -27,6 +29,8 @@ let defaultPlacement=true;
 let diagnosticTimer,layoutTimer,checkpointTimer;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
+const panelStore=new PanelPreferencesStore(data);
+let panelPreferences=panelModel.defaults(),panelOffset=null,panelResizing=false;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
 const stateFile=path.join(data,'window-state.json');
@@ -34,13 +38,13 @@ function writeDiagnostic(){
   fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function diagnostic(){
-  if(dragging){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
+  if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
   clearTimeout(diagnosticTimer);diagnosticTimer=null;writeDiagnostic();
 }
 function savePosition(){fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,dragging});}
+function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,dragging,resizing:panelResizing,panelPreferences});}
 function notifyLayout(){
-  if(dragging){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
+  if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
 }
 function beginDrag(){
@@ -56,8 +60,8 @@ function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||dip.width<=1||dip.height<=1)return;
   const previous=widget;
-  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize);widget=viewLayout.widget;
-  if(!dragging&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
+  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize,panelPreferences,panelOffset);widget=viewLayout.widget;
+  if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
   notifyLayout();
@@ -79,6 +83,20 @@ app.whenReady().then(async()=>{
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
   const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
+  panelPreferences=await panelStore.read();
+  const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
+  ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
+  ipcMain.handle('panel-language',async(event,language)=>{
+    if(event.sender!==win.webContents||!panelModel.LANGUAGES.includes(language))return {ok:false};
+    panelPreferences={...panelPreferences,language};notifyLayout();
+    try{await panelStore.save({...panelPreferences});return {ok:true};}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+  });
+  ipcMain.on('panel-resize',(event,value)=>{
+    if(event.sender!==win.webContents||!value||!expanded||dragging)return;
+    if(value.type==='begin'&&viewLayout?.regions[1]){const p=viewLayout.regions[1];panelOffset={x:p.x-widget.x,y:p.y-widget.y};panelResizing=true;}
+    else if(value.type==='update'&&panelResizing&&panelModel.validSize(value)){panelPreferences={...panelPreferences,width:value.width,height:value.height};updateShape();}
+    else if(value.type==='end'&&panelResizing){panelResizing=false;updateShape();diagnostic();savePanel();}
+  });
   const show=visibility(win);
   function sync(){
     if(quitting||win.isDestroyed())return;
@@ -95,7 +113,7 @@ app.whenReady().then(async()=>{
   ipcMain.on('panel-scroll',(event,value)=>{
     if(event.sender!==win.webContents||!value||!['top','height','clientHeight','wheelEvents'].every(k=>Number.isInteger(value[k])&&value[k]>=0&&value[k]<=100000))return;
     const roleTab=value.roleTab;
-    if(!roleTab||!['x','y'].every(k=>Number.isInteger(roleTab[k])&&roleTab[k]>=0&&roleTab[k]<=32768)||!['quota','token','character'].includes(value.tab))return;
+    if(!roleTab||!['x','y'].every(k=>Number.isInteger(roleTab[k])&&roleTab[k]>=0&&roleTab[k]<=32768)||!['quota','token','character','appearance'].includes(value.tab))return;
     panelScroll={top:value.top,height:value.height,clientHeight:value.clientHeight,wheelEvents:value.wheelEvents,tab:value.tab,roleTab:{x:roleTab.x,y:roleTab.y}};diagnostic();
   });
   ipcMain.on('character-size',(event,value)=>{
@@ -107,7 +125,7 @@ app.whenReady().then(async()=>{
     // until a real viewport is available instead of clamping it against 1×1.
     if(host.bounds&&dip.width>32&&dip.height>32){updateShape();diagnostic();}
   });
-  ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
+  ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;updateShape();diagnostic();});
   ipcMain.on('reset-position',event=>{
     if(event.sender!==win.webContents||dragging)return;
     defaultPlacement=true;widget=null;updateShape();diagnostic();
@@ -183,7 +201,7 @@ app.whenReady().then(async()=>{
     if(!win || win.isDestroyed())return;
     const cursor=screen.getCursorScreenPoint(),bounds=win.getBounds();
     const x=cursor.x-bounds.x,y=cursor.y-bounds.y;
-    const hit=dragging || region.some(r=>x>=r.x&&y>=r.y&&x<r.x+r.width&&y<r.y+r.height);
+    const hit=dragging || panelResizing || region.some(r=>x>=r.x&&y>=r.y&&x<r.x+r.width&&y<r.y+r.height);
     if(hit!==accepting){accepting=hit;win.setIgnoreMouseEvents(!hit,{forward:true});}
   },16);
 });
