@@ -108,7 +108,7 @@ app.whenReady().then(async()=>{
     try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;setTextEditing(false);notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
   });
   const dismiss=()=>{setTextEditing(false);if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
-  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging)return;speechVisible=false;expanded=true;updateShape();diagnostic();});
+  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging)return;speechVisible=false;panelOffset=null;expanded=true;updateShape();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
   ipcMain.handle('panel-language',async(event,language)=>{
@@ -153,10 +153,21 @@ app.whenReady().then(async()=>{
     const next=portraitSize(value.contentWidth,value.contentHeight,value.targetHeight,value.zoom>1);
     if(value.targetWidth!==undefined){if(!Number.isInteger(value.targetWidth)||value.targetWidth<126||value.targetWidth>672)return;next.width=value.targetWidth;next.height=Math.round(value.targetHeight);}
     if(next.width===characterSize.width&&next.height===characterSize.height)return;
+    const panel=expanded?viewLayout?.regions[1]:null;
     characterSize=next;
     // Decoding can finish before the host handshake; retain the saved position
     // until a real viewport is available instead of clamping it against 1×1.
-    if(host.bounds&&dip.width>32&&dip.height>32){updateShape();diagnostic();}
+    if(host.bounds&&dip.width>32&&dip.height>32){
+      // Keep the controls under the pointer while character dimensions change.
+      // The existing layout/position clamp still bounds the settings region.
+      if(panel){
+        const scale=docked()?Math.min(1,dip.width*.25/next.width,dip.height*.30/next.height):1;
+        const resident={width:Math.max(1,Math.round(next.width*scale)),height:Math.max(1,Math.round(next.height*scale))};
+        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences).widget;
+        panelOffset={x:panel.x-point.x,y:panel.y-point.y};
+      }
+      updateShape();diagnostic();
+    }
   });
   ipcMain.on('collapse',event=>{if(event.sender===win.webContents)dismiss();});
   ipcMain.on('reset-position',event=>{

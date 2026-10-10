@@ -1,7 +1,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
-    '1× 全身，2× 半身，最高 4× 近景。':'1× full body, 2× half body, up to 4× close-up.',
+    '取景倍数 0.5–4×。':'Framing zoom: 0.5–4×.',
     '1× 全身，2× 上半身；头顶与左右完整保留。':'1× full body, 2× upper body. Head and sides stay complete.',
     '雾蓝 × 群青':'Mist blue × Ultramarine','燕麦 × 暖金':'Oat × Warm gold','玫瑰白 × 酒红':'Rose white × Burgundy','雾绿 × 蓝绿':'Mist green × Teal','米白 × 深棕':'Ivory × Dark brown','灰蓝 × 深蓝':'Grey blue × Deep blue','杏白 × 暖红':'Apricot white × Warm red',
     '克莱茵蓝':'Klein Blue','群青 × 雾白':'Ultramarine × Mist white','申布伦黄':'Schönbrunn Yellow','暖黄 × 深棕':'Warm yellow × Dark brown','勃艮第红':'Burgundy','酒红 × 玫瑰白':'Burgundy × Rose white','马尔斯绿':'Marrs Green','蓝绿 × 墨绿':'Teal × Deep green','凡戴克棕':'Van Dyke Brown','深棕 × 香槟':'Dark brown × Champagne','普鲁士蓝':'Prussian Blue','深蓝 × 银白':'Deep blue × Silver white','提香红':'Titian Red','暖红 × 深红':'Warm red × Deep red',
