@@ -10,7 +10,8 @@ app.disableHardwareAcceleration();
 app.whenReady().then(()=>{
   const win=new BrowserWindow({show:false,frame:false,transparent:true,skipTaskbar:true,width:400,height:300});
   const invalid=[[],null,[{x:NaN,y:0,width:4,height:4}],Array(65).fill({x:2,y:2,width:4,height:4}),[{x:0,y:0,width:400,height:300}]];
-  for(const input of invalid){const result=shape(input,400,300);assert.deepEqual(result,[{x:0,y:0,width:1,height:1}]);win.setShape(result);}
-  fs.writeFileSync(output,JSON.stringify({hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),cases:invalid.length}));
+  const sizes=[{width:160,height:112},{width:320,height:270}];
+  for(const input of invalid){for(const profile of [undefined,sizes]){const result=shape(input,400,300,profile);assert.deepEqual(result,[{x:0,y:0,width:1,height:1}]);win.setShape(result);}}
+  fs.writeFileSync(output,JSON.stringify({hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),cases:invalid.length*2}));
   setTimeout(()=>app.quit(),15000);
 });

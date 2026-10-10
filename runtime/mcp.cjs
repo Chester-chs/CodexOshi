@@ -1,4 +1,4 @@
-// Local stdio MCP skeleton: no credentials, HTTP, model calls or Codex subprocesses.
+// MCP reads companion diagnostics only; the desktop process owns quota polling.
 const fs=require('node:fs');
 const path=require('node:path');
 const os=require('node:os');
@@ -16,13 +16,14 @@ function status(){
   try{window=JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));}catch{}
   let running=false;
   if(isFresh(window)){try{process.kill(window.pid,0);running=true;}catch{}}
-  return {stage:1,dataReadsEnabled:false,running,acceptance:'pending-cross-dpi-and-restart',window:running?window:null};
+  let quota=null;try{quota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
+  return {stage:2,dataReadsEnabled:true,running,quota,window:running?window:null};
 }
 function dispatch(message){
   if(!message || message.jsonrpc!=='2.0' || typeof message.method!=='string')return {error:{code:-32600,message:'Invalid request'}};
   if(message.method==='initialize')return {result:{protocolVersion:message.params?.protocolVersion || '2024-11-05',capabilities:{tools:{}},serverInfo:{name:'codex-quota-widget',version:'0.1.0'}}};
   if(message.method==='ping')return {result:{}};
-  if(message.method==='tools/list')return {result:{tools:[{name:'widget_status',description:'Read local stage 1 widget window diagnostics; does not read account or session data.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,openWorldHint:false}}]}};
+  if(message.method==='tools/list')return {result:{tools:[{name:'widget_status',description:'Read local widget window and sanitized quota diagnostics; does not fetch account data or launch turns.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,openWorldHint:false}}]}};
   if(message.method==='tools/call' && message.params?.name==='widget_status')return {result:{content:[{type:'text',text:JSON.stringify(status())}]}};
   return {error:{code:-32601,message:'Method or tool not allowed'}};
 }

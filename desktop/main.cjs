@@ -3,7 +3,8 @@ const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
 const crypto=require('node:crypto');
-const {shape,viewport,position,SIZE}=require('./geometry.cjs');
+const {shape,viewport,layout}=require('./geometry.cjs');
+const {QuotaReader}=require('../runtime/quota.cjs');
 const {visibility}=require('./visibility.cjs');
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -12,14 +13,19 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-features','CalculateNativeWinOcclusion');
 let win,ready=false,host={},region=[{x:0,y:0,width:1,height:1}],widget=null,clicks=0,dragging=false;
 let dip={width:1,height:1};
-let bridge,receivedAt=Date.now();
+let bridge,receivedAt=Date.now(),expanded=false,viewLayout=null,pollTimer;
+let savedQuota=null;
+try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
+const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
 const stateFile=path.join(data,'window-state.json');
 function diagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,quota:reader.snapshot,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function updateShape(){
-  region=shape([{...widget,...SIZE}],dip.width,dip.height);
+  viewLayout=layout(widget,dip.width,dip.height,expanded,reader.snapshot.windows.length);widget=viewLayout.widget;
+  region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
+  if(ready)win.webContents.send('layout',viewLayout);
 }
 app.whenReady().then(async()=>{
   win=new BrowserWindow({title:'Codex Quota Widget',width:1,height:1,type:'toolbar',transparent:true,frame:false,thickFrame:false,
@@ -35,27 +41,32 @@ app.whenReady().then(async()=>{
     if(host.bounds){
       dip=viewport(host.bounds.width,host.bounds.height,host.dpi);
       if(win.getSize()[0]!==dip.width || win.getSize()[1]!==dip.height) win.setSize(dip.width,dip.height,false);
-      widget=widget?position(widget.x,widget.y,dip.width,dip.height):position(dip.width,dip.height,dip.width,dip.height);
       updateShape();
-      if(ready) win.webContents.send('layout',widget);
     }
     show({...host,ready});
     diagnostic();
   }
-  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;sync()});
+  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;win.webContents.send('quota',reader.snapshot);sync()});
+  ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
   ipcMain.on('gesture',(event,value)=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object')return;
     if(value.type==='drag'){
-      dragging=true;widget=position(value.x,value.y,dip.width,dip.height);updateShape();
-      win.webContents.send('layout',widget);
+      if(!Number.isFinite(value.x)||!Number.isFinite(value.y))return;
+      dragging=true;widget={x:value.x,y:value.y};updateShape();
     } else if(value.type==='end'){
       dragging=false;
       fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));
-    } else if(value.type==='click') clicks++;
+    } else if(value.type==='click'){clicks++;expanded=!expanded;updateShape();}
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y))widget=saved;}catch{}
   await win.loadFile(path.join(__dirname,'ui','index.html'));
+  async function refresh(){
+    const quota=await reader.refresh();if(win.isDestroyed())return;
+    try{const temp=path.join(data,'quota-state.json.tmp');fs.writeFileSync(temp,JSON.stringify(quota,null,2));fs.renameSync(temp,path.join(data,'quota-state.json'));}catch{}
+    if(ready){win.webContents.send('quota',quota);updateShape();}diagnostic();
+  }
+  refresh().catch(()=>{});pollTimer=setInterval(()=>refresh().catch(()=>{}),30000);
   const pipeName='codex-quota-widget-'+process.pid+'-'+crypto.randomBytes(12).toString('hex');
   const token=crypto.randomBytes(32).toString('hex');
   bridge=net.createServer(socket=>{
@@ -90,4 +101,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{if(bridge)bridge.close();});
+app.on('before-quit',()=>{clearInterval(pollTimer);if(bridge)bridge.close();});

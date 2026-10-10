@@ -1,6 +1,31 @@
-const button=document.getElementById('widget');
-let widgetPosition={x:8,y:8},start=null,moved=false,count=0;
-window.widget.layout(value=>{widgetPosition=value;button.style.left=value.x+'px';button.style.top=value.y+'px'});
+const button=document.getElementById('widget'),details=document.getElementById('details');
+let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160;
+function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
+window.widget.layout(value=>{
+  widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
+  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);render();
+});
+window.widget.quota(value=>{quota=value;render();});
+document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
+function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
+function render(){
+  const view=window.quotaView.present(quota,width);
+  document.getElementById('window-label').textContent=view.compact.label;
+  document.getElementById('status').textContent=view.compact.text;
+  document.getElementById('compact-track').hidden=!view.showCompactBar;
+  bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);
+  button.title=view.compact.label+' · '+(quota.stale?'数据待更新':'实时额度');
+  const cards=document.getElementById('cards');cards.replaceChildren();
+  if(view.empty){const empty=document.createElement('p');empty.textContent=view.empty;cards.append(empty);}
+  for(const card of view.cards){
+    const article=document.createElement('article'),title=document.createElement('strong'),row=document.createElement('div'),reset=document.createElement('span'),remaining=document.createElement('strong'),track=document.createElement('div'),fill=document.createElement('div');
+    title.textContent=card.label;row.className='card-row';reset.textContent=card.resetText;remaining.textContent='剩余 '+card.percentText;row.append(reset,remaining);fill.className='fill';track.append(fill);bar(track,fill,card.remainingPercent,card.tone);article.append(title,row,track);cards.append(article);
+  }
+  const age=Number.isFinite(quota.observedAt)?Math.max(0,Math.floor((Date.now()-quota.observedAt)/1000)):null;
+  const ageText=age===null?'尚未更新':age<60?age+' 秒前更新':Math.floor(age/60)+' 分钟前更新';
+  const source={http:'接口',local:'本地额度快照',rpc:'额度 RPC',none:'暂无来源'}[quota.source] || '暂无来源';
+  document.getElementById('metadata').textContent='套餐：'+(quota.planType || '未知')+' · '+source+'\n'+ageText+(quota.stale?' · 数据待更新':'');
+}
 button.addEventListener('pointerdown',event=>{
   if(event.button!==0)return;
   event.preventDefault();button.setPointerCapture(event.pointerId);
@@ -12,6 +37,7 @@ button.addEventListener('pointermove',event=>{
   if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
   if(moved)window.widget.gesture({type:'drag',x:start.left+dx,y:start.top+dy});
 });
-function end(){if(!start)return;if(!moved){window.widget.gesture({type:'click'});document.getElementById('status').textContent='点击 '+(++count)}window.widget.gesture({type:'end'});start=null;}
+function end(event){if(!start)return;if(!moved&&event.type==='pointerup')window.widget.gesture({type:'click'});window.widget.gesture({type:'end'});start=null;}
 button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
+setInterval(render,1000);render();
 window.widget.ready();

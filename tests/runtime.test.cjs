@@ -2,8 +2,9 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const {dispatch,isFresh}=require('../runtime/mcp.cjs');
 const {authorizeRead}=require('../runtime/read-policy.cjs');
-test('stage 1 rejects every data source including future allowed reads',()=>{
-  for(const operation of [{method:'GET',url:'https://chatgpt.com/backend-api/wham/usage'},{rpc:'account/rateLimits/read'},{local:'session-files-read-only'},{}]) assert.throws(()=>authorizeRead(operation),/disabled in stage 1/);
+test('quota allowlist rejects model calls, writes, other URLs and files',()=>{
+  for(const operation of [{method:'POST',url:'https://chatgpt.com/backend-api/wham/usage'},{rpc:'turn/start'},{rpc:'thread/start'},{method:'GET',url:'https://example.com'},{local:'session-files-read-only'},{file:'C:/other.jsonl',codexHome:'C:/safe'},{}]) assert.throws(()=>authorizeRead(operation),/allowlist/);
+  for(const operation of [{method:'GET',url:'https://chatgpt.com/backend-api/wham/usage'},{rpc:'initialize'},{rpc:'account/rateLimits/read'},{file:'C:/safe/auth.json',codexHome:'C:/safe'},{file:'C:/safe/sessions/2026/a.jsonl',codexHome:'C:/safe'}])assert.doesNotThrow(()=>authorizeRead(operation));
 });
 test('MCP only exposes local diagnostics and rejects unlisted tools and methods',()=>{
   assert.equal(dispatch({jsonrpc:'2.0',method:'tools/list'}).result.tools[0].name,'widget_status');
@@ -36,7 +37,7 @@ test('real stdio MCP process initializes and returns only local diagnostics',()=
   assert.deepEqual(replies.map(x=>x.id),[1,2,3]);
   assert.equal(replies[0].result.protocolVersion,'2024-11-05');
   assert.equal(replies[1].result.tools.length,1);
-  assert.equal(JSON.parse(replies[2].result.content[0].text).dataReadsEnabled,false);
+  assert.equal(JSON.parse(replies[2].result.content[0].text).dataReadsEnabled,true);
 });
 test('MCP executable records startup metadata without polluting protocol output',()=>{
   const fs=require('node:fs'),path=require('node:path'),os=require('node:os');

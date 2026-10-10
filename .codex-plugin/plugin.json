@@ -1,13 +1,13 @@
 {
   "name": "codex-quota-widget",
   "version": "0.1.0",
-  "description": "Codex 额度挂件：阶段 1 窗口骨架，跨 DPI 切换待验收",
+  "description": "Codex 额度挂件：真实额度、常驻进度条与点击详情",
   "author": { "name": "Chester-chs" },
   "license": "MIT",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Codex 额度挂件",
-    "shortDescription": "透明挂件与窗口跟随骨架；尚不读取额度",
+    "shortDescription": "显示剩余额度与重置倒计时，不启动模型任务",
     "developerName": "Chester-chs",
     "category": "Productivity"
   }

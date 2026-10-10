@@ -1,8 +1,8 @@
 # Codex 额度挂件
 
-阶段 1：Codex 插件包装、透明 Electron 挂件、C#/Win32 owner 与 WinEvent 跟随。只有原创 CSS 占位角色和点击计数；尚不读取额度、凭据或会话，也不实现图片、音频和统计。
+阶段 2：Codex 插件包装、透明 Electron 挂件、C#/Win32 窗口跟随，以及真实额度的常驻细条和点击详情。角色继续使用 CSS 占位，不实现 token 统计、自定义立绘或音频。
 
-按用户授权的路线 A，鼠标交互已通过原生探针：挂件允许短暂激活，C# 延后 80ms 恢复 Codex 前台，实测在 300ms 内恢复，点击、拖动和形状外穿透均通过。跨 DPI 切换与重启后 MCP 加载仍待验收。详见 `docs/stage-1-verification.md`。
+阶段 1 已全部验收；阶段 2 继续保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。详见 `docs/stage-1-verification.md` 与 `docs/stage-2-verification.md`。
 
 ## 安装
 
@@ -18,7 +18,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 安装使用锁定的 Electron 44.3.0，下载文件与编译产物只写用户数据目录。它合并个人市场的本插件条目，使用 Codex 的 `plugin add` 安装；不会修改其他插件条目。默认添加当前用户登录启动任务 `Codex Quota Widget`，不请求管理员权限。调试安装可加 `-NoStartup -NoStart`。
 
-首次加载 MCP 骨架需要**完全退出并重开 Codex，再新建聊天**。正在进行的聊天不能用来证明新插件已经加载。
+首次加载或更新 MCP 服务需要**完全退出并重开 Codex，再新建聊天**。正在进行的聊天不能用来证明更新后的服务已经加载。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\start.ps1
@@ -31,9 +31,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 ## 窗口与交互
 
-透明窗口覆盖 Codex 客户区。C# 控制物理位置、owner 和激活后的宿主焦点恢复；Electron 同步 Chromium 的 DIP 视口。形状仅包含 96×80 DIP 的占位角色；形状外的点击、滚动和文本选择交给宿主。空、非法、超限及整窗形状统一回退 1×1，绝不传入空形状。没有托盘、任务栏挂件。
+透明窗口按 Codex 客户区定位，C# 控制物理位置、owner 和激活后的宿主焦点恢复；Electron 同步 Chromium 的 DIP 视口。常驻区域为 160×112 DIP，空间不足时缩小；宽度低于 120 DIP 隐藏进度条，只显示百分比。点击展开独立的详情区域（320 DIP 宽，按实际 0/1/2 窗口分配高度）。形状仅包含可见界面的矩形，两块之间和形状外的点击、滚动、选择文字交给宿主。实际面积预算与固定尺寸上限同时校验；空、非法、超限及整窗形状统一回退 1×1，绝不传入空形状。没有托盘、任务栏挂件。
 
-点击计数用于首次点击验收，拖动保存客户区坐标。当前使用 `focusable:true`、`showInactive()` 和形状外穿透。C# 在独立消息循环中监听挂件的前台/焦点事件，合并为一次 80ms 定时恢复；直接 SetForegroundWindow 被拒绝时才临时 AttachThreadInput，结束即解除。恢复前重新检查前台、宿主可见/启用状态、owner 和 PID；用户已切到其他应用时不恢复。立即恢复会打断 Chromium 输入，80ms 延迟在本机同时保留点击与完整拖动。
+点击展开或收起，拖动保存客户区坐标；点击计数继续用于诊断。当前使用 `focusable:true`、`showInactive()` 和形状外穿透。C# 在独立消息循环中监听挂件的前台/焦点事件，合并为一次 80ms 定时恢复；直接 SetForegroundWindow 被拒绝时才临时 AttachThreadInput，结束即解除。恢复前重新检查前台、宿主可见/启用状态、owner 和 PID；用户已切到其他应用时不恢复。立即恢复会打断 Chromium 输入，80ms 延迟在本机同时保留点击与完整拖动。
 
 **该方案允许瞬间激活及可能的焦点闪烁，验收标准是点击后 300ms 内恢复宿主。** `tests/Invoke-MouseProbe.ps1 -Label acceptance -RequirePass -VerifySwitchAway` 会计算最新 region 中心、注入点击与 10 步拖动、记录 100/300/1000ms 及前台变化时间，并用测试自有窗口验证切到其他应用后不会被拉回。它不属于插件运行时。
 
@@ -41,8 +41,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 ## 零额度消耗
 
-阶段 1 禁止所有账户和会话数据读取。MCP 仅提供 `widget_status`，读取本挂件自己的本地诊断，不自动发起任何模型任务。监督进程只启动自己的 Electron，不启动 Codex agent。
+挂件每 30 秒先 GET 固定的额度接口，读取前重读 auth.json，401 再重读并最多重试一次。失败时使用只读会话额度快照；没有可用快照才启动 `codex app-server --stdio`，逐条发送 `initialize`、`account/rateLimits/read`，最多每 5 分钟一次，完成即退出。历史会话只解析最近 4 MiB 内的额度快照，不保留聊天文本或 token 用量。访问令牌只留内存，不进入诊断、日志或源码。
 
-`runtime/read-policy.cjs` 仅保留未来允许清单：指定额度接口的 GET、只读本地会话文件、RPC `initialize` 和 `account/rateLimits/read`。阶段 1 中，即使清单内的读取也会拒绝。没有任何 HTTP 请求、模型补全或会话生成实现。
+`runtime/read-policy.cjs` 拒绝允许清单外的操作。没有模型补全、会话生成或启动 agent turn 的实现。MCP 仅提供 `widget_status`，读取本挂件自己保存的归一化额度与窗口诊断，不重复拉取账户数据。
+
+界面显示剩余百分比，实心条代表剩余；>20% 为正常色，>10% 且 ≤20% 为橙色，≤10% 为红色。按实际时长显示 5 小时、每周、长期或短期窗口，双窗口时常驻条显示剩余比例较低者。没有窗口就显示“暂无可用额度数据”；重置时间过后显示“等待更新”，不会自行恢复 100%。读取失败保留较新的已有数值并标出更新年龄。
+
+额度是 Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池，Chat 模式下的对话不计入此用量。数据来自 Codex 自己的额度接口，非本插件估算。上述说明在展开详情中可见；离线快照或 RPC 数据同时标明来源。
 
 默认角色由 CSS 和 Unicode 符号组成，不使用参考项目的立绘与音频。改编代码署名见 `THIRD_PARTY_NOTICES.md`。远端仓库和推送仍须获得用户确认。

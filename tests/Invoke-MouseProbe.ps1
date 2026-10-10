@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$Label,[switch]$RequirePass,[switch]$VerifySwitchAway)
+param([Parameter(Mandatory=$true)][ValidatePattern('^[a-z0-9-]+$')][string]$Label,[switch]$RequirePass,[switch]$VerifySwitchAway,[switch]$ExpandDetails)
 $ErrorActionPreference='Stop'
 $source=Split-Path -Parent $PSScriptRoot
 $codexRoot=if($env:CODEX_HOME){$env:CODEX_HOME}else{Join-Path $env:USERPROFILE '.codex'}
@@ -33,6 +33,15 @@ function Prepare($state,$point) {
 function Outside-Hits($state) {
     $bounds=[QuotaWindows]::Audit([long]$state.hwnd).bounds
     $scale=$state.host.dpi/96.0
+    if($state.region.Count -eq 2){
+        $a=$state.region[0];$b=$state.region[1]
+        $left=if($a.x -lt $b.x){$a}else{$b};$right=if($a.x -lt $b.x){$b}else{$a}
+        $top=[Math]::Max($a.y,$b.y);$bottom=[Math]::Min($a.y+$a.height,$b.y+$b.height)
+        if($left.x+$left.width -lt $right.x -and $bottom -gt $top){
+            $x=[int]($bounds.x+($left.x+$left.width+$right.x)/2.0*$scale);$y=[int]($bounds.y+($top+$bottom)/2.0*$scale)
+            [pscustomobject]@{x=$x;y=$y;root=[QuotaMouseProbe]::Hit($x,$y);kind='between-regions'}
+        }
+    }
     foreach($fx in @(0.1,0.25,0.5,0.75,0.9)) {
         foreach($fy in @(0.1,0.25,0.5,0.75,0.9)) {
             $x=[int]($bounds.x+$bounds.width*$fx);$y=[int]($bounds.y+$bounds.height*$fy)
@@ -48,12 +57,18 @@ while($true) {
     catch {if([DateTime]::UtcNow -ge $deadline){throw};Start-Sleep -Milliseconds 100}
 }
 $positionBefore=Get-Content -LiteralPath $positionPath -Raw | ConvertFrom-Json
+if($ExpandDetails -and $before.expanded){
+    $collapsePoint=Center $before;Prepare $before $collapsePoint
+    [QuotaMouseProbe]::ClickAndSample() | Out-Null;Start-Sleep -Milliseconds 500;$before=Read-State
+    if($before.expanded){throw 'Could not prepare collapsed baseline.'}
+}
 $point=Center $before
 Prepare $before $point
 $clickForegroundBefore=[QuotaMouseProbe]::Foreground()
 $clickObservation=[QuotaMouseProbe]::ClickAndSample()
 Start-Sleep -Milliseconds 500
 $clicked=Read-State
+if($ExpandDetails -and (-not $clicked.expanded -or $clicked.region.Count -ne 2)){throw 'Click did not expand both visible regions.'}
 $clickForegroundAfter=[QuotaMouseProbe]::Foreground()
 $outside=@(Outside-Hits $clicked)
 $point=Center $clicked
