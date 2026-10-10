@@ -60,14 +60,15 @@ function render(){
   document.getElementById('metadata').textContent='套餐：'+(quota.planType || '未知')+' · '+source+'\n'+ageText+(quota.stale?' · 数据待更新':'');
 }
 function renderTokens(){
-  const view=window.quotaView.presentTokens(tokens),chart=document.getElementById('token-chart');chart.replaceChildren();
+  const view=window.quotaView.presentTokens(tokens),chart=document.getElementById('token-chart'),exact=document.getElementById('token-exact-values');chart.replaceChildren();exact.replaceChildren();
   document.getElementById('token-coverage').textContent=view.coverageText;
   const indexing=document.getElementById('token-status');indexing.textContent=view.coverageText.split(' · ')[0];indexing.hidden=tokens?.coverage==='complete';
   chart.setAttribute('aria-label',view.rows.map(row=>row.label+'：'+row.text+' token').join('，'));
   for(const row of view.rows){
-    const item=document.createElement('div'),plot=document.createElement('div'),label=document.createElement('span'),value=document.createElement('strong'),bar=document.createElement('div');
-    item.className='token-column';plot.className='token-plot';label.className='token-label';label.textContent=row.label.replace('最近','');value.className='token-value';value.textContent=row.text;
+    const item=document.createElement('div'),plot=document.createElement('div'),label=document.createElement('span'),value=document.createElement('div'),number=document.createElement('strong'),unit=document.createElement('span'),bar=document.createElement('div');
+    item.className='token-column';item.title=row.label+'：'+row.text+' token';plot.className='token-plot';label.className='token-label';label.textContent=row.label.replace('最近','');value.className='token-value'+(row.number.length>6?' token-dense':'');number.className='token-number';number.textContent=row.number;unit.className='token-scale';unit.textContent=row.unit;value.append(number,unit);
     bar.className='token-bar';bar.style.width=row.percent+'%';plot.append(bar);item.append(label,value,plot);chart.append(item);
+    const term=document.createElement('dt'),count=document.createElement('dd');term.textContent=label.textContent;count.textContent=row.text;exact.append(term,count);
   }
   document.getElementById('token-updated').textContent=Number.isFinite(tokens?.observedAt)?'截至 '+new Date(tokens.observedAt).toLocaleTimeString('zh-CN',{hour12:false})+' · 5 分钟缓存':'历史正在补齐，当前为部分覆盖';
 }

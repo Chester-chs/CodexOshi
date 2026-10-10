@@ -18,7 +18,8 @@
     const names={hours24:'最近 24 小时',days7:'最近 7 天',days30:'最近 30 天'},max=tokens?.values?.days30;
     const rows=Object.entries(names).map(([key,label])=>{
       const value=tokens?.values?.[key],known=Number.isSafeInteger(value)&&value>=0;
-      return {label,text:known?new Intl.NumberFormat('en-US').format(value):'—',percent:known&&max>0?Math.min(100,value/max*100):0,known};
+      const divisor=known?(value>=999950000?1e9:value>=999950?1e6:value>=1000?1e3:1):1;
+      return {label,text:known?new Intl.NumberFormat('en-US').format(value):'—',number:known?(divisor===1?String(value):(value/divisor).toFixed(1)):'—',unit:{1000:'K',1000000:'M',1000000000:'B'}[divisor]||'',percent:known&&max>0?Math.min(100,value/max*100):0,known};
     });
     const label={indexing:'索引中',partial:'部分覆盖',complete:'完成'}[tokens?.coverage] || '索引中';
     return {rows,coverageText:label+' · '+(tokens?.filesIndexed || 0)+'/'+(tokens?.filesDiscovered || 0)+' 个文件'};
