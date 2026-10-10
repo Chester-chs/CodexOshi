@@ -16,14 +16,26 @@ test('zoom can frame the upper half without moving the drawn viewport onto the f
   const r=portraitFrame(200,300,100,200,{zoom:2,x:0,y:1});
   assert.ok(r.source,'enlarged view must crop the chosen source area');assert.equal(r.source.y,0);assert.equal(r.source.height,100);
   assert.equal(r.source.x,0);assert.equal(r.source.width,100);assert.equal(r.width,192);assert.equal(r.height,192);
-  for(const x of [-1,0,1])for(const y of [-1,0,1]){const q=portraitFrame(200,300,100,200,{zoom:3,x,y});assert.equal(q.source.x,0);assert.equal(q.source.y,0);assert.equal(q.source.width,100);assert.equal(q.source.height,100);assert.ok(q.x>=0&&q.y>=0);assert.ok(q.x+q.width<=200+.001);assert.ok(q.y+q.height<=300+.001);}
+  for(const x of [-1,0,1])for(const y of [-1,0,1]){const q=portraitFrame(200,300,100,200,{zoom:4,x,y});assert.equal(q.source.x,0);assert.equal(q.source.y,0);assert.equal(q.source.width,100);assert.equal(q.source.height,50);assert.ok(q.x>=0&&q.y>=0);assert.ok(q.x+q.width<=200+.001);assert.ok(q.y+q.height<=300+.001);}
 });
 test('upper-body layout grows horizontally while staying within existing native caps',()=>{
   const {portraitSize,portraitContentSize}=require('../desktop/ui/portrait-size.js');
   assert.equal(typeof portraitContentSize,'function');
-  assert.deepEqual(portraitContentSize(627,882,2),{width:627,height:441});assert.deepEqual(portraitContentSize(627,882,3),{width:627,height:441});
+  assert.deepEqual(portraitContentSize(627,882,2),{width:627,height:441});assert.deepEqual(portraitContentSize(627,882,4),{width:627,height:220.5});
   assert.deepEqual(portraitSize(627,441,280),{width:398,height:280});
   for(const z of [.5,1,1.5,2,3])for(const [w,h]of [[627,882],[4096,1],[1,4096]]){const c=portraitContentSize(w,h,z),r=portraitSize(c.width,c.height,420);assert.ok(r.width<=672&&r.height<=420);}
+});
+test('close-up framing retains target height at its width cap and visibly enlarges the portrait',()=>{
+  const {portraitSize,portraitFrame,stageHeight}=require('../desktop/ui/portrait-size.js');
+  assert.deepEqual(portraitSize(627,220.5,280,true),{width:448,height:280});
+  const medium=portraitFrame(398,stageHeight(280),627,882,{zoom:2}),close=portraitFrame(448,stageHeight(280),627,882,{zoom:4});
+  assert.ok(close.width/627>medium.width/627*1.3,'close-up must enlarge the actual drawing');assert.equal(close.source.height,220.5);assert.equal(close.source.width,627);
+});
+test('main accepts bounded close-up size reports and rejects invalid zoom values',async()=>{
+  const {mainHarness}=require('./main-harness.cjs'),h=await mainHarness();
+  const value={contentWidth:627,contentHeight:220.5,targetHeight:280,zoom:4};h.ipc('character-size',value);
+  assert.deepEqual(JSON.parse(h.run('JSON.stringify(characterSize)')),{width:448,height:280});
+  const before=h.shapes.length;for(const zoom of [4.01,-1,NaN,Infinity,'4'])h.ipc('character-size',{...value,zoom});assert.equal(h.shapes.length,before);
 });
 test('content ratio determines dimensions, with bounded width and global fallback for extreme proportions',()=>{
   const {portraitSize}=require('../desktop/ui/portrait-size.js');
@@ -49,5 +61,6 @@ test('target height persists per role and invalid values cannot enlarge the over
     const store=new CharacterStore(root);await store.init();await store.create('A');await store.settings('A',{targetHeight:420});await store.create('B');
     assert.equal((await store.read('B')).targetHeight,280);await store.select('A');const reload=new CharacterStore(root);await reload.init();assert.equal((await reload.read('A')).targetHeight,420);
     for(const value of [179,421,Infinity,NaN,'280'])await assert.rejects(store.settings('A',{targetHeight:value}));
+    await store.settings('A',{zoom:4});assert.equal((await reload.read('A')).zoom,4);await assert.rejects(store.settings('A',{zoom:4.01}));
   }finally{assert.equal(path.dirname(root),os.tmpdir());await fs.rm(root,{recursive:true,force:true});}
 });

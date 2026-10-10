@@ -39,6 +39,13 @@ test('dialogues have exactly two bounded plain-text templates and safe substitut
   assert.match(text.line,/主人/);assert.match(text.line,/51%/);assert.match(text.line,/1小时1分钟/);assert.match(text.line,/未知/);
   assert.equal(m.present(d,0,{windows:[]},100000).reset,'重置时间未知');
 });
+test('presets with a literal salutation still explain unknown or elapsed reset times',()=>{
+  const m=require('../desktop/ui/dialogue-model.js');
+  for(const language of ['zh-CN','en-US']){const line=m.presets(language)[0][0].template.replace('{称呼}','老板'),value={address:'老板',lines:[line,'加油']};
+    assert.doesNotMatch(m.present(value,0,{windows:[]},100000,language).line,/未知|Unknown/);
+    assert.match(m.present(value,0,{windows:[{resetAt:99}]},100000,language).line,language==='zh-CN'?/等我更新/:/refresh the quota/);
+  }
+});
 test('reset placeholder is duration only, while the standalone reset label stays a sentence',()=>{
   const m=require('../desktop/ui/dialogue-model.js'),d=m.defaults(),q=seconds=>({windows:[{remainingPercent:49,resetAt:100+seconds}]});
   const v=m.present(d,0,q(3*86400+21*3600+23*60),100000);

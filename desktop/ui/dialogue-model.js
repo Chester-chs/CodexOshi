@@ -17,7 +17,7 @@
   }
   const defaults=()=>({address:'主人',lines:[presets()[0][0].template,presets()[1][0].template]});
   function validate(v){
-    if(!v||Object.keys(v).some(k=>!['address','lines'].includes(k))||typeof v.address!=='string'||!v.address.trim()||v.address.length>32||!Array.isArray(v.lines)||v.lines.length!==2||[0,1].some(i=>typeof v.lines[i]!=='string'||!v.lines[i].trim()||v.lines[i].length>240))throw Error('请填写称呼和两段对话；称呼最多 32 字，对话每段最多 240 字。');
+    if(!v||Object.keys(v).some(k=>!['address','lines'].includes(k))||typeof v.address!=='string'||!v.address.trim()||v.address.length>32||!Array.isArray(v.lines)||v.lines.length!==2||[0,1].some(i=>typeof v.lines[i]!=='string'||!v.lines[i].trim()||v.lines[i].length>240))throw Error('请填写两段对话，每段最多 240 字。');
     return {address:v.address.trim(),lines:v.lines.map(s=>s.trim())};
   }
   function upgrade(value){
@@ -37,8 +37,9 @@
     const values={'称呼':v.address,'剩余额度':remaining,'重置时间':resetDuration,'重置卡次数':count};
     let template=v.lines[index===1?1:0];
     if(index!==1&&(seconds===null||seconds===0)){
-      const builtin=presets()[0].some(p=>p.template===template)||presets('en-US')[0].some(p=>p.template===template);
-      if(builtin){const english=presets('en-US')[0].some(p=>p.template===template);template=seconds===null?(english?'{称呼}, the reset time is unavailable. I will check again.':'{称呼}，暂时还没查到重置时间，再等等我哦。'):(english?'{称呼}, the reset time has arrived. Let me refresh the quota.':'{称呼}，重置时间到了，等我更新一下额度哦。');}
+      const matches=p=>p.template===template||p.template.replace(/\{称呼\}/g,()=>v.address)===template;
+      const builtin=presets()[0].some(matches)||presets('en-US')[0].some(matches);
+      if(builtin){const english=presets('en-US')[0].some(matches);template=seconds===null?(english?'{称呼}, the reset time is unavailable. I will check again.':'{称呼}，暂时还没查到重置时间，再等等我哦。'):(english?'{称呼}, the reset time has arrived. Let me refresh the quota.':'{称呼}，重置时间到了，等我更新一下额度哦。');}
     }
     return {line:template.replace(/\{(称呼|剩余额度|重置时间|重置卡次数)\}/g,(_,key)=>values[key]),reset,resetDuration,remaining,count,stale:Boolean(quota?.resetCredits?.stale)};
   }

@@ -139,7 +139,8 @@ app.whenReady().then(async()=>{
   });
   ipcMain.on('character-size',(event,value)=>{
     if(event.sender!==win.webContents||!value||!['contentWidth','contentHeight'].every(k=>Number.isFinite(value[k])&&value[k]>0&&value[k]<=4096)||!Number.isFinite(value.targetHeight)||value.targetHeight<180||value.targetHeight>420)return;
-    const next=portraitSize(value.contentWidth,value.contentHeight,value.targetHeight);
+    if(value.zoom!==undefined&&(!Number.isFinite(value.zoom)||value.zoom<.5||value.zoom>4))return;
+    const next=portraitSize(value.contentWidth,value.contentHeight,value.targetHeight,value.zoom>1);
     if(next.width===characterSize.width&&next.height===characterSize.height)return;
     characterSize=next;
     // Decoding can finish before the host handshake; retain the saved position

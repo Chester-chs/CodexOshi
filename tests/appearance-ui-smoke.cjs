@@ -27,6 +27,29 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   assert.equal(await js(`document.querySelectorAll('[data-mode],[data-surface],#accent-custom').length`),0);
   const model=require('../desktop/ui/appearance-model.js'),rows=[],stableRegion=state().region;clearInterval(heartbeat);let shapeCallsForTheme=0;
   async function capture(name){const r=state().region[1];await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(60);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage({x:r.x,y:r.y,width:r.width,height:r.height},{stayHidden:true,stayAwake:true})).toPNG());}
+  const periodRows=[];
+  async function checkPeriods(palette){
+    const hex=c=>'#'+c.match(/[\d.]+/g).slice(0,3).map(n=>Number(n).toString(16).padStart(2,'0')).join('');
+    await js(`document.querySelector('#token-tab').click()`);
+    win.webContents.debugger.attach('1.3');
+    try{
+      await win.webContents.debugger.sendCommand('DOM.enable');await win.webContents.debugger.sendCommand('CSS.enable');
+      const doc=await win.webContents.debugger.sendCommand('DOM.getDocument');
+      for(const period of ['hours24','days7','days30']){
+        await js(`document.querySelector('[data-period="${period}"]').click()`);
+        const {nodeId}=await win.webContents.debugger.sendCommand('DOM.querySelector',{nodeId:doc.root.nodeId,selector:`[data-period="${period}"]`});
+        for(const hover of [false,true]){
+          await win.webContents.debugger.sendCommand('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:hover?['hover']:[]});
+          const colors=await js(`(()=>{const group=document.querySelector('#token-periods'),buttons=[...group.querySelectorAll('button')],selected=buttons.filter(b=>b.getAttribute('aria-pressed')==='true');return {count:selected.length,period:selected[0].dataset.period,background:getComputedStyle(selected[0]).backgroundColor,text:getComputedStyle(selected[0]).color,group:getComputedStyle(group).backgroundColor,weight:getComputedStyle(selected[0]).fontWeight};})()`);
+          assert.equal(colors.count,1);assert.equal(colors.period,period);
+          const separation=model.contrast(hex(colors.background),hex(colors.group)),textContrast=model.contrast(hex(colors.text),hex(colors.background));
+          assert.ok(separation>=3,`${palette}/${period}/hover=${hover}: selected range must stand out (${separation})`);assert.ok(textContrast>=4.5);assert.equal(colors.weight,'600');
+          periodRows.push({palette,period,hover,separation,textContrast});
+        }
+        await win.webContents.debugger.sendCommand('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:[]});
+      }
+    }finally{win.webContents.debugger.detach();}
+  }
   for(const p of model.palettes){
     send();await waitFor(`document.readyState==='complete'`);while(state().host.revision!==revision)await delay(5);const before=shapes.length;
     await js(`document.querySelector('#appearance-tab').click();document.querySelector('button[data-palette="${p.id}"]').click();document.querySelector('#details').scrollTop=0`);await delay(180);
@@ -38,7 +61,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
     const percentStyle=await js(`(()=>{const n=document.querySelector('.quota-percent'),label=n.parentElement;return {text:n.textContent,family:getComputedStyle(n).fontFamily,weight:getComputedStyle(label).fontWeight,size:getComputedStyle(label).fontSize}})()`);assert.equal(percentStyle.text,'72%');assert.match(percentStyle.family,/Segoe UI Variable Display/);assert.equal(percentStyle.weight,'400');assert.equal(percentStyle.size,'14px');
     const minimum=Math.min(...q.contrastPairs.flatMap(([f,bs])=>bs.map(b=>model.contrast(f,b))));assert.ok(minimum>=4.5);assert.equal(shapes.length,before);assert.deepEqual(state().region,stableRegion);
     nativeTheme.themeSource='light';await delay(40);const light=await js(`getComputedStyle(document.querySelector('#details')).backgroundColor`);nativeTheme.themeSource='dark';await delay(40);const dark=await js(`getComputedStyle(document.querySelector('#details')).backgroundColor`);assert.equal(light,dark);
-    await capture('palette-'+p.id+'.png');await js(`document.querySelector('#token-tab').click()`);await capture('token-'+p.id+'.png');rows.push({palette:p.id,base:p.base,accent:q.variables['--accent'],minimum,systemIndependent:true});
+    await capture('palette-'+p.id+'.png');await checkPeriods(p.id);assert.equal(shapes.length,before);assert.deepEqual(state().region,stableRegion);await capture('token-'+p.id+'.png');rows.push({palette:p.id,base:p.base,accent:q.variables['--accent'],minimum,systemIndependent:true});
   }
   await js(`document.querySelector('#appearance-tab').click();document.querySelector('button[data-palette="midnight"]').click()`);await delay(200);
   const inherited=await js(`(()=>{const s=getComputedStyle(document.documentElement);return {base:s.getPropertyValue('--bg-base').trim(),accent:s.getPropertyValue('--accent').trim()};})()`);
@@ -57,7 +80,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   send();while(state().host.revision!==revision)await delay(5);
   for(const [id,color] of [['custom-base-hex','#102030'],['custom-accent-hex','#f0d090']])await js(`(()=>{const input=document.getElementById('${id}');input.value='${color}';input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   await delay(350);const custom={palette:'custom',base:'#102030',accent:'#f0d090'};assert.deepEqual(JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8')),custom);assert.deepEqual(await js('window.widget.appearanceRead()'),custom);await js(`document.querySelector('#custom-palette').click()`);await delay(180);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8')),custom);
-  assert.equal(await js(`getComputedStyle(document.querySelector('#details')).backgroundColor`),'rgb(16, 32, 48)');assert.deepEqual(state().region,stableRegion);await capture('palette-custom.png');
+  assert.equal(await js(`getComputedStyle(document.querySelector('#details')).backgroundColor`),'rgb(16, 32, 48)');assert.deepEqual(state().region,stableRegion);await capture('palette-custom.png');await checkPeriods('custom-dark');await capture('token-custom.png');await js(`document.querySelector('#appearance-tab').click()`);
   await js(`document.querySelector('#custom-base-hex').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.match(win.getTitle(),/Text editing/);await js(`document.querySelector('#custom-base-hex').select()`);await win.webContents.insertText('#213141');await delay(200);assert.equal(JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8')).base,'#213141');await js(`document.querySelector('#custom-palette').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.equal(win.getTitle(),'Codex Quota Widget');
   await js(`document.querySelector('#custom-base-hex').value='#102030';document.querySelector('#custom-base-hex').dispatchEvent(new Event('input'))`);await delay(200);
   await js(`document.querySelector('#custom-base-hex').value='bad';document.querySelector('#custom-base-hex').dispatchEvent(new Event('change'));`);assert.deepEqual(JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8')),custom);
@@ -71,5 +94,5 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   const persisted=JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8'));assert.deepEqual(persisted,{palette:'forest'});
   win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('DOM.enable');await win.webContents.debugger.sendCommand('CSS.enable');const doc=await win.webContents.debugger.sendCommand('DOM.getDocument');const {nodeId}=await win.webContents.debugger.sendCommand('DOM.querySelector',{nodeId:doc.root.nodeId,selector:'button[data-palette="forest"]'});await win.webContents.debugger.sendCommand('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:['focus','focus-visible']});
   const focusRing=await js(`getComputedStyle(document.querySelector('button[data-palette="forest"]')).outlineStyle`);assert.equal(focusRing,'none');assert.match(await js(`getComputedStyle(document.querySelector('button[data-palette="forest"]')).boxShadow`),/inset/);win.webContents.debugger.detach();
-  const result={passed:true,palettes:rows.length,minimumContrast:Math.min(...rows.map(r=>r.minimum)),shapeCallsForTheme,custom:{inheritsAllSevenPresets:true,reselectKeepsEdits:true,saved:true,hexEditable:true,invalidRejected:true,inlinePickerPointer:true,sameWindow:true,reloadRestored:true},stableRegion,persisted,focusRing,rows};fs.writeFileSync(path.join(output,'appearance-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
+  const result={passed:true,palettes:rows.length,minimumContrast:Math.min(...rows.map(r=>r.minimum)),tokenPeriods:{checks:periodRows.length,minimumSeparation:Math.min(...periodRows.map(r=>r.separation)),minimumTextContrast:Math.min(...periodRows.map(r=>r.textContrast)),rows:periodRows},shapeCallsForTheme,custom:{inheritsAllSevenPresets:true,reselectKeepsEdits:true,saved:true,hexEditable:true,invalidRejected:true,inlinePickerPointer:true,sameWindow:true,reloadRestored:true},stableRegion,persisted,focusRing,rows};fs.writeFileSync(path.join(output,'appearance-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
 })().catch(e=>{process.stderr.write(e.stack+'\n');app.exit(1);});

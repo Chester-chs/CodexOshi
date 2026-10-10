@@ -1,6 +1,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '1× 全身，2× 半身，最高 4× 近景。':'1× full body, 2× half body, up to 4× close-up.',
     '1× 全身，2× 上半身；头顶与左右完整保留。':'1× full body, 2× upper body. Head and sides stay complete.',
     '雾蓝 × 群青':'Mist blue × Ultramarine','燕麦 × 暖金':'Oat × Warm gold','玫瑰白 × 酒红':'Rose white × Burgundy','雾绿 × 蓝绿':'Mist green × Teal','米白 × 深棕':'Ivory × Dark brown','灰蓝 × 深蓝':'Grey blue × Deep blue','杏白 × 暖红':'Apricot white × Warm red',
     '克莱茵蓝':'Klein Blue','群青 × 雾白':'Ultramarine × Mist white','申布伦黄':'Schönbrunn Yellow','暖黄 × 深棕':'Warm yellow × Dark brown','勃艮第红':'Burgundy','酒红 × 玫瑰白':'Burgundy × Rose white','马尔斯绿':'Marrs Green','蓝绿 × 墨绿':'Teal × Deep green','凡戴克棕':'Van Dyke Brown','深棕 × 香槟':'Dark brown × Champagne','普鲁士蓝':'Prussian Blue','深蓝 × 银白':'Deep blue × Silver white','提香红':'Titian Red','暖红 × 深红':'Warm red × Deep red',
@@ -18,7 +19,7 @@
     '查看本机用量随时间的变化':'Track usage over time on this computer.','统计范围':'Time range','24 小时':'24 hours','7 天':'7 days','30 天':'30 days',
     '按自然小时 / 日期汇总，当前小时 / 当天尚未结束。':'Calendar hours / days; the current hour / day is incomplete.',
     '按本机时间展示最近 24 个小时、7 个日期或 30 个日期。总数等于当前柱形之和，不含已删除会话或其他电脑。':'Shows the latest 24 calendar hours, 7 days or 30 days in local time. Total equals the displayed bars. Deleted sessions and other computers are excluded.',
-    '设置':'Settings','挂件设置':'Widget settings','点击对话':'Click dialogue','称呼':'Address','第一段对话':'First dialogue','第二段对话':'Second dialogue','编辑对话':'Edit dialogue','关闭对话':'Close dialogue','额度小提醒':'Quota reminder','重置卡：{count} 次':'Reset credits: {count}','对话已保存。':'Dialogue saved.','对话保存失败。':'Could not save dialogue.','对话设置读取失败。':'Could not load dialogue settings.','对话编辑器无法打开。':'Could not open the dialogue editor.','请填写称呼和两段对话；称呼最多 32 字，对话每段最多 240 字。':'Enter an address (up to 32 characters) and two dialogues (up to 240 characters each).',
+    '设置':'Settings','挂件设置':'Widget settings','点击对话':'Click dialogue','称呼':'Address','第一段对话':'First dialogue','第二段对话':'Second dialogue','编辑对话':'Edit dialogue','关闭对话':'Close dialogue','额度小提醒':'Quota reminder','重置卡：{count} 次':'Reset credits: {count}','对话已保存。':'Dialogue saved.','对话保存失败。':'Could not save dialogue.','对话设置读取失败。':'Could not load dialogue settings.','对话编辑器无法打开。':'Could not open the dialogue editor.','请填写两段对话，每段最多 240 字。':'Enter two dialogues, up to 240 characters each.',
     '每次点击轮换一段；支持 {称呼}、{剩余额度}、{重置时间}、{重置卡次数}。':'Two alternating dialogues. Placeholders: {称呼}, {剩余额度}, {重置时间}, {重置卡次数}.','{label}，剩余 {value}，点击对话，拖动移动':'{label}, {value} remaining. Click for dialogue; drag to move.','额度挂件，拖动移动，点击对话':'Quota widget. Drag to move; click for dialogue.',
     'Codex 额度':'Codex Quota','额度管理':'Quota','token 用量':'Tokens','角色':'Character','外观选择':'Appearance','详情视图':'Detail views','额度与用量详情':'Quota and usage details','收起详情':'Close details',
     '语言':'Language','拖动右下角调整大小':'Drag this corner to resize','调整卡片大小':'Resize card','卡片设置未能保存，请检查本机文件权限。':'Could not save card settings. Check local file permissions.',
