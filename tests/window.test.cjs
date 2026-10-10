@@ -28,11 +28,11 @@ test('expanded layout admits only the bounded visible rectangles, with gaps pass
 test('large role layout uses its actual budget, keeps panel separate, and rejects inflated profiles',()=>{
   const v=layout({x:900,y:700},1000,800,true,2,{width:199,height:280});
   assert.equal(v.regions[0].width,199);assert.equal(v.regions[0].height,280);
-  assert.equal(v.regions[1].width,320);assert.equal(v.regions[1].height,352);
+  assert.equal(v.regions[1].width,480);assert.equal(v.regions[1].height,560);
   assert.deepEqual(shape(v.regions,1000,800,v.sizes),v.regions);
   assert.ok(v.regions.every(r=>r.x>=8&&r.y>=8&&r.x+r.width<=976&&r.y+r.height<=776));
   const enlarged=v.regions.map(r=>({...r}));enlarged[0].width++;assert.deepEqual(shape(enlarged,1000,800,v.sizes),tiny);
-  for(const sizes of [[{width:673,height:420}],[{width:672,height:421}],[{width:672,height:420},{width:341,height:352}],[{width:672,height:420},{width:340,height:353}]])assert.deepEqual(shape([{x:8,y:8,width:10,height:10}],2000,2000,sizes),tiny);
+  for(const sizes of [[{width:673,height:420}],[{width:672,height:421}],[{width:672,height:420},{width:501,height:560}],[{width:672,height:420},{width:500,height:561}]])assert.deepEqual(shape([{x:8,y:8,width:10,height:10}],2000,2000,sizes),tiny);
   const max=layout({x:9999,y:9999},1200,800,false,0,{width:672,height:420});assert.deepEqual(shape(max.regions,1200,800,max.sizes),max.regions);
   assert.deepEqual(shape([{x:8,y:8,width:672,height:420},{x:8,y:8,width:672,height:420}],2000,2000,[{width:672,height:420},{width:672,height:420}]),tiny);
 });

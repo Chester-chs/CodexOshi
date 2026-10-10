@@ -23,12 +23,13 @@ app.whenReady().then(async()=>{
   await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);
   // Commit the newly selected tab to the hidden window's hit-test surface.
   await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});
+  await new Promise(r=>setTimeout(r,80));
   const wheelPoint=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details'),r=p.getBoundingClientRect();return {x:Math.round(r.x+4),y:Math.round(r.y+r.height/2),top:p.scrollTop}})()`);
   win.webContents.sendInputEvent({type:'mouseWheel',x:wheelPoint.x,y:wheelPoint.y,deltaY:-120,deltaX:0,wheelTicksY:-1,canScroll:true});
   for(let i=0;i<4;i++){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await new Promise(r=>setTimeout(r,100));}
-  const nativeWheel=await win.webContents.executeJavaScript(`({top:document.querySelector('#details').scrollTop,focused:document.hasFocus()})`);
+  const nativeWheel=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details');return {top:p.scrollTop,max:p.scrollHeight-p.clientHeight,focused:document.hasFocus()};})()`);
   await fs.writeFile(path.join(output,'inactive-wheel-characterization.json'),JSON.stringify({before:wheelPoint,after:nativeWheel},null,2));
-  assert.ok(nativeWheel.top>=100,'inactive character panel must accept native wheel input');assert.equal(nativeWheel.focused,false);
+  assert.ok(nativeWheel.max>0,'character controls must extend beyond the card for this scroll test');assert.ok(nativeWheel.top>=Math.min(100,nativeWheel.max),'inactive character panel must accept native wheel input');assert.equal(nativeWheel.focused,false);
   const whiteGarment=await win.webContents.executeJavaScript(`(()=>{const c=document.querySelector('#character-canvas');return [...c.getContext('2d').getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data]})()`);assert.deepEqual(whiteGarment,[255,255,255,255]);
   const sizes=[];
   for(const h of [180,281,420]){
@@ -36,7 +37,7 @@ app.whenReady().then(async()=>{
     const m=await metrics();assert.ok(Math.abs(m.height-h)<=1);assert.equal(m.slider,String(h));assert.equal((await store.read('白裙几何')).targetHeight,h);sizes.push(m);
   }
   await store.create('另一个');win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));await store.select('白裙几何');win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,350));assert.equal((await metrics()).slider,'420');
-  const panels=[];for(const [count,height]of [[0,214],[1,270],[2,352]]){update(true,count);await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);await new Promise(r=>setTimeout(r,100));const p=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details');p.scrollTop=p.scrollHeight;const a=p.getBoundingClientRect(),b=document.querySelector('#character-notice').getBoundingClientRect();return {width:p.offsetWidth,height:p.offsetHeight,noticeVisible:b.bottom<=a.bottom&&b.top>=a.top}})()`);assert.equal(p.width,320);assert.equal(p.height,height);assert.equal(p.noticeVisible,true);panels.push(p);}
+  const panels=[];for(const [count,height]of [[0,560],[1,560],[2,560]]){update(true,count);await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);await new Promise(r=>setTimeout(r,100));const p=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details');p.scrollTop=p.scrollHeight;const a=p.getBoundingClientRect(),b=document.querySelector('#character-notice').getBoundingClientRect();return {width:p.offsetWidth,height:p.offsetHeight,noticeVisible:b.bottom<=a.bottom&&b.top>=a.top}})()`);assert.equal(p.width,480);assert.equal(p.height,height);assert.equal(p.noticeVisible,true);panels.push(p);}
   const extremes=[];await store.settings('白裙几何',{targetHeight:280});
   for(const [file,width,height]of [['portrait-wide.png',448,48],['portrait-narrow.png',126,420]]){
     await store.importFile('白裙几何','ready',path.join(__dirname,'fixtures',file));win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,350));const m=await metrics();assert.equal(m.width,width);assert.equal(m.height,height);assert.equal(m.barInside,true);extremes.push(m);

@@ -1,6 +1,4 @@
 const button=document.getElementById('widget'),details=document.getElementById('details');
-const query=new URLSearchParams(location.search),workspaceMode=query.get('workspace')==='true';
-if(workspaceMode){document.documentElement.dataset.workspace='true';details.hidden=false;for(const control of details.querySelectorAll('[tabindex="-1"]'))control.tabIndex=0;}
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
 let feedbackAnimation;
@@ -20,7 +18,6 @@ details.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+1)
 details.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
-  if(workspaceMode)return;
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
   layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
@@ -38,9 +35,6 @@ function selectTab(name){
   details.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
 }
 for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>selectTab(name));
-window.widget.selectTab?.(selectTab);
-document.getElementById('open-workspace').addEventListener('click',()=>window.widget.openWorkspace(document.querySelector('nav [aria-selected="true"]').id.replace('-tab','')));
-if(workspaceMode)selectTab(query.get('tab')||'quota');
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 document.getElementById('position-reset').addEventListener('click',()=>window.widget.resetPosition());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}

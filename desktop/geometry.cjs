@@ -2,8 +2,8 @@
 const tiny = () => [{x:0,y:0,width:1,height:1}];
 const SIZE = {width:96,height:80};
 const {DEFAULT:COMPACT,LIMIT:ROLE_LIMIT}=require('./ui/portrait-size.js');
-const PANEL={width:320,height:352};
-const PANEL_LIMIT={width:340,height:352};
+const PANEL={width:480,height:560};
+const PANEL_LIMIT={width:500,height:560};
 const MAX_AREA=ROLE_LIMIT.width*ROLE_LIMIT.height+PANEL_LIMIT.width*PANEL_LIMIT.height;
 const EDGE = 24;
 function shape(value,width,height,sizes=[SIZE]) {
@@ -41,7 +41,7 @@ function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPA
   const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-EDGE,width,height,compact);
   const regions=[{...point,...compact}],sizes=[compact];
   if(expanded){
-    const panel={width:Math.max(1,Math.min(PANEL.width,width-EDGE-8)),height:Math.max(1,Math.min(windowCount>1?352:windowCount?270:214,height-EDGE-8))};
+    const panel={width:Math.max(1,Math.min(PANEL.width,width-EDGE-8)),height:Math.max(1,Math.min(PANEL.height,height-EDGE-8))};
     const left=point.x-panel.width-12,right=point.x+compact.width+12;
     let p=position(left>=8?left:right,point.y,width,height,panel);
     if(left<8&&right+panel.width>width-EDGE){p=position(point.x,point.y-panel.height-12>=8?point.y-panel.height-12:point.y+compact.height+12,width,height,panel);}

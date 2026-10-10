@@ -26,6 +26,5 @@
   for(const button of document.querySelectorAll('[data-mode]'))button.onclick=()=>changed({mode:button.dataset.mode});
   $('accent-custom').oninput=()=>changed({accent:$('accent-custom').value});media.addEventListener('change',paint);paint();
   const initialRevision=revision;
-  window.widget.appearanceChanged?.(value=>{try{settings=model.validate(value);revision++;clearTimeout(timer);paint();}catch{}});
   window.widget.appearanceRead?.().then(value=>{if(revision===initialRevision&&value){try{settings=model.validate(value);paint();}catch{}}}).catch(()=>{$('appearance-error').textContent='未能读取外观设置，已使用默认配色。';});
 })();

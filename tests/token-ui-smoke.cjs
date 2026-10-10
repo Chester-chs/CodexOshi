@@ -29,11 +29,11 @@ app.whenReady().then(async()=>{
   assert.equal(cold.columns,3);assert.ok(cold.ticks>0);assert.ok(maxMainGap<250);assert.equal(cold.selected,'true');assert.ok(updates.includes('indexing'));
   const captured=JSON.parse(await fs.readFile(path.join(process.env.CODEX_HOME || path.join(process.env.USERPROFILE,'.codex'),'codex-quota-widget','tokens-state.json'),'utf8'));
   const cases=[];
-  for(const [count,height,coverage] of [[0,214,'indexing'],[1,270,'partial'],[2,352,'complete']]){
+  for(const [count,height,coverage] of [[0,448,'indexing'],[1,448,'partial'],[2,448,'complete']]){
     const view=layout({x:400,y:40},720,480,true,count);win.setShape(shape(view.regions,720,480,view.sizes));win.webContents.send('layout',view);win.webContents.send('tokens',{...captured,coverage});
     await new Promise(r=>setTimeout(r,100));
     const state=await win.webContents.executeJavaScript(`(()=>{const panel=document.querySelector('#details'),bars=[...document.querySelectorAll('.token-bar')];return {width:panel.offsetWidth,height:panel.offsetHeight,scrollHeight:panel.scrollHeight,clientHeight:panel.clientHeight,values:[...document.querySelectorAll('.token-value')].map(x=>x.textContent),widths:bars.map(x=>x.getBoundingClientRect().width),colors:bars.map(x=>getComputedStyle(x).backgroundColor),coverage:document.querySelector('#token-coverage').textContent,statement:document.querySelector('#token-statement').textContent}})()`);
-    assert.equal(state.width,320);assert.equal(state.height,height);assert.equal(state.widths.length,3);assert.ok(state.widths[0]<=state.widths[1]&&state.widths[1]<=state.widths[2]);assert.equal(new Set(state.colors).size,1);
+    assert.equal(state.width,480);assert.equal(state.height,height);assert.equal(state.widths.length,3);assert.ok(state.widths[0]<=state.widths[1]&&state.widths[1]<=state.widths[2]);assert.equal(new Set(state.colors).size,1);
     assert.match(state.statement,/本机现存会话/);assert.match(state.statement,/非 OpenAI 账户官方统计/);assert.match(state.statement,/已删除会话及其他电脑/);
     await fs.writeFile(path.join(output,'chart-'+count+'.png'),(await win.webContents.capturePage()).toPNG());
     const footerVisible=await win.webContents.executeJavaScript(`(()=>{const panel=document.querySelector('#details');panel.scrollTop=panel.scrollHeight;const a=panel.getBoundingClientRect(),b=document.querySelector('#token-statement').getBoundingClientRect();return b.bottom<=a.bottom&&b.top>=a.top;})()`);assert.equal(footerVisible,true);cases.push({...state,footerVisible});

@@ -10,7 +10,6 @@ const {Worker}=require('node:worker_threads');
 const {visibility}=require('./visibility.cjs');
 const {CharacterStore}=require('../runtime/characters.cjs');
 const {installCharacters}=require('./characters.cjs');
-const {createWorkspace}=require('./workspace.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -27,7 +26,6 @@ let panelScroll=null;
 let defaultPlacement=true;
 let diagnosticTimer,layoutTimer,checkpointTimer;
 let pendingQuota=null,pendingTokens=null;
-let workspace;
 let quitting=false;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
@@ -80,9 +78,7 @@ app.whenReady().then(async()=>{
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
-  workspace=createWorkspace(win,{BrowserWindow,ipcMain});
-  const trusted=sender=>sender===win.webContents||workspace.owns(sender);
-  const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters,()=>[win,workspace.window()].filter(Boolean));
+  const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
   const show=visibility(win);
   function sync(){
     if(quitting||win.isDestroyed())return;
@@ -94,8 +90,8 @@ app.whenReady().then(async()=>{
     show({...host,ready});
     diagnostic();
   }
-  ipcMain.on('ready',event=>{if(!trusted(event.sender))return;if(workspace.owns(event.sender)){event.sender.send('quota',reader.snapshot);event.sender.send('tokens',tokens);return;}ready=true;win.webContents.send('quota',reader.snapshot);win.webContents.send('tokens',tokens);sync()});
-  ipcMain.on('read-tokens',event=>{if(trusted(event.sender))readTokens();});
+  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;win.webContents.send('quota',reader.snapshot);win.webContents.send('tokens',tokens);sync()});
+  ipcMain.on('read-tokens',event=>{if(event.sender===win.webContents)readTokens();});
   ipcMain.on('panel-scroll',(event,value)=>{
     if(event.sender!==win.webContents||!value||!['top','height','clientHeight','wheelEvents'].every(k=>Number.isInteger(value[k])&&value[k]>=0&&value[k]<=100000))return;
     const roleTab=value.roleTab;
@@ -111,9 +107,9 @@ app.whenReady().then(async()=>{
     // until a real viewport is available instead of clamping it against 1×1.
     if(host.bounds&&dip.width>32&&dip.height>32){updateShape();diagnostic();}
   });
-  ipcMain.on('collapse',event=>{if(workspace.owns(event.sender)){workspace.close();return;}if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
+  ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
   ipcMain.on('reset-position',event=>{
-    if(!trusted(event.sender)||dragging)return;
+    if(event.sender!==win.webContents||dragging)return;
     defaultPlacement=true;widget=null;updateShape();diagnostic();
   });
   ipcMain.on('gesture',(event,value)=>{
@@ -138,9 +134,9 @@ app.whenReady().then(async()=>{
       worker.on('message',message=>{
         if(message?.type!=='tokens'||win.isDestroyed())return;tokens=message.value;
         if(dragging)pendingTokens=tokens;else saveSnapshot('tokens-state.json',tokens);
-        if(ready)win.webContents.send('tokens',tokens);workspace.send('tokens',tokens);diagnostic();
+        if(ready)win.webContents.send('tokens',tokens);diagnostic();
       });
-      worker.on('error',()=>{tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);workspace.send('tokens',tokens);});
+      worker.on('error',()=>{tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);});
       worker.on('exit',()=>{if(tokenWorker===worker)tokenWorker=null;});
     }
     tokenWorker.postMessage({type:'read'});
@@ -149,7 +145,7 @@ app.whenReady().then(async()=>{
   async function refresh(){
     const quota=await reader.refresh();if(win.isDestroyed())return;
     if(dragging)pendingQuota=quota;else saveSnapshot('quota-state.json',quota);
-    if(ready){win.webContents.send('quota',quota);updateShape();}workspace.send('quota',quota);diagnostic();
+    if(ready){win.webContents.send('quota',quota);updateShape();}diagnostic();
   }
   refresh().catch(()=>{});pollTimer=setInterval(()=>refresh().catch(()=>{}),30000);
   const pipeName='codex-quota-widget-'+process.pid+'-'+crypto.randomBytes(12).toString('hex');

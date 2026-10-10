@@ -1,84 +1,81 @@
-# 阶段5a追加：图表可读性与放大设置窗口
+# 阶段5a追加：单击展开大卡片与横向用量图
 
-2026-10-10，基线6c7e06f。用户反馈token竖柱难看、320×352设置面板太挤，要求放大并保留关键信息。本次增加由用户主动打开的普通可缩放窗口；常驻挂件继续沿用既有透明形状、拖动、焦点恢复和右下角位置。未push。
+2026-10-10。用户最终明确：不要“放大”按钮或独立设置窗口，只将点击角色后出现的卡片放大。此记录覆盖6abd6a2的独立窗口方案；该方案已撤回。未push。
 
-## 参考与取舍
+## 交互与可读性
 
-只查阅项目作者的说明，没有安装或运行其他额度工具、复制代码或下载素材：
+点击角色一次，直接展开480×560 DIP卡片，四个页签为额度管理、token用量、角色、外观；再次点击或关闭按钮收起。只有原来的一个透明挂件窗口，不增加窗口、采集器、Worker或跨窗口广播。去掉独立窗口模块、按钮和相关IPC，恢复单窗口的sender校验。
 
-- [CodexBar UI说明](https://github.com/steipete/CodexBar/blob/main/docs/ui.md)：独立设置、清晰的用量选择器与数字检查区，窄窗口避免挤压标题。
-- [Codex Monitor](https://github.com/manuelsh/codex-monitor)：剩余额度、重置时间和用量数字为主要信息，更多信息展开查看。
-- [Codex Usage Counter](https://github.com/remriel/codex-usage-counter)：常驻额度展示与大幅统计视图分开，统计支持全屏。
-- [Codex Token Dashboard](https://github.com/Jack-Tsue/codex-token-dashboard)：趋势、热力图与项目分析适合完整dashboard。本阶段只有三个滚动累计窗口，未虚构每日趋势或新增历史采集。
+卡片正文15px，说明14px、标题17px、token数字22px；色板36px，角色预览180px，大小及取景滑杆占据可用宽度。角色和外观页内容可纵向滚动。常驻立绘尺寸、点击反馈、数据读取和大小设置保持原有逻辑。
 
-采用“小面板看关键数值，大窗口调整与查看”的方式；三条横向柱分别显示24小时/7天/30天累计值，共用30天比例尺。24小时包含在7天、7天包含在30天，不能相加，口径说明保留。显示原始千分位数字，不用缩略值替代精确值。
+token使用三行横向柱：24小时、7天、30天，按30天值归一化，独立显示精确千分位数字。累计窗口不能相加；本机统计与共享池的关键声明常显，完整口径/索引数收进“统计口径”“额度说明”。索引中、部分覆盖仍常显。
 
-## 改动与操作
+## 参考
 
-点击角色展开后，在顶部点击“放大 ↗”。默认窗口840×680，最小540×520；可拖动边框、使用Windows最大化按钮，打开时沿用当前页签。四个页签共用原来的本机快照、角色和外观设置，重复打开会复用已有窗口。关大窗口不关常驻挂件。
+只阅读项目作者的文档，未安装其他工具、复制其代码或下载素材：
 
-大窗口正文15px，说明14px，token数字28px；宽窗口的外观设置以两列排列，窄窗口恢复单列，色板可换行。角色原图/效果预览增至220px高，滑杆随窗口宽度拉伸，设置控件可键盘聚焦。
+- [CodexBar](https://github.com/steipete/CodexBar/blob/main/docs/ui.md)：用量数字与设置层级清晰。
+- [Codex Monitor](https://github.com/manuelsh/codex-monitor)：剩余额度、重置时间和关键数字优先，其余按需展开。
+- [Codex Usage Counter](https://github.com/remriel/codex-usage-counter)：常驻信息与统计视图分层。
+- [Codex Token Dashboard](https://github.com/Jack-Tsue/codex-token-dashboard)：完整趋势/热力图适合dashboard。本插件只有三个累计窗口，不虚构每日趋势。
 
-小面板的竖柱改为三行“时段 / 精确数字 / 横向柱”，数字和柱分离，避免文字压在短柱上。统计口径、索引文件数、完整共享池说明收进可展开说明；索引中/部分覆盖提示仍留在默认页面，未把不完整数据伪装为完整数据。
+采用关键数字优先和可展开说明；按用户最终要求全部放在单击展开的卡片里。
 
-实现需要扩展主进程的本机窗口与IPC路由，这是用户后续“设置能放大”的需求带来的范围调整。新增workspace.cjs仅创建普通窗口；geometry.cjs、WindowApi.cs、runtime额度/token/MCP/角色后端/取景算法均未改。普通设置窗口是用户主动打开并操作的窗口，可以正常取得焦点；常驻挂件仍由原有C#80ms方案恢复Codex焦点。设置窗口不使用setShape，不修改常驻矩形和拖动分支。
+## 几何安全边界
 
-新增IPC只接纳常驻窗口与当前设置窗口的webContents；任何其他窗口都不能读取/写外观或操作角色。窗口加载固定本机文件，禁外部导航/弹出页，contextIsolation与sandbox打开、nodeIntegration关闭。使用同一存储队列与同一角色操作队列，不重复采集额度或创建第二个token Worker；设置窗口变化会广播回常驻界面。原有图片导入仍复制到本机，文件对话框隶属当前发起操作的窗口。
+PANEL由320×352改为480×560，固定卡片高度不再随额度窗口数量变化，避免未知/单窗口数据下设置区过小。实际尺寸仍受视口减去24px边距与8px起点约束。角色上限672×420未变；面板全局上限500×560，合计全局面积预算562,240 DIP²。
 
-## 本轮报错与修复
+只调整尺寸常量与面板高度分配，未放松整数、坐标、逐矩形实际尺寸预算、64矩形上限、全局面积预算、保留外侧滚动条或异常回退1×1校验。角色拖动、吸附、默认右下角、位置写盘与C#80ms焦点恢复方案未改。扩大详情矩形属于本轮刻意调整，配色与点击反馈动画自身均不改变形状。
 
-用户提供的主进程报错为源码desktop/main.cjs:173的“Object has been destroyed”。实测进程28488命令行是本轮workspace-ui-smoke隐藏测试，不是缓存中运行的正式挂件29828。
+## “Object has been destroyed”修复
 
-测试暂停模拟心跳统计主题形状，随后更多截图/尺寸检查超过3.5秒宿主超时，触发退出。退出后到达的管道包仍进入sync，异常处理再对已销毁窗口调用hide，造成第二个未捕获异常。已停止这个测试进程。
+用户截图指向源码desktop/main.cjs:173。实测进程28488来自本轮隐藏UI测试。暂停模拟宿主心跳后超时退出，随后到达的管道包仍访问已销毁窗口，异常处理再次hide产生未捕获异常。
 
-生产修复：before-quit标记quitting，sync/管道入口跳过退出或销毁状态，catch仅隐藏存活窗口，超时定时器不再访问销毁窗口。未改变认证、形状校验、焦点恢复或数据采集。测试恢复主题采样后的模拟心跳，并保持全部fixture窗口隐藏。新增shutdown.test在旧实现实测失败，修复后通过；覆盖合法认证的延迟管道包与退出后定时器。
+保留修复：before-quit设置quitting；sync与管道入口跳过退出或销毁状态，catch仅隐藏存活窗口，超时定时器避免访问已销毁窗口。认证和数据允许清单保持原状。shutdown.test在修复前失败、修复后通过，覆盖已认证延迟包和退出后的定时器；fixture主题采样后恢复心跳。
 
-## 自动与原生窗口验证
+## 本轮验证
 
-| 项目 | 本轮实测 |
+| 项目 | 实测证据 |
 | --- | --- |
-| 自动测试 | 64/64通过，含窗口销毁回归、允许清单、拖动、默认位置、角色迁移与内容检测。 |
-| 设置放大 | 540×520、840×680、1200×800实际窗口分别为526×484、826×644、1186×764网页客户区，无水平溢出。窗口resizable/maximizable均开启。 |
-| 外观布局 | 三档窗口大小下所有设置分组均无横向溢出；大窗口正文15px。 |
-| 图表 | 几何fixture精确返回246,800 / 1,456,000 / 6,200,000；横柱宽度按比例递增，标签与数字不重叠。 |
-| 小面板 | 320×214/270/352三档通过横柱、同色、索引状态、说明可滚动至可见的原生测试。 |
-| 同步 | 大窗口改紫色/深色后常驻界面同步；修改角色高度到300后常驻大小控件同步。 |
-| 权限 | 第三个非授权窗口的appearance-read为null、appearance-save和character-action均ok:false。 |
-| 形状独立 | 调大设置窗口前后常驻region相同；设置配色期间额外setShape=0。 |
-| 生命周期 | 重复打开仍仅两个窗口；关闭设置窗口后常驻窗口未销毁；退出竞态回归通过。 |
-| 颜色 | 70组配色重跑通过，最低正文4.500353580:1、强调文字4.500693575:1，主题额外setShape=0。 |
-| 角色回归 | 单图、220ms反馈、形状0额外调用、180/280/420大小、去背景、缩放平移、重置均通过；纵向/白裙/极端比例和滚轮测试通过。 |
-| 异常形状 | 10例仍回退1×1 DIP；本机144DPI窗口对应2×2物理像素。 |
-| 焦点/形状外输入 | C#与geometry未变，实机SendInput及用户体验仍待本轮鼠标暂停后复测；没有把之前的回复当成本轮通过证据。 |
-| 零消耗/本机图片 | 允许清单测试通过，新增仅本机窗口/IPC；未新增网络资源、图片上传、agent turn，未重复10分钟静置。 |
+| 自动检查 | scripts/verify.ps1 -Native：66/66通过，包含新增大卡片与退出竞态回归。 |
+| 单击/四页签 | 原生Electron生产main，点击一次clicks=1、expanded=true、窗口数=1；四页签均480×560、正文15px、没有横向溢出或放大按钮。 |
+| 小视口 | 480×320时详情448×288；200×180时168×148；恢复900×700后480×560。所有region均在保留边界内，超限profile/整窗形状失败关闭。 |
+| 横向图 | 隔离示例准确显示246,800 / 1,456,000 / 6,200,000；原生token Worker扫描26MB，主线程最大心跳间隔21ms。480×448受限视口下0/1/2额度窗口、三种索引状态、同色比例与说明可见均通过。 |
+| 颜色 | 70组系统/手动/底色/强调色通过，最低正文4.500353580:1、强调文字4.500693575:1。主题额外setShape=0。 |
+| 角色 | 单图迁移、220ms反馈结束还原、动画额外setShape=0、180/280/420大小、背景/取景/重置通过。白裙内白色保留，超宽/窄图正常。 |
+| 滚轮 | 隐藏原生角色面板scrollTop=0→120，最大可滚动202，document.hasFocus=false。测试按实际滚动范围断言，等待绘制提交后注入。 |
+| 异常形状 | 10例回退1×1 DIP；本机窗口144DPI时对应2×2物理像素。 |
+| 拖动 | 下表3轮真实main测量，移动写盘均0，松手合计2次；拖动期间UI重绘次数0。 |
+| 焦点/形状外宿主输入 | 待本轮用户暂停鼠标后实机探针；不把上一版独立窗口测试或此前回复当通过证据。 |
+| 零消耗/本机图片 | 允许清单测试通过，未新增网络资源、图片上传、agent turn；未重复10分钟静置。 |
 
-### 拖动写盘与耗时
+### 拖动性能
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/Invoke-DragIoSmoke.ps1 -Baseline 6c7e06f -Runs 3
-```
+复现：powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/Invoke-DragIoSmoke.ps1 -Baseline 6c7e06f -Runs 3。
 
-真实隐藏Electron、120事件/批次；每轮位置与诊断写盘均0，end后合计2次。未新增热路径序列化或窗口广播。
+每批120事件，三轮移动期间positionWrites=0、diagnosticWrites=0，end后合计2次。数值是批处理耗时，不是单帧视觉延迟。
 
-| 批次 | 前三轮ms | 后三轮ms | 中位 前→后 |
+| 批次 | 基线3轮ms | 当前3轮ms | 中位数前→后 |
 | --- | --- | --- | --- |
-| 视口内 | 27.319 / 48.740 / 25.649 | 24.255 / 43.726 / 56.097 | 27.319→43.726 |
-| 边缘来回 | 22.083 / 21.885 / 22.202 | 22.330 / 20.427 / 21.393 | 22.083→21.393 |
+| 视口内 | 48.548 / 37.322 / 30.792 | 28.304 / 43.886 / 30.640 | 37.322→30.640 |
+| 边缘来回 | 22.059 / 20.926 / 33.705 | 21.921 / 21.988 / 22.288 | 22.059→21.988 |
 
-边缘批次仍约20ms；第一批存在启动/系统调度波动，不将批次耗时当逐帧视觉延迟，也不声称所有耗时下降。拖动生产分支未变。
+基线为阶段5a首版6c7e06f。原始数据位于运行时drag-io-native/6c7e06f-run-{1,2,3}/，不提交用户运行数据。
 
-复现：scripts/verify.ps1 -Native；tests/Invoke-WorkspaceSmoke.ps1；tests/Invoke-AppearanceSmoke.ps1；tests/Invoke-PortraitSmoke.ps1；tests/Invoke-SingleCharacterSmoke.ps1。原始证据均在运行时数据目录stage-5a-workspace/、stage-5a-token-refresh/、stage-5a-ui/及drag-io-native/6c7e06f-run-{1,2,3}/，未提交用户数据。
+其他复现入口：tests/Invoke-PopupSmoke.ps1、Invoke-AppearanceSmoke.ps1、Invoke-PortraitSmoke.ps1、Invoke-SingleCharacterSmoke.ps1；token原生脚本tests/token-ui-smoke.cjs。隔离测试报告位于stage-5a-popup/、stage-5a-ui/、stage-4a-ui/、stage-5a-token-refresh/。
 
 ## 效果图
 
-截图由真实Electron窗口捕获，示例数字与白裙几何机器人为隔离测试数据，无用户动漫素材。改造前竖柱见[上轮截图](images/stage-5a-after-dark-token.png)。
+真实Electron捕获，示例额度/token和可自由分发的白裙几何机器人；未使用用户动漫素材。
 
-![横向token图](images/stage-5a-workspace-token.png)
+![单击展开的额度卡片](images/stage-5a-popup-quota.png)
 
-![放大外观设置](images/stage-5a-workspace-appearance.png)
+![横向token图](images/stage-5a-popup-token.png)
 
-![放大角色设置](images/stage-5a-workspace-character.png)
+![角色设置](images/stage-5a-popup-character.png)
 
-## 安装与审查
+![外观设置](images/stage-5a-popup-appearance.png)
 
-stop→桌面CLI0.162.0-alpha.17.2重装→逐文件SHA256→缓存start；125/125文件一致，无多余文件，逐文件清单见运行时stage-5a-readability-cache-hashes.json。用户角色、外观和位置文件保留。单独只读审查了本机窗口路由、sender校验、设置同步、生命周期和拖动分支；没有新增账户读取能力或外部资源。
+## 安装与交付
+
+采用stop→桌面CLI0.162.0-alpha.17.2重装→源码/缓存逐文件SHA256→缓存start。本轮126/126个源码文件SHA256一致，无额外插件文件（不计安装复制的.git元数据），逐文件清单见运行时stage-5a-popup-cache-hashes.json。实机焦点/形状外输入仍待用户暂停鼠标后复测，未标成通过。用户角色、外观和位置文件保留。未push。
