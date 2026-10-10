@@ -3,7 +3,7 @@
   const message=document.getElementById('dialogue-message'),save=document.getElementById('dialogue-save');
   let saved=null,editing=false;
   const groups=[first,second].map(field=>{const group=document.createElement('div');group.id=field.id+'-presets';group.className='dialogue-presets';group.setAttribute('role','group');field.closest('label').after(group);return group;});
-  const help=document.createElement('p');help.className='character-help';help.dataset.i18n='{重置时间} 仅为时长，例如 3天21小时；“再过”和“后重置”由句子填写。选择预设后可继续编辑，保存后生效。';document.querySelector('.dialogue-actions').before(help);
+  const help=document.createElement('p');help.className='character-help';help.dataset.i18n='预设可编辑，保存生效；{重置时间}如 3天21小时。';document.querySelector('.dialogue-actions').before(help);
   function paintPresets(){for(const [i,group]of groups.entries())for(const button of group.querySelectorAll('button')){button.disabled=!saved;button.setAttribute('aria-pressed',String([first,second][i].value===button.dataset.template));}}
   function renderPresets(){
     for(const [i,rows]of window.dialogueModel.presets(window.uiText.language).entries()){
