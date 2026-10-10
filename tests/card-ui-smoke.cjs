@@ -22,13 +22,17 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   const r=state().region[1];await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(80);fs.writeFileSync(path.join(output,'speech.png'),(await win.webContents.capturePage(r,{stayHidden:true,stayAwake:true})).toPNG());
   await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,1);assert.match(await js(`document.querySelector('#speech-text').textContent`),/消耗好快/);
   assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'none','Second dialogue must not show countdown or reset cards');
-  const typography=await js(`(()=>{const s=getComputedStyle(document.querySelector('#speech-text'));return {family:s.fontFamily,weight:s.fontWeight}})()`);
-  assert.ok(typography.family.startsWith('"Noto Sans SC"'),typography.family);assert.equal(typography.weight,'400');
+  const typography=await js(`(()=>{const s=getComputedStyle(document.querySelector('#speech-text'));return {family:s.fontFamily,weight:s.fontWeight,size:s.fontSize}})()`);
+  assert.ok(typography.family.indexOf('Segoe UI Variable Text')<typography.family.indexOf('Noto Sans SC'),typography.family);assert.match(typography.family,/DengXian/);assert.equal(typography.weight,'400');assert.equal(typography.size,'16px');
   assert.deepEqual(state().region[1],r,'Dialogue text and typography must not resize the bubble region');
   await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);
   assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex','First dialogue must restore reset details');
+  async function dismissSpeech(){socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,bounds:dimensions,outsideClick:true}})+'\n');await delay(150);assert.equal(state().speechVisible,false);}
+  await dismissSpeech();await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex');
+  await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,1);
+  await dismissSpeech();await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex');
   const gear=await js(`(()=>{const r=document.querySelector('#settings-open').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);await clickAt(gear.x,gear.y);
-  assert.equal(state().expanded,true);assert.equal(state().speechVisible,false);assert.equal(state().clicks,3);
+  assert.equal(state().expanded,true);assert.equal(state().speechVisible,false);assert.equal(state().clicks,6);
   socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,bounds:dimensions,outsideClick:true}})+'\n');await delay(150);assert.equal(state().expanded,false);await clickAt(gear.x,gear.y);
   await js(`window.widget.gesture({type:'drag',x:950,y:80});window.widget.gesture({type:'end'})`);await waitFor(`!document.querySelector('#details').hidden`);await delay(100);
   async function capture(name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(80);const r=state().region[1];fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(r,{stayHidden:true,stayAwake:true})).toPNG());}
@@ -49,5 +53,5 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await js(`document.querySelector('#panel-resize').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))`);await delay(100);assert.deepEqual(saved(),{width:640,height:720,language:'en-US'});
   dimensions={width:320,height:250};send();await delay(100);for(const r of state().region)assert.ok(r.x>=8&&r.y>=8&&r.x+r.width<=296&&r.y+r.height<=226);assert.deepEqual(saved(),{width:640,height:720,language:'en-US'});dimensions={width:1200,height:1000};send();await delay(100);
   await js(`document.querySelector('#close').click()`);await waitFor(`document.querySelector('#details').hidden`);assert.equal(state().region.length,1);
-  const result={passed:true,speech:{alternatesTwo:true,secondDialogueOnly:true,width:280,height:152,resetCredits:2,gearOnlySettings:true,outsideSignalDismisses:true},typography,close:initial.close,tabWidths:initial.tabs.map(t=>t.width),pointerResize:{width:620,height:720},saved:saved(),languages:['zh-CN','en-US'],stickyClose:true,wheelScroll:true,smallViewportClamped:true,closeCollapses:true};fs.writeFileSync(path.join(output,'card-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
+  const result={passed:true,speech:{alternatesTwo:true,secondDialogueOnly:true,dismissalRestartsFirst:true,width:280,height:152,resetCredits:2,gearOnlySettings:true,outsideSignalDismisses:true},typography,close:initial.close,tabWidths:initial.tabs.map(t=>t.width),pointerResize:{width:620,height:720},saved:saved(),languages:['zh-CN','en-US'],stickyClose:true,wheelScroll:true,smallViewportClamped:true,closeCollapses:true};fs.writeFileSync(path.join(output,'card-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
 })().catch(e=>{process.stderr.write(e.stack+'\n');app.exit(1);});

@@ -160,7 +160,7 @@ app.whenReady().then(async()=>{
       savePosition();notifyLayout();
       if(pendingQuota){saveSnapshot('quota-state.json',pendingQuota);pendingQuota=null;}
       if(pendingTokens){saveSnapshot('tokens-state.json',pendingTokens);pendingTokens=null;}
-    } else if(value.type==='click'){if(panelResizing){panelResizing=false;savePanel();}clicks++;expanded=false;speechVisible=true;speechIndex=(speechIndex+1)%2;updateShape();}
+    } else if(value.type==='click'){if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=speechVisible?(speechIndex+1)%2:0;expanded=false;speechVisible=true;updateShape();}
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=saved;defaultPlacement=false;}}catch{}

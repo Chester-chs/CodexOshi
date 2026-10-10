@@ -13,7 +13,9 @@ $form.Text=if($en){'Edit dialogue'}else{'编辑点击对话'}
 $form.ClientSize=New-Object Drawing.Size(540,410)
 $form.StartPosition='CenterParent';$form.FormBorderStyle='FixedDialog';$form.MaximizeBox=$false;$form.MinimizeBox=$false;$form.ShowInTaskbar=$false
 $fontCollection=New-Object Drawing.Text.InstalledFontCollection
-$fontFamily=if($fontCollection.Families.Name -contains 'Noto Sans SC'){'Noto Sans SC'}else{'Microsoft YaHei UI'}
+$fontCandidates=if($en){@('Segoe UI','等线','Noto Sans SC','Microsoft YaHei UI')}else{@('PingFang SC','DengXian','等线','Noto Sans SC','Microsoft YaHei UI')}
+$fontFamily=($fontCandidates | Where-Object {$_ -in $fontCollection.Families.Name} | Select-Object -First 1)
+if(-not $fontFamily){$fontFamily='Segoe UI'}
 $fontCollection.Dispose()
 $form.Font=New-Object Drawing.Font($fontFamily,10,[Drawing.FontStyle]::Regular)
 $names=if($en){@('Address','First dialogue','Second dialogue')}else{@('称呼','第一段对话','第二段对话')}

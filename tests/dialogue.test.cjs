@@ -19,6 +19,17 @@ test('portrait alternates two speeches; only gear opens settings and outside cli
   const socket=h.socket();socket.emit('data',JSON.stringify({token:h.bridgeInfo.token,state:{attached:true,visible:true,hostAlive:true,dpi:96,bounds:{width:800,height:600},outsideClick:true}})+'\n');
   assert.equal(h.run('expanded'),false);
 });
+for(const previousClicks of [1,2])test(`outside dismissal after ${previousClicks} portrait clicks starts again with reset information`,async()=>{
+  const h=await mainHarness(),socket=h.socket();
+  for(let n=0;n<previousClicks;n++)h.gesture({type:'click'});
+  socket.emit('data',JSON.stringify({token:h.bridgeInfo.token,state:{attached:true,visible:true,hostAlive:true,dpi:96,bounds:{width:800,height:600},outsideClick:true}})+'\n');
+  assert.equal(h.run('speechVisible'),false);
+  h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0,'A closed bubble must begin a fresh dialogue');
+  h.gesture({type:'click'});assert.equal(h.run('speechIndex'),1,'Only a visible first bubble advances to the reminder');
+  h.ipc('collapse');h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);
+  h.ipc('open-settings');h.ipc('collapse');h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);
+  assert.equal(h.run('clicks'),previousClicks+4);
+});
 test('dialogues have exactly two bounded plain-text templates and safe substitutions',()=>{
   const m=require('../desktop/ui/dialogue-model.js');const d=m.defaults();assert.equal(d.lines.length,2);
   assert.throws(()=>m.validate({...d,lines:['a']}));assert.throws(()=>m.validate({...d,address:'x'.repeat(33)}));
