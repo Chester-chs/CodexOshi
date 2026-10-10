@@ -23,7 +23,7 @@ app.whenReady().then(async()=>{
   await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);
   // Commit the newly selected tab to the hidden window's hit-test surface.
   await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});
-  const wheelPoint=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details'),r=p.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2),top:p.scrollTop}})()`);
+  const wheelPoint=await win.webContents.executeJavaScript(`(()=>{const p=document.querySelector('#details'),r=p.getBoundingClientRect();return {x:Math.round(r.x+4),y:Math.round(r.y+r.height/2),top:p.scrollTop}})()`);
   win.webContents.sendInputEvent({type:'mouseWheel',x:wheelPoint.x,y:wheelPoint.y,deltaY:-120,deltaX:0,wheelTicksY:-1,canScroll:true});
   for(let i=0;i<4;i++){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await new Promise(r=>setTimeout(r,100));}
   const nativeWheel=await win.webContents.executeJavaScript(`({top:document.querySelector('#details').scrollTop,focused:document.hasFocus()})`);

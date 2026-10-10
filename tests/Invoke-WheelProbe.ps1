@@ -27,7 +27,8 @@ if($s.panelScroll.tab -ne 'character'){
   $p=Point $s $s.panelScroll.roleTab.x $s.panelScroll.roleTab.y;Prepare $s $p;[QuotaMouseProbe]::ClickAndSample() | Out-Null;Start-Sleep -Milliseconds 200;$s=Read-State
 }
 if($s.panelScroll.tab -ne 'character' -or $s.panelScroll.height -le $s.panelScroll.clientHeight){throw 'Character panel is not scrollable.'}
-$r=$s.region[1];$p=Point $s ($r.x+$r.width/2) ($r.y+$r.height/2);Prepare $s $p
+# Use the panel padding: its center can now land on a range/control that consumes wheel input.
+$r=$s.region[1];$p=Point $s ($r.x+4) ($r.y+$r.height/2);Prepare $s $p
 $before=Read-State;$foregroundBefore=[QuotaMouseProbe]::Foreground()
 $delta=if($before.panelScroll.top -eq 0){-120}else{120}
 $sent=[QuotaMouseProbe]::Wheel($delta);Start-Sleep -Milliseconds 500;$after=Read-State

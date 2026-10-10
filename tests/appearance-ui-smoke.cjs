@@ -1,0 +1,67 @@
+// Hidden real application, fixed local geometry art and synthetic quota/token snapshots.
+const {app,BrowserWindow,nativeTheme,ipcMain}=require('electron'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),Module=require('node:module'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events'),{execFileSync}=require('node:child_process');
+const output=path.resolve(process.argv[process.argv.indexOf('--output')+1]),data=path.join(output,'data'),restart=process.argv.includes('--restart'),role=path.join(data,'characters','白裙几何'),source=path.resolve(__dirname,'..');fs.mkdirSync(role,{recursive:true});
+fs.copyFileSync(path.join(__dirname,'fixtures/portrait-white.png'),path.join(role,'tired.png'));fs.writeFileSync(path.join(role,'settings.json'),JSON.stringify({images:{tired:'tired.png'},targetHeight:280}));fs.writeFileSync(path.join(data,'characters','active.json'),'{"name":"白裙几何"}');
+if(!restart)try{fs.unlinkSync(path.join(data,'appearance.json'));}catch(e){if(e.code!=='ENOENT')throw e;}
+const quota={windows:[{remainingPercent:72,label:'5 小时限额',resetAt:Date.now()/1000+7200},{remainingPercent:55,label:'每周限额',resetAt:Date.now()/1000+86400*3}],planType:'plus',source:'http',observedAt:Date.now()};
+const tokenData={values:{hours24:246800,days7:1456000,days30:6200000},coverage:'complete',filesIndexed:12,filesDiscovered:12,observedAt:Date.now()};
+process.argv.push('--data',data);const originalLoad=Module._load;
+Module._load=function(name,parent,...args){if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot=quota;}async refresh(){return this.snapshot;}}};if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){queueMicrotask(()=>this.emit('message',{type:'tokens',value:tokenData}));}terminate(){}}};return originalLoad.call(this,name,parent,...args);};
+const shapes=[],nativeShape=BrowserWindow.prototype.setShape;BrowserWindow.prototype.setShape=function(value){shapes.push(JSON.stringify(value));return nativeShape.call(this,value);};
+const handlers=new Map(),nativeHandle=ipcMain.handle.bind(ipcMain);ipcMain.handle=(name,callback)=>{handlers.set(name,callback);nativeHandle(name,callback);};
+const filename=path.join(source,'desktop/main.cjs'),main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));main._compile(fs.readFileSync(filename,'utf8'),filename);
+const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));
+(async()=>{
+  await app.whenReady();let bridge;const deadline=Date.now()+6000;while(!bridge){try{const q=JSON.parse(fs.readFileSync(path.join(data,'bridge.json'),'utf8'));if(q.pid===process.pid)bridge=q;}catch{}if(Date.now()>deadline)throw Error('No new bridge');await delay(20);}
+  const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});
+  let revision=0;
+  const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:false,dpi:96,revision:++revision,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
+  const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code),current=path.join(source,'desktop/ui/index.html');
+  async function waitFor(code){const deadline=Date.now()+4000;while(!(await js(code))){if(Date.now()>deadline)throw Error('UI condition timed out: '+code);await delay(40);}}
+  await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(350);
+  const typography=await js(`({family:getComputedStyle(document.body).fontFamily,size:getComputedStyle(document.body).fontSize})`);assert.match(typography.family,/Segoe UI/);fs.writeFileSync(path.join(output,'typography.json'),JSON.stringify(typography,null,2));
+  assert.equal(await handlers.get('appearance-read')({sender:{}}),null);assert.equal((await handlers.get('appearance-save')({sender:{}},{mode:'dark'})).ok,false);
+  if(restart){
+    await waitFor(`document.documentElement.dataset.theme==='dark'&&document.querySelector('#accent-custom').value==='#8944d4'`);
+    const actual=await js(`window.widget.appearanceRead()`);assert.deepEqual(actual,{mode:'dark',accent:'#8944d4',surface:'cream'});
+    fs.writeFileSync(path.join(output,'restart.json'),JSON.stringify({pid:process.pid,settings:actual,passed:true},null,2));clearInterval(heartbeat);socket.destroy();app.quit();return;
+  }
+  await js(`window.widget.gesture({type:'click'})`);await delay(150);
+  async function capture(name){const s=state(),left=Math.min(...s.region.map(r=>r.x)),top=Math.min(...s.region.map(r=>r.y)),right=Math.max(...s.region.map(r=>r.x+r.width)),bottom=Math.max(...s.region.map(r=>r.y+r.height));const rect={x:Math.max(0,left-16),y:Math.max(0,top-16),width:Math.min(900-left+16,right-left+32),height:Math.min(700-top+16,bottom-top+32)};await win.webContents.capturePage(rect,{stayHidden:true,stayAwake:true});await delay(80);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(rect,{stayHidden:true,stayAwake:true})).toPNG());}
+  // Read-only baseline UI export. Same native window, data and region, no checkout changes.
+  const before=path.join(output,'baseline-ui');fs.mkdirSync(before,{recursive:true});for(const file of execFileSync('git',['ls-tree','-r','--name-only','9f6a1b6','desktop/ui'],{cwd:source,encoding:'utf8',windowsHide:true}).trim().split(/\r?\n/)){fs.writeFileSync(path.join(before,path.basename(file)),execFileSync('git',['show','9f6a1b6:'+file],{cwd:source,windowsHide:true}));}
+  await win.loadFile(path.join(before,'index.html'));await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(250);
+  for(const mode of ['light','dark']){nativeTheme.themeSource=mode;await delay(250);await capture('before-'+mode+'.png');}
+  nativeTheme.themeSource='light';await win.loadFile(current);await waitFor(`document.querySelector('#accent-presets').children.length===7&&document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(350);
+  const system=[];for(const mode of ['light','dark']){nativeTheme.themeSource=mode;await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(200);system.push(await js(`({attribute:document.documentElement.dataset.theme||null,dark:matchMedia('(prefers-color-scheme: dark)').matches,background:getComputedStyle(document.querySelector('#details')).backgroundColor})`));}
+  fs.writeFileSync(path.join(output,'system-debug.json'),JSON.stringify(system,null,2));
+  assert.equal(system[0].attribute,null);assert.equal(system[1].attribute,null);assert.notEqual(system[0].background,system[1].background);
+  clearInterval(heartbeat);heartbeat=null;const stableRegion=state().region,rows=[];let shapeCallsForTheme=0;
+  const model=require('../desktop/ui/appearance-model.js');
+  // Inspect computed CSS, not just the palette model, for every preset combination.
+  for(const mode of ['light','dark'])for(const surface of model.surfaces)for(const accent of model.accents){
+    send();const ackDeadline=Date.now()+1000;while(state().host.revision!==revision){if(Date.now()>ackDeadline)throw Error('Host heartbeat not acknowledged');await delay(5);}const shapeStart=shapes.length;
+    await js(`document.querySelector('#appearance-tab').click();document.querySelector('[data-mode="${mode}"]').click();document.querySelector('[data-surface="${surface.id}"]').click();document.querySelector('[data-accent="${accent.color}"]').click();`);await delay(170);
+    const colors=await js(`(()=>{const ids=['#details','#metadata','#appearance-adjustment','#appearance-error','article','#character-upload','.surface-options button[aria-pressed="true"]'];return Object.fromEntries(ids.map(s=>{const c=getComputedStyle(document.querySelector(s));return [s,{foreground:c.color,background:c.backgroundColor}]}))})()`);
+    const resolved=model.resolve({mode,surface:surface.id,accent:accent.color}),cssHex=rgb=>'#'+rgb.match(/[\d.]+/g).slice(0,3).map(v=>Number(v).toString(16).padStart(2,'0')).join('');
+    assert.equal(cssHex(colors['#details'].foreground),resolved.variables['--text-primary']);assert.equal(cssHex(colors['#metadata'].foreground),resolved.variables['--text-secondary']);assert.equal(cssHex(colors['#appearance-error'].foreground),resolved.variables['--danger-ink']);
+    assert.equal(cssHex(colors['#character-upload'].foreground),resolved.variables['--accent-contrast']);assert.equal(cssHex(colors['#character-upload'].background),resolved.variables['--accent']);
+    const bodyMinimum=Math.min(...resolved.contrastPairs.slice(0,5).flatMap(([f,bs])=>bs.map(b=>model.contrast(f,b)))),accentMinimum=Math.min(...resolved.contrastPairs[5][1].map(b=>model.contrast(resolved.contrastPairs[5][0],b)));
+    rows.push({mode,surface:surface.id,accent:accent.id,bodyMinimum,accentMinimum,colors});assert.ok(bodyMinimum>=4.5);assert.ok(accentMinimum>=4.5);assert.deepEqual(state().region,stableRegion);shapeCallsForTheme+=shapes.length-shapeStart;
+  }
+  assert.equal(shapeCallsForTheme,0,'theme changes must not request any shape operations');send();heartbeat=setInterval(send,150);
+  async function choose(mode,accent,surface='theme'){await js(`document.querySelector('#appearance-tab').click();document.querySelector('[data-mode="${mode}"]').click();document.querySelector('[data-surface="${surface}"]').click();document.querySelector('[data-accent="${accent}"]').click();`);await delay(220);}
+  for(const [mode,accent,name]of [['light','#007aff','after-light-blue'],['dark','#007aff','after-dark-blue'],['light','#248a3d','after-light-green'],['dark','#8944d4','after-dark-purple']]){await choose(mode,accent);await js(`document.querySelector('#quota-tab').click()`);await delay(70);await capture(name+'.png');fs.writeFileSync(path.join(output,name+'-styles.json'),JSON.stringify(await js(`(()=>{const selectors=['html','body','nav','#quota-tab','#appearance-tab'];return Object.fromEntries(selectors.map(s=>{const c=getComputedStyle(document.querySelector(s));return [s,{font:c.font,fontVariable:c.getPropertyValue('--font-system'),elevated:c.getPropertyValue('--bg-elevated'),background:c.backgroundColor,foreground:c.color,appearance:c.appearance,hover:document.querySelector(s).matches(':hover')}]}))})()`),null,2));}
+  await js(`document.querySelector('#token-tab').click()`);await delay(180);assert.equal(await js(`document.querySelectorAll('.token-column').length`),3);assert.equal(await js(`document.querySelector('.token-value').textContent`),'246,800');await capture('after-dark-token.png');
+  await choose('light','#007aff');await js(`document.querySelector('#details').scrollTop=0`);await capture('appearance-light.png');await js(`document.querySelector('#details').scrollTop=document.querySelector('#details').scrollHeight`);await capture('appearance-light-bottom.png');
+  await choose('dark','#8944d4','cream');await js(`document.querySelector('#details').scrollTop=0`);await capture('appearance-dark-purple.png');
+  await js(`document.querySelector('#accent-custom').value='#242426';document.querySelector('#accent-custom').dispatchEvent(new Event('input',{bubbles:true}))`);await delay(220);const adjusted=await js(`({value:document.querySelector('#accent-custom').value,text:document.querySelector('#appearance-adjustment').textContent})`);assert.equal(adjusted.value,'#242426');assert.match(adjusted.text,/自动调整/);
+  await choose('dark','#8944d4','cream');await delay(150);const persisted=JSON.parse(fs.readFileSync(path.join(data,'appearance.json'),'utf8'));assert.deepEqual(persisted,{mode:'dark',accent:'#8944d4',surface:'cream'});
+  await js(`document.querySelector('#appearance-tab').click();document.querySelector('#details').scrollTop=document.querySelector('#details').scrollHeight`);
+  // Hidden fixtures cannot take native keyboard focus. Evaluate the actual focus-visible rule via CDP.
+  win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('DOM.enable');await win.webContents.debugger.sendCommand('CSS.enable');const documentNode=await win.webContents.debugger.sendCommand('DOM.getDocument');const {nodeId}=await win.webContents.debugger.sendCommand('DOM.querySelector',{nodeId:documentNode.root.nodeId,selector:'[data-mode="dark"]'});await win.webContents.debugger.sendCommand('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:['focus','focus-visible']});
+  const focusRing=await js(`({width:getComputedStyle(document.querySelector('[data-mode="dark"]')).outlineWidth,style:getComputedStyle(document.querySelector('[data-mode="dark"]')).outlineStyle})`);assert.equal(focusRing.width,'2px');assert.equal(focusRing.style,'solid');win.webContents.debugger.detach();
+  assert.equal(await js(`document.documentElement.hasAttribute('aria-pressed')`),false);
+  const result={system,combinations:rows.length,minimumBody:Math.min(...rows.map(r=>r.bodyMinimum)),minimumAccent:Math.min(...rows.map(r=>r.accentMinimum)),shapeCallsForTheme,stableRegion,adjusted,persisted,focusRing,rows,passed:true};
+  fs.writeFileSync(path.join(output,'appearance-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
+})().catch(e=>{process.stderr.write(e.stack+'\n');app.exit(1);});

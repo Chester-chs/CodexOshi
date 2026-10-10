@@ -1,6 +1,8 @@
 const {ipcMain,protocol,dialog}=require('electron');
 const fs=require('node:fs/promises'),path=require('node:path');
+const {installAppearance}=require('./appearance.cjs');
 function installCharacters(win,store){
+  installAppearance(win,path.dirname(store.root));
   protocol.handle('character',async request=>{
     try{
       const url=new URL(request.url);if(request.method!=='GET')throw Error();let buffer,mime;

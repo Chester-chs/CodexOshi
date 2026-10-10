@@ -1,5 +1,7 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('widget',{
+  appearanceRead:()=>ipcRenderer.invoke('appearance-read'),
+  appearanceSave:value=>ipcRenderer.invoke('appearance-save',value),
   ready:()=>ipcRenderer.send('ready'),
   gesture:value=>ipcRenderer.send('gesture',value),
   collapse:()=>ipcRenderer.send('collapse'),

@@ -26,8 +26,8 @@ window.widget.layout(value=>{
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
-for(const name of ['quota','token','character'])document.getElementById(name+'-tab').addEventListener('click',()=>{
-  for(const tab of ['quota','token','character']){
+for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>{
+  for(const tab of ['quota','token','character','appearance']){
     document.getElementById(tab+'-panel').hidden=tab!==name;
     document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
   }
