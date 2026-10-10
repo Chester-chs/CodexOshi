@@ -19,7 +19,7 @@ test('all four JPEG states survive reload; mislabeled images import without chan
     const store=new CharacterStore(path.join(root,'characters'));await store.init();await store.create('几何');
     const bytes=await fs.readFile(fixture('geometry.jpg')),source=path.join(root,'original.jpeg');await fs.writeFile(source,bytes);const before=await fs.stat(source);
     for(const state of STATES)await store.importFile('几何',state,source);
-    const reload=new CharacterStore(store.root);await reload.init();assert.equal(Object.keys((await reload.snapshot()).characters[0].images).length,4);
+    const reload=new CharacterStore(store.root);await reload.init();assert.equal((await reload.snapshot()).characters[0].image.filename,'ready.jpg');
     for(const state of STATES){const q=await reload.asset('几何',state);assert.equal(q.mime,'image/jpeg');assert.deepEqual(q.buffer,bytes);}
     assert.deepEqual(await fs.readFile(source),bytes);assert.equal((await fs.stat(source)).mtimeMs,before.mtimeMs);
     const png=await fs.readFile(path.resolve(__dirname,'../assets/placeholder-ready.png'));

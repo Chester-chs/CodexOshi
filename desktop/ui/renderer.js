@@ -1,6 +1,12 @@
 const button=document.getElementById('widget'),details=document.getElementById('details');
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
+let feedbackAnimation;
+function clickFeedback(){
+  feedbackAnimation?.cancel();
+  const animation=document.getElementById('character-canvas').animate([{transform:'scale(1)'},{transform:'scale(.96)',offset:.35},{transform:'scale(1)'}],{duration:220,easing:'ease-out'});
+  feedbackAnimation=animation;animation.onfinish=()=>{if(feedbackAnimation===animation)feedbackAnimation=null;};
+}
 function reportScroll(){
   if(scrollReportPending)return;scrollReportPending=true;
   requestAnimationFrame(()=>{
@@ -73,7 +79,6 @@ button.addEventListener('pointermove',event=>{
   if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
   if(moved)window.widget.gesture({type:'drag',x:start.left+dx,y:start.top+dy});
 });
-function end(event){if(!start)return;if(!moved&&event.type==='pointerup')window.widget.gesture({type:'click'});window.widget.gesture({type:'end'});start=null;}
+function end(event){if(!start)return;if(!moved&&event.type==='pointerup'){clickFeedback();window.widget.gesture({type:'click'});}window.widget.gesture({type:'end'});start=null;}
 button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
 setInterval(render,1000);render();renderTokens();
-window.widget.ready();

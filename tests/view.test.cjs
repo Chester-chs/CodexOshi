@@ -9,7 +9,7 @@ test('0/1/2 actual windows render and compact chooses the limiting window',()=>{
   const v=present(q,160,0);assert.equal(v.cards.length,2);assert.equal(v.compact.remainingPercent,18);
 });
 test('remaining thresholds and narrow-width downgrade use real remaining values',()=>{
-  for(const [percent,tone] of [[21,'normal'],[20,'orange'],[11,'orange'],[10,'orange'],[6,'orange'],[5,'red'],[0,'red']]) {
+  for(const [percent,tone] of [[21,'normal'],[20,'orange'],[11,'orange'],[10,'red'],[6,'red'],[5,'red'],[0,'red']]) {
     const v=present({windows:[{remainingPercent:percent}]},119,0);assert.equal(v.compact.tone,tone);assert.equal(v.showCompactBar,false);
   }
   assert.equal(present({windows:[{remainingPercent:65}]},120,0).showCompactBar,true);

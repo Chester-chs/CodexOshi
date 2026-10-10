@@ -1,16 +1,12 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {CharacterStore,imageInfo}=require('../runtime/characters.cjs');
-const {characterState,characterView}=require('../desktop/ui/character-view.js');
+const {characterView}=require('../desktop/ui/character-view.js');
 const {prepareImage}=require('../desktop/ui/image-processing.js');
-test('quota states follow weakest window, unknown stays neutral, and recovered quota is ready',()=>{
-  for(const [n,state] of [[100,'ready'],[50,'tired'],[21,'tired'],[20,'low'],[6,'low'],[5,'exhausted'],[0,'exhausted']])assert.equal(characterState([{remainingPercent:n}]),state);
-  assert.equal(characterState([]),null);assert.equal(characterState([{remainingPercent:null}]),null);
-  assert.equal(characterState([{remainingPercent:90},{remainingPercent:3}]),'exhausted');
-  const role={images:{ready:{url:'local-ready'},low:{url:'local-low'}},settings:{zoom:1.4,x:.1,y:-.2,background:true}};
-  assert.equal(characterView(role,'low').url,'local-low');assert.equal(characterView(role,'low').fallback,false);
-  assert.equal(characterView(role,'tired').url,'local-ready');assert.equal(characterView(role,'tired').fallback,true);
-  assert.match(characterView(role,null).url,/placeholder/);assert.notEqual(characterView(role,'exhausted').filter,characterView(role,'tired').filter);
+test('one selected portrait stays identical at every quota value, including unknown',()=>{
+  const role={image:{url:'local-portrait'},settings:{zoom:1.4,x:.1,y:-.2,background:true}};
+  for(const quota of [100,50,21,20,10,5,0,null]){const view=characterView(role,quota);assert.equal(view.url,'local-portrait');assert.deepEqual(view.settings,role.settings);assert.equal(view.filter,undefined);assert.equal(view.scale,undefined);}
+  assert.match(characterView(null).url,/placeholder/);
 });
 function pixels(w,h,color){return {width:w,height:h,data:new Uint8ClampedArray(Array.from({length:w*h},()=>color).flat())};}
 test('transparent bounds crop; border-connected background removes and feathers without changing input',()=>{
@@ -38,7 +34,7 @@ test('create, copy four states, rename, switch, persist framing, and delete only
   assert.deepEqual(await fs.readFile(path.join(dir,'characters','几何示例','low.png')),png);
   await store.settings('几何示例',{zoom:1.5,x:.2,y:-.1,background:false});await store.rename('几何示例','新名字');await store.create('另一角色');await store.select('新名字');
   const reload=new CharacterStore(path.join(dir,'characters'));await reload.init();const q=await reload.snapshot();assert.equal(q.active,'新名字');assert.equal(q.characters.find(c=>c.name===q.active).settings.zoom,1.5);
-  assert.match(q.characters.find(c=>c.name==='新名字').images.ready.url,/^character:\/\/local\//);await reload.remove('新名字');assert.equal((await reload.snapshot()).active,'另一角色');assert.deepEqual(await fs.readFile(file),png);
+  assert.match(q.characters.find(c=>c.name==='新名字').image.url,/^character:\/\/local\//);await reload.remove('新名字');assert.equal((await reload.snapshot()).active,'另一角色');assert.deepEqual(await fs.readFile(file),png);
 }));
 test('invalid names, oversized files, giant dimensions, unsupported data and links cannot escape storage',()=>fixture(async dir=>{
   const store=new CharacterStore(path.join(dir,'characters'));await store.init();for(const name of ['../escape','CON','a/b','bad.',''])await assert.rejects(store.create(name));await store.create('safe');
