@@ -1,4 +1,6 @@
 const button=document.getElementById('widget'),details=document.getElementById('details');
+const query=new URLSearchParams(location.search),workspaceMode=query.get('workspace')==='true';
+if(workspaceMode){document.documentElement.dataset.workspace='true';details.hidden=false;for(const control of details.querySelectorAll('[tabindex="-1"]'))control.tabIndex=0;}
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
 let feedbackAnimation;
@@ -18,6 +20,7 @@ details.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+1)
 details.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
+  if(workspaceMode)return;
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
   layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
@@ -26,13 +29,18 @@ window.widget.layout(value=>{
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
-for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>{
+function selectTab(name){
+  if(!['quota','token','character','appearance'].includes(name))return;
   for(const tab of ['quota','token','character','appearance']){
     document.getElementById(tab+'-panel').hidden=tab!==name;
     document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
   }
   details.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
-});
+}
+for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>selectTab(name));
+window.widget.selectTab?.(selectTab);
+document.getElementById('open-workspace').addEventListener('click',()=>window.widget.openWorkspace(document.querySelector('nav [aria-selected="true"]').id.replace('-tab','')));
+if(workspaceMode)selectTab(query.get('tab')||'quota');
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 document.getElementById('position-reset').addEventListener('click',()=>window.widget.resetPosition());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
@@ -60,11 +68,12 @@ function render(){
 function renderTokens(){
   const view=window.quotaView.presentTokens(tokens),chart=document.getElementById('token-chart');chart.replaceChildren();
   document.getElementById('token-coverage').textContent=view.coverageText;
+  const indexing=document.getElementById('token-status');indexing.textContent=view.coverageText.split(' · ')[0];indexing.hidden=tokens?.coverage==='complete';
   chart.setAttribute('aria-label',view.rows.map(row=>row.label+'：'+row.text+' token').join('，'));
   for(const row of view.rows){
     const item=document.createElement('div'),plot=document.createElement('div'),label=document.createElement('span'),value=document.createElement('strong'),bar=document.createElement('div');
     item.className='token-column';plot.className='token-plot';label.className='token-label';label.textContent=row.label.replace('最近','');value.className='token-value';value.textContent=row.text;
-    bar.className='token-bar';bar.style.height=row.percent*.8+'%';value.style.bottom='calc('+row.percent*.8+'% + 5px)';plot.append(bar,value);item.append(plot,label);chart.append(item);
+    bar.className='token-bar';bar.style.width=row.percent+'%';plot.append(bar);item.append(label,value,plot);chart.append(item);
   }
   document.getElementById('token-updated').textContent=Number.isFinite(tokens?.observedAt)?'截至 '+new Date(tokens.observedAt).toLocaleTimeString('zh-CN',{hour12:false})+' · 5 分钟缓存':'历史正在补齐，当前为部分覆盖';
 }

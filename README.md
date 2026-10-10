@@ -4,6 +4,8 @@
 
 阶段 1–4b 已验收；角色系统保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。本次逐项证据、对比度数据与浅深色截图见 `docs/stage-5a-verification.md`；此前记录见 docs/ 下对应阶段文件。
 
+展开挂件后点顶部“放大 ↗”，打开默认840×680的用量与设置窗口，可拖动边框或最大化。保留四个页签，外观、角色设置与常驻挂件同步；关大窗口不关挂件。大窗口正常取得输入焦点，常驻挂件仍恢复Codex焦点。图表与放大设置的追加实测见 `docs/stage-5a-readability-verification.md`。
+
 ## 安装
 
 Windows x64，Node.js 24+，Codex 桌面应用。使用 Windows 自带 Windows PowerShell 5.1 和 .NET Framework C# 编译器；无需 MSVC、C++ 模块或额外 C# SDK。
@@ -55,7 +57,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 ## 本机 token 用量
 
-详情面板内切换「套餐限额」与「token 用量」。token 页签的三根柱显示最近 24 小时、7 天、30 天，统一按 30 天值缩放，柱顶显示整数与千分位，单位为 token；不套用额度阈值颜色。面板仍为 320×214/270/352 DIP，较矮面板内滚动查看完整声明。
+详情面板内切换「套餐限额」与「token 用量」。token 页签的三条横向柱显示最近24小时、7天、30天，统一按30天值缩放；每行单独显示整数与千分位，不套用额度阈值颜色。三个累计窗口相互包含，不能相加。小面板仍为320×214/270/352 DIP，可点击“放大 ↗”查看大图；完整声明与索引文件数在“统计口径”中展开查看，索引中/部分覆盖提示仍直接显示。
 
 只读 sessions/**/*.jsonl 的 event_msg/token_count，累计字段为 payload.info.total_token_usage.total_tokens。每文件保留最大累计值，只有超过历史高水位的正增量进入后一条事件的时间桶；累计回退和重复不叠加，mtime 只用于发现与排序。冷启动先读最多 300 个候选文件、每文件最多尾部 768 KiB；截断尾部的首条累计值只作基线。Worker 后台以 256 KiB 块补齐历史，完整历史替换预览，不重复相加。
 

@@ -14,7 +14,7 @@
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
     const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent='尚无角色，使用内置占位';list.append(hint);}
-    for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.tabIndex=-1;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
+    for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.tabIndex=document.documentElement.dataset.workspace==='true'?0:-1;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
     for(const id of ['character-rename','character-delete','character-background','character-zoom','character-size','character-reset','character-upload'])$(id).disabled=!role;
     $('character-background').checked=role?.settings.background??true;$('character-zoom').value=role?.settings.zoom||1;$('character-zoom-value').textContent=(role?.settings.zoom||1).toFixed(2)+'×';$('character-size').value=role?.settings.targetHeight??280;$('character-size-value').textContent=(role?.settings.targetHeight??280)+'px';renderPreview();window.renderCharacter();
   }

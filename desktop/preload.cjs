@@ -1,5 +1,8 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('widget',{
+  openWorkspace:tab=>ipcRenderer.send('open-workspace',tab),
+  selectTab:callback=>ipcRenderer.on('select-tab',(_event,value)=>callback(value)),
+  appearanceChanged:callback=>ipcRenderer.on('appearance-changed',(_event,value)=>callback(value)),
   appearanceRead:()=>ipcRenderer.invoke('appearance-read'),
   appearanceSave:value=>ipcRenderer.invoke('appearance-save',value),
   ready:()=>ipcRenderer.send('ready'),
