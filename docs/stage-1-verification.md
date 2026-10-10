@@ -4,11 +4,13 @@
 
 **2026-10-10 MCP 加载复核：验收方报告完整重启后新建聊天仍拿不到 widget_status，重启后 MCP 加载不通过。按要求仅将 .mcp.json 的 args 改为 runtime/mcp.cjs，重装后 Args 已更新，但 codex mcp list 的 Cwd 仍为 `-`。已触发用户指定的停止条件，不继续猜测配置、不使用绝对路径兜底、不将该门槛标为通过。**
 
+**2026-10-10 第二轮：按新授权显式设置缓存绝对 cwd 与 10 秒启动超时，并增加静默启动日志。配置重装后 mcp list 的 Cwd 已为指定缓存目录；11 项测试通过。完整退出重开后的真实启动日志和新聊天 widget_status 调用尚未验证，MCP 加载门槛仍未标为通过。下方保留首轮失败的历史证据。**
+
 **2026-10-09 路线 A 修复：按新授权采用 focusable:true + C# 激活事件恢复，允许短暂激活，要求点击后 300ms 内回到宿主。立即恢复会打断输入；仅改为延后 80ms 后，点击、拖动、形状外穿透与切走防护均通过原生探针。跨 DPI 切换与重启后 MCP 加载仍待验收。没有进入阶段 2。此前 focusable:false 的通过结论仍已撤回，不将“短暂激活后恢复”等同于“从不激活”。**
 
 | 条件 | 当前证据 | 结论 |
 |---|---|---|
-| 1. 安装与自动跟随 | 窗口安装与跟随的既有证据保留。验收方报告重开 Codex、新建聊天后没有 widget_status；2026-10-10 相对路径修复重装后，mcp list 显示 Args=runtime/mcp.cjs、Cwd=`-`。 | 窗口与 CLI 安装已验证；**重启后的 MCP 加载不通过，相对路径的工作目录验收也未通过** |
+| 1. 安装与自动跟随 | 窗口安装与跟随的既有证据保留。首轮相对路径配置 Cwd=`-`；第二轮显式 cwd 重装后，mcp list 显示指定缓存目录。启动日志写入和失败静默回归通过。 | 窗口与 CLI 安装已验证；**第二轮配置解析通过，完整重启后的进程启动与新聊天工具调用待验收** |
 | 2. 无托盘、任务栏 | 无 Tray 对象；BrowserWindow 设置 skipTaskbar、toolbar、focusable:true，原生扩展样式包含 TOOLWINDOW、没有 APPWINDOW，且 owner 是 Codex。无独立挂件任务栏窗口。 | 通过 |
 | 3. 移动、最小化/还原、DPI | 用户明确确认移动、最小化消失和还原出现正常。诊断记录 DPI=144，即 150%；100%/150%/200% 的物理尺寸→DIP 单元测试通过。用户确认只有 150% 显示环境。 | 生命周期通过；跨 DPI 切换未实测 |
 | 4. 首次点击、拖动、恢复宿主焦点 | 路线 A 延后 80ms 后 clicks 0→1；复测 1→2、2→3，约 112～113ms 时已回到宿主 HWND=328082。完整 10 步拖动 (499,382)→(539,406)，position.json 同步。切走测试在定时器到期前将前台转到测试窗口，随后保持该窗口，未被拉回。用户确认“操作正常，闪烁可接受”。 | **按新授权的 300ms 恢复判据通过**；用户接受瞬间闪烁 |
@@ -150,3 +152,25 @@ codex-quota-widget  node     runtime/mcp.cjs   -    -    enabled  Unsupported
 本机 codex --version 实测为 `codex-cli 0.162.0-alpha.17.2`。验收方报告从 0.156.1 自动升级到该 alpha 版本；将版本和升级方式记录为后续插件/MCP 异常的排查变量，不由本次输出推断其必然是根因。
 
 本轮源码只改 .mcp.json 与本验收记录；桌面形状、1×1 回退、focusable:true、C# 80ms 恢复、读取允许清单及运行时实现均未修改。没有 MSVC、阶段 2、codex exec、review 或新 agent turn。挂件按要求停止，未重新启动；本轮提交为中文本地提交，不 push。补充本记录后再次同步缓存并核验最终文件哈希。
+
+## 2026-10-10：第二轮显式 cwd 与启动诊断
+
+按验收方指定格式，.mcp.json 新增 cwd=C:/Users/Chester/.codex/plugins/cache/personal/codex-quota-widget/0.1.0、startup_timeout_sec=10，args 保持 runtime/mcp.cjs。没有改成源码目录或使用占位符。runtime/mcp.cjs 在主程序启动时写一次 mcp-startup.json，字段仅为 at、pid、cwd、argv、codexHome、nodeVersion；导入模块不写日志，目录创建及写文件异常全部静默忽略，stdout 不增加任何协议外输出。
+
+回归新增前，启动元数据测试因日志文件不存在失败；实现后全部 11 项测试通过。测试覆盖真实 Node 子进程的启动元数据、stdio 应答及数据目录被同名普通文件阻塞时的静默继续启动。所有子进程测试使用临时 CODEX_HOME，并清理自己创建的目录，未向正式运行目录制造启动证据。测试子进程不等于 Codex 加载 MCP 的证据。
+
+步骤 1～5 已执行：停止挂件、CLI plugin add 重装、32/32 文件 SHA256 一致、清理正式 mcp-startup.json、运行 codex mcp list。CLI 版本实测 codex-cli 0.162.0-alpha.17.2；验收方报告这是从 0.156.1 自动升级的 alpha 版本。目标行原样如下（不压缩列间空白）：
+
+```text
+codex-quota-widget  node                                                                                              runtime/mcp.cjs                                                                                                                 -                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             C:/Users/Chester/.codex/plugins/cache/personal/codex-quota-widget/0.1.0           enabled   Unsupported
+```
+
+配置解析结果：Cwd 已不是 `-`，为用户指定缓存目录。mcp list 之后正式 mcp-startup.json 未出现；这是完整重启前的观察，不能据此判断 Codex 是否会在新会话拉起第三方 MCP，也不能提前触发“步骤 8 未出现”的根因结论。
+
+步骤 6～9：尚未执行完整退出重开后的验收。当前聊天的工具清单里没有 widget_status；本次没有调用它，也没有用手动启动 Node 的应答替代新聊天工具调用。必须完全退出 Codex、在任务管理器确认 ChatGPT 进程全部消失，再重开 Codex并新建聊天，检查启动 JSON 并调用已加载的 widget_status。只有真实启动日志和真实工具调用都成功后，才能改为通过。
+
+自动创建聊天并发送提示会启动额外 agent turn，受用户零额度约束限制，因此此处需要用户在重启后发起新聊天中的工具调用。新聊天可直接使用下列验收提示：
+
+> 只使用已加载的 widget_status 工具调用一次并返回原始结果；不要运行 codex exec/review，不要手动启动 Node MCP。读取 C:\Users\Chester\.codex\codex-quota-widget\mcp-startup.json，原样返回其内容。源码仓库为 C:\Users\Chester\plugins\codex-quota-widget。若工具未加载或启动文件未出现，报告原始情况，不继续猜测或改配置。启动文件出现并且真实工具调用成功后，更新 docs/stage-1-verification.md 的第二轮验收结果，中文本地提交，不 push。
+
+本轮修改仅涉及 .mcp.json、runtime/mcp.cjs、对应回归测试及本记录。桌面 geometry.cjs、focusable:true、C# 80ms 恢复与数据读取允许清单无修改；没有阶段 2、MSVC、模型或 agent 子进程调用。挂件仍保持停止。补充记录后再次同步缓存并核验哈希，中文本地提交，不 push。

@@ -2,7 +2,9 @@
   "mcpServers": {
     "codex-quota-widget": {
       "command": "node",
-      "args": ["runtime/mcp.cjs"]
+      "cwd": "C:/Users/Chester/.codex/plugins/cache/personal/codex-quota-widget/0.1.0",
+      "args": ["runtime/mcp.cjs"],
+      "startup_timeout_sec": 10
     }
   }
 }

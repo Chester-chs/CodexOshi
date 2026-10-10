@@ -4,6 +4,12 @@ const path=require('node:path');
 const os=require('node:os');
 const readline=require('node:readline');
 const data=path.join(process.env.CODEX_HOME || path.join(os.homedir(),'.codex'),'codex-quota-widget');
+if(require.main===module){
+  try{
+    fs.mkdirSync(data,{recursive:true});
+    fs.writeFileSync(path.join(data,'mcp-startup.json'),JSON.stringify({at:new Date().toISOString(),pid:process.pid,cwd:process.cwd(),argv:process.argv,codexHome:process.env.CODEX_HOME || null,nodeVersion:process.version},null,2));
+  }catch{}
+}
 const isFresh=(value,now=Date.now())=>Number.isFinite(value?.updatedAt) && now>=value.updatedAt && now-value.updatedAt<=3500;
 function status(){
   let window=null;

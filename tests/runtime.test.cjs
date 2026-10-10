@@ -26,11 +26,45 @@ test('real stdio MCP process initializes and returns only local diagnostics',()=
     {jsonrpc:'2.0',id:2,method:'tools/list'},
     {jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'widget_status',arguments:{}}}
   ];
-  const child=spawnSync(process.execPath,[path.join(__dirname,'../runtime/mcp.cjs')],{input:requests.map(x=>JSON.stringify(x)).join('\n')+'\n',encoding:'utf8',timeout:5000});
+  const fs=require('node:fs'),os=require('node:os');
+  const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'codex-quota-mcp-'));
+  let child;
+  try {child=spawnSync(process.execPath,[path.join(__dirname,'../runtime/mcp.cjs')],{env:{...process.env,CODEX_HOME:fixture},input:requests.map(x=>JSON.stringify(x)).join('\n')+'\n',encoding:'utf8',timeout:5000});}
+  finally {assert.equal(path.dirname(path.resolve(fixture)),path.resolve(os.tmpdir()));fs.rmSync(fixture,{recursive:true,force:true});}
   assert.equal(child.status,0,child.stderr);
   const replies=child.stdout.trim().split('\n').map(x=>JSON.parse(x));
   assert.deepEqual(replies.map(x=>x.id),[1,2,3]);
   assert.equal(replies[0].result.protocolVersion,'2024-11-05');
   assert.equal(replies[1].result.tools.length,1);
   assert.equal(JSON.parse(replies[2].result.content[0].text).dataReadsEnabled,false);
+});
+test('MCP executable records startup metadata without polluting protocol output',()=>{
+  const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+  const {spawnSync}=require('node:child_process');
+  const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'codex-quota-mcp-'));
+  const cwd=path.resolve(__dirname,'..');
+  try {
+    const child=spawnSync(process.execPath,['runtime/mcp.cjs'],{cwd,env:{...process.env,CODEX_HOME:fixture},input:'{"jsonrpc":"2.0","id":1,"method":"ping"}\n',encoding:'utf8',timeout:5000});
+    assert.equal(child.status,0,child.stderr);assert.equal(child.stderr,'');
+    assert.deepEqual(JSON.parse(child.stdout),{jsonrpc:'2.0',id:1,result:{}});
+    const startupFile=path.join(fixture,'codex-quota-widget','mcp-startup.json');
+    assert.equal(fs.existsSync(startupFile),true,'MCP process did not record startup');
+    const startup=JSON.parse(fs.readFileSync(startupFile,'utf8'));
+    assert.deepEqual(Object.keys(startup).sort(),['at','pid','cwd','argv','codexHome','nodeVersion'].sort());
+    assert.ok(Number.isFinite(Date.parse(startup.at)));assert.ok(startup.pid>0);
+    assert.equal(startup.cwd,cwd);assert.equal(startup.codexHome,fixture);
+    assert.equal(startup.nodeVersion,process.version);
+    assert.deepEqual(startup.argv,[process.execPath,path.join(cwd,'runtime','mcp.cjs')]);
+  } finally {assert.equal(path.dirname(path.resolve(fixture)),path.resolve(os.tmpdir()));fs.rmSync(fixture,{recursive:true,force:true});}
+});
+test('MCP protocol still responds silently when startup log cannot be written',()=>{
+  const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+  const {spawnSync}=require('node:child_process');
+  const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'codex-quota-mcp-'));
+  try {
+    fs.writeFileSync(path.join(fixture,'codex-quota-widget'),'blocked directory');
+    const child=spawnSync(process.execPath,[path.resolve(__dirname,'../runtime/mcp.cjs')],{env:{...process.env,CODEX_HOME:fixture},input:'{"jsonrpc":"2.0","id":1,"method":"initialize"}\n',encoding:'utf8',timeout:5000});
+    assert.equal(child.status,0,child.stderr);assert.equal(child.stderr,'');
+    assert.equal(JSON.parse(child.stdout).result.serverInfo.name,'codex-quota-widget');
+  } finally {assert.equal(path.dirname(path.resolve(fixture)),path.resolve(os.tmpdir()));fs.rmSync(fixture,{recursive:true,force:true});}
 });
