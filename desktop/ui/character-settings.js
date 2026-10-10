@@ -13,16 +13,16 @@
   window.renderCharacter=()=>{const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
-    const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent='尚无角色，使用内置占位';list.append(hint);}
+    const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent='上传立绘，即可添加角色';list.append(hint);}
     for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.tabIndex=-1;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
-    for(const id of ['character-rename','character-delete','character-background','character-zoom','character-size','character-reset','character-upload'])$(id).disabled=!role;
+    for(const id of ['character-rename','character-delete','character-background','character-zoom','character-size','character-reset'])$(id).disabled=!role;
     $('character-background').checked=role?.settings.background??true;$('character-zoom').value=role?.settings.zoom||1;$('character-zoom-value').textContent=(role?.settings.zoom||1).toFixed(2)+'×';$('character-size').value=role?.settings.targetHeight??280;$('character-size-value').textContent=(role?.settings.targetHeight??280)+'px';renderPreview();window.renderCharacter();
   }
   function flush(){clearTimeout(timer);const role=active();if(role)action({action:'settings',name:role.name,patch:role.settings});}
   function changed(patch){const role=active();if(!role)return;Object.assign(role.settings,patch);$('character-zoom-value').textContent=role.settings.zoom.toFixed(2)+'×';$('character-size-value').textContent=(role.settings.targetHeight??280)+'px';renderPreview();window.renderCharacter();clearTimeout(timer);timer=setTimeout(flush,150);}
   window.widget.characters(value=>{snapshot=value;render();});
-  $('character-new').onclick=()=>action({action:'create'});$('character-rename').onclick=()=>active()&&action({action:'rename',name:active().name});$('character-delete').onclick=()=>active()&&action({action:'delete',name:active().name});
-  $('character-upload').onclick=()=>active()&&action({action:'import',name:active().name});
+  $('character-rename').onclick=()=>active()&&action({action:'rename',name:active().name});$('character-delete').onclick=()=>active()&&action({action:'delete',name:active().name});
+  $('character-upload').onclick=()=>{flush();action({action:'import'});};
   $('character-background').onchange=()=>changed({background:$('character-background').checked});$('character-zoom').oninput=()=>changed({zoom:Number($('character-zoom').value)});$('character-zoom').onchange=flush;
   $('character-size').oninput=()=>changed({targetHeight:Number($('character-size').value)});$('character-size').onchange=flush;
   $('character-reset').onclick=()=>{changed({zoom:1,x:0,y:0});$('character-zoom').value=1;flush();};

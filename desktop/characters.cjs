@@ -22,14 +22,13 @@ function installCharacters(win,store){
         const {action,name,patch}=value;
         if(action==='select')await store.select(name);
         else if(action==='settings')await store.settings(name,patch||{});
-        else if(action==='create'||action==='rename'){
-          const names=await store.names();let suggestion='角色 '+(names.length+1);while(names.includes(suggestion))suggestion+=' 新';
-          const choice=await dialog.showSaveDialog(win,{title:action==='create'?'新建角色：输入角色名称':'重命名角色：输入新名称',buttonLabel:action==='create'?'创建角色':'更名',defaultPath:path.join(store.root,action==='create'?suggestion:name+' 新名'),properties:['dontAddToRecent']});
-          if(!choice.canceled&&choice.filePath){const next=path.basename(choice.filePath);if(action==='create')await store.create(next);else await store.rename(name,next);}
-        }else if(action==='import'){
+        else if(action==='rename'){
           await store.checked(name);
+          const choice=await dialog.showSaveDialog(win,{title:'重命名角色：输入新名称',buttonLabel:'更名',defaultPath:path.join(store.root,name+' 新名'),properties:['dontAddToRecent']});
+          if(!choice.canceled&&choice.filePath)await store.rename(name,path.basename(choice.filePath));
+        }else if(action==='import'){
           const choice=await dialog.showOpenDialog(win,{title:'选择本机角色图片',filters:[{name:'角色图片',extensions:['png','jpg','jpeg','webp','gif','bmp']},{name:'所有文件（按图片内容校验）',extensions:['*']}],properties:['openFile','dontAddToRecent']});
-          if(!choice.canceled&&choice.filePaths[0])await store.importPortrait(name,choice.filePaths[0]);
+          if(!choice.canceled&&choice.filePaths[0])await store.uploadPortrait(choice.filePaths[0]);
         }else if(action==='delete'){
           await store.checked(name);const choice=await dialog.showMessageBox(win,{type:'question',message:'删除角色“'+name+'”？',detail:'删除本机保存的角色副本，原始图片保留。',buttons:['取消','删除'],defaultId:0,cancelId:0});if(choice.response===1)await store.remove(name);
         }else throw Error('角色操作无效。');

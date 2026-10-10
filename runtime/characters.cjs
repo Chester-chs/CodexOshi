@@ -67,6 +67,19 @@ class CharacterStore{
     const q=await this.read(name);q.images[state]=filename;await this.write(path.join(dir,'settings.json'),q);return info;
   }
   async importPortrait(name,source){const dir=await this.checked(name),{buffer,info}=await readSource(source),filename='portrait-'+randomUUID().replaceAll('-','')+'.'+info.ext;await fs.writeFile(path.join(dir,filename),buffer,{flag:'wx'});const q=await this.metadata(name);q.portrait=filename;await this.write(path.join(dir,'settings.json'),q);return info;}
+  async uploadPortrait(source){
+    // Validate before creating anything; the selected source is read once and never changed.
+    const {buffer,info}=await readSource(source);
+    let base=path.parse(source).name.replace(/[<>:"/\\|?*\x00-\x1f]/g,' ').trim().slice(0,56).replace(/[. ]+$/,'');
+    try{safeName(base);}catch{base='角色';}
+    const names=new Set((await this.names()).map(n=>n.toLowerCase()));let name,dir;
+    for(let n=1;;n++){
+      const suffix=n===1?'':' '+n;name=base.slice(0,64-suffix.length).trimEnd()+suffix;if(names.has(name.toLowerCase()))continue;
+      dir=this.directory(name);try{await fs.mkdir(dir);break;}catch(e){if(e.code!=='EEXIST')throw e;}
+    }
+    const filename='portrait-'+randomUUID().replaceAll('-','')+'.'+info.ext;
+    await fs.writeFile(path.join(dir,filename),buffer,{flag:'wx'});await this.write(path.join(dir,'settings.json'),{...defaults(),portrait:filename});await this.select(name);return info;
+  }
   async selectedImage(name,settings){
     const dir=await this.checked(name),q=settings||await this.read(name),candidates=[q.portrait,...STATES.flatMap(s=>[q.images[s],...EXTENSIONS.map(ext=>s+'.'+ext)])].filter(Boolean);
     for(const filename of candidates)try{const stat=await fs.lstat(path.join(dir,filename));if(stat.isFile()&&!stat.isSymbolicLink()&&stat.size<=MAX_BYTES)return {filename,url:'character://local/'+encodeURIComponent(name)+'/portrait?v='+encodeURIComponent(filename+'-'+stat.mtimeMs)};}catch{}
