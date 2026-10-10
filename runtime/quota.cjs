@@ -17,7 +17,9 @@ function normalize(input,source,observedAt=Date.now()){
     windows.push({id,label:seconds===18000?'5 小时限额':seconds>=604800?'每周限额':seconds>=86400?'长期额度':'短期额度',durationSeconds:seconds,usedPercent,remainingPercent:usedPercent===null?null:100-usedPercent,resetAt});
   }
   const plan=input?.plan_type ?? value.plan_type ?? value.planType;
-  return {planType:typeof plan==='string'&&plan.length<=80?plan:'未知',windows,source,observedAt,stale:source!=='http'};
+  const count=input?.rateLimitResetCredits?.availableCount;
+  const resetCredits=Number.isSafeInteger(count)&&count>=0?{availableCount:count,observedAt,stale:false}:null;
+  return {planType:typeof plan==='string'&&plan.length<=80?plan:'未知',windows,source,observedAt,stale:source!=='http',resetCredits};
 }
 function readToken(codexHome=home()){
   const file=path.join(codexHome,'auth.json');authorizeRead({file,codexHome});
@@ -90,7 +92,7 @@ async function readRpc(options={}){
 class QuotaReader{
   constructor(options={}){
     this.now=options.now || Date.now;this.http=options.http || (()=>readHttp(options));this.local=options.local || (()=>readLocal(options.codexHome));this.rpc=options.rpc || (()=>readRpc(options));
-    this.snapshot=options.snapshot || {...normalize({},'none',null),stale:true};this.lastRpcAttemptAt=options.lastRpcAttemptAt ?? null;this.busy=false;
+    this.snapshot=options.snapshot || {...normalize({},'none',null),stale:true};this.lastRpcAttemptAt=options.lastRpcAttemptAt ?? null;this.busy=false;this.readResetCredits=options.readResetCredits===true;
   }
   async refresh(){
     if(this.busy)return this.snapshot;this.busy=true;let quota=null,errorCode=null;
@@ -99,10 +101,11 @@ class QuotaReader{
       if(!quota){try{quota=await this.local();}catch{}}
       // Offline history must not replace a newer successful reading with older numbers.
       if(quota?.source==='local'&&Number.isFinite(this.snapshot.observedAt)&&quota.observedAt<this.snapshot.observedAt)quota={...this.snapshot,stale:true};
-      if(!quota&&(this.lastRpcAttemptAt===null||this.now()-this.lastRpcAttemptAt>=300000)){
-        this.lastRpcAttemptAt=this.now();try{quota=await this.rpc();}catch{}
+      let resetCredits=quota?.resetCredits||this.snapshot.resetCredits||null;
+      if((!quota||this.readResetCredits)&&(this.lastRpcAttemptAt===null||this.now()-this.lastRpcAttemptAt>=300000)){
+        this.lastRpcAttemptAt=this.now();try{const rpc=await this.rpc();if(!quota)quota=rpc;resetCredits=rpc.resetCredits||null;}catch{if(resetCredits)resetCredits={...resetCredits,stale:true};}
       }
-      this.snapshot={...(quota || this.snapshot),stale:!quota || Boolean(errorCode) || quota.source!=='http',lastAttemptAt:this.now(),lastRpcAttemptAt:this.lastRpcAttemptAt,errorCode};return this.snapshot;
+      this.snapshot={...(quota || this.snapshot),resetCredits,stale:!quota || Boolean(errorCode) || quota.source!=='http',lastAttemptAt:this.now(),lastRpcAttemptAt:this.lastRpcAttemptAt,errorCode};return this.snapshot;
     }finally{this.busy=false;}
   }
 }

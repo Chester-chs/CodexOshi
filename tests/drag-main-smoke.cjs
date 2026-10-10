@@ -14,14 +14,14 @@ Module._load=function(name,parent,...args){
 };
 const filename=path.resolve(__dirname,'../desktop/main.cjs');
 const source=before?execFileSync('git',['show',baseline+':desktop/main.cjs'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'}):fs.readFileSync(filename,'utf8');
-const main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));main._compile(source,filename);
+const main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));BrowserWindow.prototype.showInactive=function(){};main._compile(source,filename);
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
   await app.whenReady();const deadline=Date.now()+8000;
   let bridge;
   while(!bridge){try{const value=JSON.parse(fs.readFileSync(path.join(data,'bridge.json'),'utf8'));if(value.pid===process.pid)bridge=value;}catch{}if(Date.now()>deadline)throw Error('Main bridge unavailable');await delay(20);}
   const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});
-  socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:false,modal:false,dpi:144,bounds:{width:1350,height:1050}}})+'\n');await delay(120);
+  socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,modal:false,dpi:144,bounds:{width:1350,height:1050}}})+'\n');await delay(120);
   const win=BrowserWindow.getAllWindows()[0],event={sender:win.webContents},rows=[];
   for(const edge of [false,true]){
     writes.length=0;const start=performance.now();

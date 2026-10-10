@@ -12,6 +12,9 @@ const {CharacterStore}=require('../runtime/characters.cjs');
 const {installCharacters}=require('./characters.cjs');
 const panelModel=require('./ui/panel-model.js');
 const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs');
+const dialogueModel=require('./ui/dialogue-model.js');
+const {DialoguePreferencesStore}=require('../runtime/dialogue-preferences.cjs');
+const {editDialogue}=require('./dialogue-edit.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -31,18 +34,20 @@ let pendingQuota=null,pendingTokens=null;
 let quitting=false;
 const panelStore=new PanelPreferencesStore(data);
 let panelPreferences=panelModel.defaults(),panelOffset=null,panelResizing=false;
+const dialogueStore=new DialoguePreferencesStore(data);
+let dialoguePreferences=dialogueModel.defaults(),speechVisible=false,speechIndex=-1;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
-const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
+const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt,readResetCredits:true});
 const stateFile=path.join(data,'window-state.json');
 function writeDiagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function diagnostic(){
   if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
   clearTimeout(diagnosticTimer);diagnosticTimer=null;writeDiagnostic();
 }
 function savePosition(){fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,dragging,resizing:panelResizing,panelPreferences});}
+function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
 function notifyLayout(){
   if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
@@ -58,9 +63,9 @@ function saveSnapshot(file,value){
 }
 function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
-  if(!host.bounds||dip.width<=1||dip.height<=1)return;
+  if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   const previous=widget;
-  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize,panelPreferences,panelOffset);widget=viewLayout.widget;
+  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,characterSize,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
@@ -84,6 +89,20 @@ app.whenReady().then(async()=>{
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
   const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
   panelPreferences=await panelStore.read();
+  dialoguePreferences=await dialogueStore.read();
+  let editingDialogue=false;
+  ipcMain.handle('dialogue-edit',async event=>{
+    if(event.sender!==win.webContents||editingDialogue||!expanded)return {ok:false};editingDialogue=true;
+    try{const value=await editDialogue(win,dialoguePreferences,panelPreferences.language);if(!value)return {ok:true,canceled:true};const saved=await dialogueStore.save(value);dialoguePreferences=saved;notifyLayout();return {ok:true,value:saved};}
+    catch(e){return {ok:false,error:e.message};}finally{editingDialogue=false;}
+  });
+  ipcMain.handle('dialogue-read',event=>event.sender===win.webContents?dialoguePreferences:null);
+  ipcMain.handle('dialogue-save',async(event,value)=>{
+    if(event.sender!==win.webContents)return {ok:false};
+    try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
+  });
+  const dismiss=()=>{if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
+  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging)return;speechVisible=false;expanded=true;updateShape();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
   ipcMain.handle('panel-language',async(event,language)=>{
@@ -100,7 +119,7 @@ app.whenReady().then(async()=>{
   const show=visibility(win);
   function sync(){
     if(quitting||win.isDestroyed())return;
-    if(host.bounds){
+    if(host.bounds&&host.visible!==false&&host.attached!==false){
       dip=viewport(host.bounds.width,host.bounds.height,host.dpi);
       if(win.getSize()[0]!==dip.width || win.getSize()[1]!==dip.height) win.setSize(dip.width,dip.height,false);
       updateShape();
@@ -125,7 +144,7 @@ app.whenReady().then(async()=>{
     // until a real viewport is available instead of clamping it against 1×1.
     if(host.bounds&&dip.width>32&&dip.height>32){updateShape();diagnostic();}
   });
-  ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;updateShape();diagnostic();});
+  ipcMain.on('collapse',event=>{if(event.sender===win.webContents)dismiss();});
   ipcMain.on('reset-position',event=>{
     if(event.sender!==win.webContents||dragging)return;
     defaultPlacement=true;widget=null;updateShape();diagnostic();
@@ -141,7 +160,7 @@ app.whenReady().then(async()=>{
       savePosition();notifyLayout();
       if(pendingQuota){saveSnapshot('quota-state.json',pendingQuota);pendingQuota=null;}
       if(pendingTokens){saveSnapshot('tokens-state.json',pendingTokens);pendingTokens=null;}
-    } else if(value.type==='click'){clicks++;expanded=!expanded;updateShape();}
+    } else if(value.type==='click'){if(panelResizing){panelResizing=false;savePanel();}clicks++;expanded=false;speechVisible=true;speechIndex=(speechIndex+1)%2;updateShape();}
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=saved;defaultPlacement=false;}}catch{}
@@ -181,7 +200,8 @@ app.whenReady().then(async()=>{
           if(message.token!==token){socket.destroy();return;}
           receivedAt=Date.now();
           if(message.state.stop){app.quit();return;}
-          const {nativeWheel=[],...state}=message.state;host=state;sync();
+          const {nativeWheel=[],outsideClick=false,...state}=message.state;host=state;
+          if(outsideClick===true&&!dragging&&!panelResizing)dismiss();sync();
           if(host.attached&&win.isVisible()&&Array.isArray(nativeWheel)&&nativeWheel.length<=32){
             for(const wheel of nativeWheel){
               const input=wheelInput(wheel,host,region);if(input)win.webContents.sendInputEvent(input);

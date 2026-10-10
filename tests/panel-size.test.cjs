@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),g=require('../desktop/geometry.cjs');
-test('one click opens the same large four-tab card even without quota windows',()=>{
+test('settings keeps the same large four-tab card even without quota windows',()=>{
   for(const count of [0,1,2]){const view=g.layout({x:676,y:396},900,700,true,count,{width:200,height:280});assert.equal(view.regions[1].width,480);assert.equal(view.regions[1].height,560);assert.deepEqual(g.shape(view.regions,900,700,view.sizes),view.regions);}
 });
 test('large card is bounded in small viewports; inflated profiles and whole-window regions fail closed',()=>{

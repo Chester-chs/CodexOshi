@@ -33,17 +33,18 @@ function snap(widget,width,height,size){
     const end=Math.max(8,total-side-EDGE);if(point[axis]-8<=12)point[axis]=8;else if(end-point[axis]<=12)point[axis]=end;
   }return point;
 }
-function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null){
+function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null,speech=false){
   if(!requested||!['width','height'].every(k=>Number.isInteger(requested[k])&&requested[k]>0&&requested[k]<=ROLE_LIMIT[k]))requested=COMPACT;
   const scale=Math.min(1,Math.max(1,width-EDGE-8)/requested.width,Math.max(1,height-EDGE-8)/requested.height);
   const compact={width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
   const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-EDGE,width,height,compact);
   const regions=[{...point,...compact}],sizes=[compact];
   if(expanded){
-    if(!validSize(requestedPanel))requestedPanel=PANEL;
+    if(speech){requestedPanel={width:280,height:152};}else if(!validSize(requestedPanel))requestedPanel=PANEL;
     const panel={width:Math.max(1,Math.min(requestedPanel.width,width-EDGE-8)),height:Math.max(1,Math.min(requestedPanel.height,height-EDGE-8))};
     const left=point.x-panel.width-12,right=point.x+compact.width+12;
     let p=position(left>=8?left:right,point.y,width,height,panel);
+    if(speech&&point.y-panel.height-12>=8)p=position(point.x+(compact.width-panel.width)/2,point.y-panel.height-12,width,height,panel);
     if(left<8&&right+panel.width>width-EDGE){p=position(point.x,point.y-panel.height-12>=8?point.y-panel.height-12:point.y+compact.height+12,width,height,panel);}
     if(panelOffset&&['x','y'].every(k=>Number.isFinite(panelOffset[k])&&Math.abs(panelOffset[k])<=32768))p=position(point.x+panelOffset.x,point.y+panelOffset.y,width,height,panel);
     regions.push({...p,...panel});sizes.push(panel);

@@ -1,5 +1,9 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('widget',{
+  openSettings:()=>ipcRenderer.send('open-settings'),
+  dialogueRead:()=>ipcRenderer.invoke('dialogue-read'),
+  dialogueEdit:()=>ipcRenderer.invoke('dialogue-edit'),
+  dialogueSave:value=>ipcRenderer.invoke('dialogue-save',value),
   panelPreferencesRead:()=>ipcRenderer.invoke('panel-preferences-read'),
   panelLanguage:value=>ipcRenderer.invoke('panel-language',value),
   panelResize:value=>ipcRenderer.send('panel-resize',value),

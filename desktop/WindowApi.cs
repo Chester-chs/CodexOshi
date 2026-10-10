@@ -15,6 +15,7 @@ public static class QuotaWindows {
     [DllImport("gdi32.dll")] static extern IntPtr CreateRectRgn(int x, int y, int right, int bottom);
     [DllImport("user32.dll")] static extern int GetWindowRgn(IntPtr h, IntPtr region);
     [DllImport("gdi32.dll")] static extern int GetRgnBox(IntPtr region, out Rect bounds);
+    [DllImport("gdi32.dll")] static extern bool PtInRegion(IntPtr region, int x, int y);
     [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr value);
     public static object Audit(long value) {
         IntPtr previous = SetThreadDpiAwarenessContext(new IntPtr(-4));
@@ -162,6 +163,7 @@ public static class QuotaWindows {
         return new { enabled = f != null && f.Running, events = f == null ? 0 : Interlocked.Read(ref f.Events), moves = f == null ? 0 : Interlocked.Read(ref f.Moves), wheels = f == null ? 0 : Interlocked.Read(ref f.Wheels), error = f == null ? "" : f.Error };
     }
     public static object[] DrainWheels() { var f=follower;return f==null?new object[0]:f.DrainWheels(); }
+    public static bool DrainOutsideClick() { var f=follower;return f!=null&&f.DrainOutsideClick(); }
     public static bool WidgetVisible(long overlayValue) { return overlayValue != 0 && IsWindowVisible(new IntPtr(overlayValue)) && !IsIconic(new IntPtr(overlayValue)); }
     public static void Detach(long overlayValue) { StopFollowing(); var overlay = new IntPtr(overlayValue); uint pid; GetWindowThreadProcessId(overlay, out pid); if (Image((int)pid).EndsWith(@"\electron\dist\electron.exe", StringComparison.OrdinalIgnoreCase)) SetWindowLongPtr(overlay, -8, IntPtr.Zero); }
     public static void StopFollowing() { var f = follower; follower = null; if (f != null) f.Stop(); }
@@ -207,6 +209,8 @@ public static class QuotaWindows {
         public volatile bool Running;
         public string Error = "";
         public long Events, Moves, Wheels;
+        int outsideClick;
+        public bool DrainOutsideClick() { return Interlocked.Exchange(ref outsideClick,0)!=0; }
         readonly System.Collections.Generic.Queue<object> wheelQueue=new System.Collections.Generic.Queue<object>();
         public object[] DrainWheels() { lock(wheelQueue) { var result=wheelQueue.ToArray();wheelQueue.Clear();return result; } }
         WinEvent callback;
@@ -257,6 +261,25 @@ public static class QuotaWindows {
             if (Interlocked.Exchange(ref focusPending, 1) == 0) focusTimer.Change(80, Timeout.Infinite);
         }
         IntPtr OnMouse(int code, UIntPtr message, IntPtr value) {
+            // Passive dismissal signal only. Never consume or re-inject an
+            // outside click; the original host/application receives it normally.
+            if(code>=0 && (message.ToUInt64()==0x0201 || message.ToUInt64()==0x0204) && !stopping &&
+               (GetForegroundWindow()==host || GetForegroundWindow()==overlay) &&
+               IsWindowVisible(overlay) && !IsIconic(host) && GetWindow(overlay,4)==host) {
+                try {
+                    var mouse=(MouseEvent)Marshal.PtrToStructure(value,typeof(MouseEvent));
+                    var context=SetThreadDpiAwarenessContext(new IntPtr(-4));
+                    try {
+                        var point=mouse.Position;var shape=CreateRectRgn(0,0,0,0);
+                        if(shape!=IntPtr.Zero)try {
+                            // Region membership is independent of the 16ms
+                            // ignore-mouse toggle; a quick entry click is internal.
+                            if(ScreenToClient(overlay,ref point) && GetWindowRgn(overlay,shape)>0 && !PtInRegion(shape,point.X,point.Y))Interlocked.Exchange(ref outsideClick,1);
+                        } finally { DeleteObject(shape); }
+                    }
+                    finally { if(context!=IntPtr.Zero)SetThreadDpiAwarenessContext(context); }
+                } catch { /* A failed observation must not affect mouse delivery. */ }
+            }
             // Foreground-only Windows wheel routing otherwise sends wheel to
             // Codex after our focus recovery. Forward only over this overlay's
             // native shape; outside it, or while another app is active, pass on.

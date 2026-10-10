@@ -1,7 +1,8 @@
 const button=document.getElementById('widget'),details=document.getElementById('details'),panelBody=document.getElementById('panel-body'),text=(value,args)=>window.uiText.t(value,args);
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
-let feedbackAnimation;
+let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
+const speech=document.getElementById("speech");
 function clickFeedback(){
   feedbackAnimation?.cancel();
   const animation=document.getElementById('character-canvas').animate([{transform:'scale(1)'},{transform:'scale(.96)',offset:.35},{transform:'scale(1)'}],{duration:220,easing:'ease-out'});
@@ -22,6 +23,7 @@ window.widget.layout(value=>{
   layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
+  speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}
   if(!layoutDragging&&!value.resizing){render();reportScroll();}
 });
 window.widget.quota(value=>{quota=value;render();});
@@ -36,14 +38,25 @@ function selectTab(name){
 }
 for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>selectTab(name));
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
+const gear=document.getElementById('settings-open');
+gear.addEventListener('pointerdown',event=>event.stopPropagation());
+gear.addEventListener('click',event=>{event.stopPropagation();window.widget.openSettings();});
+function renderSpeech(){
+  if(speech.hidden)return;
+  const view=window.dialogueModel.present(dialoguePreferences,speechIndex,quota,Date.now(),window.uiText.language);
+  document.getElementById('speech-text').textContent=view.line;
+  document.getElementById('speech-reset').textContent=view.reset;
+  document.getElementById('speech-reset').hidden=dialoguePreferences.lines[speechIndex===1?1:0].includes('{重置时间}');
+  document.getElementById('speech-credits').textContent=text('重置卡：{count} 次',{count:view.count})+(view.stale?' · '+text('数据待更新'):'');
+}
 document.getElementById('position-reset').addEventListener('click',()=>window.widget.resetPosition());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
-  if(layoutDragging)return;
+  if(layoutDragging)return;renderSpeech();
   const view=window.quotaView.present(quota,width,Date.now(),window.uiText.language);
   window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;
-  button.setAttribute('aria-label',text('{label}，剩余 {value}，点击详情，拖动移动',{label:view.compact.label,value:view.compact.text}));
+  button.setAttribute('aria-label',text('{label}，剩余 {value}，点击对话，拖动移动',{label:view.compact.label,value:view.compact.text}));
   document.getElementById('status').textContent=view.compact.text;
   document.getElementById('compact-track').hidden=!view.showCompactBar;
   bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);

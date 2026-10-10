@@ -22,6 +22,7 @@ async function mainHarness(source,options={}){
     if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}refresh(){return new Promise(()=>{});}}};
     if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};
     if(name==='../runtime/panel-preferences.cjs')return {PanelPreferencesStore:class{async read(){return options.savedPanel||{width:480,height:560,language:'zh-CN'};}async save(value){writes.push({at:now,file:'panel-preferences.json',value:JSON.stringify(value)});return value;}}};
+    if(name==='../runtime/dialogue-preferences.cjs')return {DialoguePreferencesStore:class{async read(){return localRequire('../desktop/ui/dialogue-model.js').defaults();}async save(value){return localRequire('../desktop/ui/dialogue-model.js').validate(value);}}};
     if(name==='../runtime/characters.cjs')return {CharacterStore:class{async init(){}}};
     if(name==='./characters.cjs')return {installCharacters(){}};return localRequire(name);
   }});

@@ -64,6 +64,7 @@ try {
                 $hostState['attached']=($attached -eq $hostState.window -and [QuotaWindows]::IsFollowing())
                 $hostState['revision']=[QuotaWindows]::VisibilityRevision()
                 $hostState['nativeWheel']=[QuotaWindows]::DrainWheels()
+                $hostState['outsideClick']=[QuotaWindows]::DrainOutsideClick()
                 $hostState.Remove('mouseButtons'); $hostState.Remove('mouseSampleAt')
                 # Ordinary location changes stay native; Chromium only needs dimensions / DPI.
                 $hostState.bounds = @{width=$hostState.bounds.width;height=$hostState.bounds.height}

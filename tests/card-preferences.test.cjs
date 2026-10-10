@@ -7,12 +7,12 @@ test('resized cards use their own bounded profile and still clamp to the host vi
   assert.deepEqual(shape([{x:8,y:8,width:199,height:280},{x:300,y:8,width:761,height:800}],1200,1000,[{width:199,height:280},{width:761,height:800}]),[{x:0,y:0,width:1,height:1}]);
 });
 test('card resize updates do not write; release saves size and language survives a later resize',async()=>{
-  const h=await mainHarness();h.gesture({type:'click'});h.reset();assert.ok(h.hasHandler('panel-resize'));h.ipc('panel-resize',{type:'begin'});
+  const h=await mainHarness();h.ipc('open-settings');h.reset();assert.ok(h.hasHandler('panel-resize'));h.ipc('panel-resize',{type:'begin'});
   for(let n=0;n<120;n++)h.ipc('panel-resize',{type:'update',width:500+n,height:580+n});assert.equal(h.writes.length,0);assert.equal(h.stringifies,0);h.ipc('panel-resize',{type:'end'});await Promise.resolve();assert.equal(h.writes.filter(w=>w.file==='panel-preferences.json').length,1);
   await h.ipc('panel-language','en-US');h.reset();h.ipc('panel-resize',{type:'begin'});h.ipc('panel-resize',{type:'update',width:620,height:700});h.ipc('panel-resize',{type:'end'});await Promise.resolve();assert.equal(JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value).language,'en-US');
 });
 test('saved card size loads before the first expanded layout and invalid IPC cannot enlarge the shape',async()=>{
-  const h=await mainHarness(undefined,{savedPanel:{width:700,height:740,language:'en-US'}});h.gesture({type:'click'});assert.equal(h.shapes.at(-1)[1].width,700);assert.equal(h.shapes.at(-1)[1].height,568);h.reset();h.ipc('panel-resize',{type:'begin'});h.ipc('panel-resize',{type:'update',width:99999,height:99999});h.ipc('panel-resize',{type:'end'});await Promise.resolve();assert.equal(JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value).width,700);
+  const h=await mainHarness(undefined,{savedPanel:{width:700,height:740,language:'en-US'}});h.ipc('open-settings');assert.equal(h.shapes.at(-1)[1].width,700);assert.equal(h.shapes.at(-1)[1].height,568);h.reset();h.ipc('panel-resize',{type:'begin'});h.ipc('panel-resize',{type:'update',width:99999,height:99999});h.ipc('panel-resize',{type:'end'});await Promise.resolve();assert.equal(JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value).width,700);
 });
 test('card preferences persist independently and reject malformed, oversized and linked files',async()=>{
   const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-panel-prefs-'));

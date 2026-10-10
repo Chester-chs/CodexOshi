@@ -7,12 +7,12 @@ fs.writeFileSync(path.join(role,'settings.json'),JSON.stringify({background:true
 process.argv.push('--data',data);const originalLoad=Module._load;
 Module._load=function(name,parent,...args){if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[{remainingPercent:80,label:'每周限额'}]};}async refresh(){return this.snapshot;}}};if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};return originalLoad.call(this,name,parent,...args);};
 const shapes=[],nativeShape=BrowserWindow.prototype.setShape;BrowserWindow.prototype.setShape=function(value){shapes.push(JSON.stringify(value));return nativeShape.call(this,value);};
-const filename=path.resolve(__dirname,'../desktop/main.cjs'),main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));main._compile(fs.readFileSync(filename,'utf8'),filename);
+const filename=path.resolve(__dirname,'../desktop/main.cjs'),main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));BrowserWindow.prototype.showInactive=function(){};main._compile(fs.readFileSync(filename,'utf8'),filename);
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));
 (async()=>{
   await app.whenReady();let bridge;const deadline=Date.now()+8000;while(!bridge){try{const q=JSON.parse(fs.readFileSync(path.join(data,'bridge.json'),'utf8'));if(q.pid===process.pid)bridge=q;}catch{}if(Date.now()>deadline)throw Error('No new bridge');await delay(20);}
   const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});
-  const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:false,modal:false,dpi:96,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
+  const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,modal:false,dpi:96,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code);
   async function capture(name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(60);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());}
   await delay(700);await js(`document.querySelector('#character-tab').click()`);

@@ -1,6 +1,8 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '设置':'Settings','挂件设置':'Widget settings','点击对话':'Click dialogue','称呼':'Address','第一段对话':'First dialogue','第二段对话':'Second dialogue','编辑对话':'Edit dialogue','关闭对话':'Close dialogue','额度小提醒':'Quota reminder','重置卡：{count} 次':'Reset credits: {count}','对话已保存。':'Dialogue saved.','对话保存失败。':'Could not save dialogue.','对话设置读取失败。':'Could not load dialogue settings.','对话编辑器无法打开。':'Could not open the dialogue editor.','请填写称呼和两段对话；称呼最多 32 字，对话每段最多 240 字。':'Enter an address (up to 32 characters) and two dialogues (up to 240 characters each).',
+    '每次点击轮换一段；支持 {称呼}、{剩余额度}、{重置时间}、{重置卡次数}。':'Two alternating dialogues. Placeholders: {称呼}, {剩余额度}, {重置时间}, {重置卡次数}.','{label}，剩余 {value}，点击对话，拖动移动':'{label}, {value} remaining. Click for dialogue; drag to move.','额度挂件，拖动移动，点击对话':'Quota widget. Drag to move; click for dialogue.',
     'Codex 额度':'Codex Quota','额度管理':'Quota','token 用量':'Tokens','角色':'Character','外观选择':'Appearance','详情视图':'Detail views','额度与用量详情':'Quota and usage details','收起详情':'Close details',
     '语言':'Language','拖动右下角调整大小':'Drag this corner to resize','调整卡片大小':'Resize card','卡片设置未能保存，请检查本机文件权限。':'Could not save card settings. Check local file permissions.',
     'Codex / Work 共享额度池':'Shared Codex / Work quota','额度说明':'About quota','Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池。Chat 模式下的对话不计入此用量。数据来自 Codex 自己的额度接口，非本插件估算。':'Codex, Work, workspace agents and ChatGPT for Excel share this quota. Chat-mode conversations are excluded. Values come from Codex’s own quota API.',

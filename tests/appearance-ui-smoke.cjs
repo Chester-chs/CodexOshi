@@ -9,13 +9,13 @@ process.argv.push('--data',data);const originalLoad=Module._load;
 Module._load=function(name,parent,...args){if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot=quota;}async refresh(){return this.snapshot;}}};if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){queueMicrotask(()=>this.emit('message',{type:'tokens',value:tokenData}));}terminate(){}}};return originalLoad.call(this,name,parent,...args);};
 const shapes=[],nativeShape=BrowserWindow.prototype.setShape;BrowserWindow.prototype.setShape=function(value){shapes.push(JSON.stringify(value));return nativeShape.call(this,value);};
 const handlers=new Map(),nativeHandle=ipcMain.handle.bind(ipcMain);ipcMain.handle=(name,callback)=>{handlers.set(name,callback);nativeHandle(name,callback);};
-const filename=path.join(source,'desktop/main.cjs'),main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));main._compile(fs.readFileSync(filename,'utf8'),filename);
+const filename=path.join(source,'desktop/main.cjs'),main=new Module(filename,module);main.filename=filename;main.paths=Module._nodeModulePaths(path.dirname(filename));BrowserWindow.prototype.showInactive=function(){};main._compile(fs.readFileSync(filename,'utf8'),filename);
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));
 (async()=>{
   await app.whenReady();let bridge;const deadline=Date.now()+6000;while(!bridge){try{const q=JSON.parse(fs.readFileSync(path.join(data,'bridge.json'),'utf8'));if(q.pid===process.pid)bridge=q;}catch{}if(Date.now()>deadline)throw Error('No new bridge');await delay(20);}
   const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});
   let revision=0;
-  const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:false,dpi:96,revision:++revision,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
+  const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,revision:++revision,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code),current=path.join(source,'desktop/ui/index.html');
   async function waitFor(code){const deadline=Date.now()+4000;while(!(await js(code))){if(Date.now()>deadline)throw Error('UI condition timed out: '+code);await delay(40);}}
   await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(350);
@@ -23,7 +23,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   const actual=await js(`window.widget.appearanceRead()`);
   assert.equal(await handlers.get('appearance-read')({sender:{}}),null);assert.equal((await handlers.get('appearance-save')({sender:{}},{palette:'forest'})).ok,false);
   if(restart){assert.deepEqual(actual,{palette:'forest'});await waitFor(`document.documentElement.dataset.palette==='forest'`);fs.writeFileSync(path.join(output,'restart.json'),JSON.stringify({pid:process.pid,settings:actual,passed:true},null,2));clearInterval(heartbeat);socket.destroy();app.quit();return;}
-  await js(`window.widget.gesture({type:'click'});document.querySelector('#appearance-tab').click()`);await delay(150);
+  await js(`window.widget.openSettings();document.querySelector('#appearance-tab').click()`);await delay(150);
   assert.equal(await js(`document.querySelectorAll('[data-mode],[data-surface],#accent-custom').length`),0);
   const model=require('../desktop/ui/appearance-model.js'),rows=[],stableRegion=state().region;clearInterval(heartbeat);let shapeCallsForTheme=0;
   async function capture(name){const r=state().region[1];await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(60);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage({x:r.x,y:r.y,width:r.width,height:r.height},{stayHidden:true,stayAwake:true})).toPNG());}
