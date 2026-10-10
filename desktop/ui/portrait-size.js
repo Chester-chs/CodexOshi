@@ -9,18 +9,17 @@
     const clamped=width!==Math.round(h*ratio);
     return {width,height:clamped?Math.max(48,Math.min(LIMIT.height,Math.round(width/ratio))):h};
   }
-  // At <=1x keep the entire image. At >1x frame a selected source area;
-  // the footer remains outside this drawing viewport in either mode.
+  // Keep the head and full horizontal extent; framing removes only the bottom.
+  function portraitContentSize(width,height,zoom=1){return {width,height:height/(Number.isFinite(zoom)?Math.max(1,Math.min(2,zoom)):1)};}
   function portraitFrame(width,height,bw,bh,settings={}){
     const inset=Math.min(4,width/4,height/4),availableW=width-inset*2,availableH=height-inset*2;
-    const zoom=Number.isFinite(settings.zoom)?Math.max(.5,Math.min(3,settings.zoom)):1;
-    const ratio=Math.min(availableW/bw,availableH/bh)*zoom,w=bw*ratio,h=bh*ratio;
+    const zoom=Number.isFinite(settings.zoom)?Math.max(.5,Math.min(2,settings.zoom)):1,content=portraitContentSize(bw,bh,zoom);
+    const ratio=Math.min(availableW/content.width,availableH/content.height)*Math.min(1,zoom),w=content.width*ratio,h=content.height*ratio;
     const pan=k=>Number.isFinite(settings[k])?Math.max(-1,Math.min(1,settings[k])):0;
     const x=inset+(availableW-w)/2+pan('x')*Math.abs(availableW-w)/2,y=inset+(availableH-h)/2+pan('y')*Math.abs(availableH-h)/2;
     if(zoom<=1)return {x,y,width:w,height:h};
-    const left=Math.max(inset,x),top=Math.max(inset,y),right=Math.min(width-inset,x+w),bottom=Math.min(height-inset,y+h);
-    return {x:left,y:top,width:right-left,height:bottom-top,source:{x:Math.max(0,(left-x)/ratio),y:Math.max(0,(top-y)/ratio),width:(right-left)/ratio,height:(bottom-top)/ratio}};
+    return {x,y,width:w,height:h,source:{x:0,y:0,width:bw,height:content.height}};
   }
   const stageHeight=height=>Math.max(1,height-52);
-  return {portraitSize,portraitFrame,stageHeight,LIMIT,DEFAULT};
+  return {portraitSize,portraitFrame,portraitContentSize,stageHeight,LIMIT,DEFAULT};
 });

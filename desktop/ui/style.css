@@ -105,7 +105,7 @@ article>strong,.appearance-heading{font-size:17px} .card-row,.token-label,.data-
 .panel-toolbar{margin-bottom:14px}header{margin-bottom:20px}
 nav{background:var(--bg-sunken);gap:3px;padding:4px;border-radius:10px}
 nav button{font-size:14px;min-height:42px;border-radius:7px}
-nav button[aria-selected="true"]{box-shadow:var(--shadow-control)}
+nav button[aria-selected="true"],nav button[aria-selected="true"]:hover{background:var(--accent);color:var(--accent-contrast);font-weight:600;box-shadow:var(--shadow-control)}
 #panel-body{padding:1px 2px 2px 0}
 article{padding:18px;margin-bottom:14px}.card-row{margin:12px 0 14px;align-items:center}.card-row strong{font-size:23px;letter-spacing:-.5px}
 .section-heading{padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid var(--separator)}

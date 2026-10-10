@@ -15,8 +15,15 @@ test('zoom can frame the upper half without moving the drawn viewport onto the f
   const {portraitFrame}=require('../desktop/ui/portrait-size.js');
   const r=portraitFrame(200,300,100,200,{zoom:2,x:0,y:1});
   assert.ok(r.source,'enlarged view must crop the chosen source area');assert.equal(r.source.y,0);assert.equal(r.source.height,100);
-  assert.equal(r.y,4);assert.equal(r.height,292);assert.ok(r.source.width<100);
-  for(const x of [-1,0,1])for(const y of [-1,0,1]){const q=portraitFrame(200,300,100,200,{zoom:3,x,y});assert.ok(q.source.x>=0&&q.source.y>=0);assert.ok(q.source.x+q.source.width<=100+.001);assert.ok(q.source.y+q.source.height<=200+.001);}
+  assert.equal(r.source.x,0);assert.equal(r.source.width,100);assert.equal(r.width,192);assert.equal(r.height,192);
+  for(const x of [-1,0,1])for(const y of [-1,0,1]){const q=portraitFrame(200,300,100,200,{zoom:3,x,y});assert.equal(q.source.x,0);assert.equal(q.source.y,0);assert.equal(q.source.width,100);assert.equal(q.source.height,100);assert.ok(q.x>=0&&q.y>=0);assert.ok(q.x+q.width<=200+.001);assert.ok(q.y+q.height<=300+.001);}
+});
+test('upper-body layout grows horizontally while staying within existing native caps',()=>{
+  const {portraitSize,portraitContentSize}=require('../desktop/ui/portrait-size.js');
+  assert.equal(typeof portraitContentSize,'function');
+  assert.deepEqual(portraitContentSize(627,882,2),{width:627,height:441});assert.deepEqual(portraitContentSize(627,882,3),{width:627,height:441});
+  assert.deepEqual(portraitSize(627,441,280),{width:398,height:280});
+  for(const z of [.5,1,1.5,2,3])for(const [w,h]of [[627,882],[4096,1],[1,4096]]){const c=portraitContentSize(w,h,z),r=portraitSize(c.width,c.height,420);assert.ok(r.width<=672&&r.height<=420);}
 });
 test('content ratio determines dimensions, with bounded width and global fallback for extreme proportions',()=>{
   const {portraitSize}=require('../desktop/ui/portrait-size.js');

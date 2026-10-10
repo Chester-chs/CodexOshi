@@ -1,6 +1,8 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '1× 全身，2× 上半身；头顶与左右完整保留。':'1× full body, 2× upper body. Head and sides stay complete.',
+    '雾蓝 × 群青':'Mist blue × Ultramarine','燕麦 × 暖金':'Oat × Warm gold','玫瑰白 × 酒红':'Rose white × Burgundy','雾绿 × 蓝绿':'Mist green × Teal','米白 × 深棕':'Ivory × Dark brown','灰蓝 × 深蓝':'Grey blue × Deep blue','杏白 × 暖红':'Apricot white × Warm red',
     '克莱茵蓝':'Klein Blue','群青 × 雾白':'Ultramarine × Mist white','申布伦黄':'Schönbrunn Yellow','暖黄 × 深棕':'Warm yellow × Dark brown','勃艮第红':'Burgundy','酒红 × 玫瑰白':'Burgundy × Rose white','马尔斯绿':'Marrs Green','蓝绿 × 墨绿':'Teal × Deep green','凡戴克棕':'Van Dyke Brown','深棕 × 香槟':'Dark brown × Champagne','普鲁士蓝':'Prussian Blue','深蓝 × 银白':'Deep blue × Silver white','提香红':'Titian Red','暖红 × 深红':'Warm red × Deep red',
     '色相':'Hue','1× 显示完整立绘；放大后可拖动取景。':'At 1× the full portrait is shown. Zoom in and drag to frame it.',
     '已优化强调色对比，选择自动保存。':'Accent contrast adjusted. Your choice is saved automatically.',

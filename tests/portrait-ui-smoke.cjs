@@ -25,8 +25,10 @@ app.whenReady().then(async()=>{
   for(const h of [180,280,420]){
     await store.settings('白裙几何',{targetHeight:h,zoom:1.55,x:-.025,y:.756});win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));
     const frame=await win.webContents.executeJavaScript(`window.lastPortraitDraw`);assert.ok(frame.x>=0&&frame.y>=0);assert.ok(frame.x+frame.width<=frame.canvasWidth+.001);assert.ok(frame.y+frame.height<=frame.canvasHeight+.001);
+    assert.equal(frame.source[0],0);assert.equal(frame.source[1],0);assert.equal(frame.source[2],631);assert.ok(Math.abs(frame.source[3]-882/1.55)<.001);
     const clearance=await win.webContents.executeJavaScript(`(()=>{const stage=document.querySelector('#character-stage').getBoundingClientRect(),bar=document.querySelector('.compact-line').getBoundingClientRect();return bar.top-stage.bottom})()`);assert.ok(clearance>=0,'progress footer must not cover the dress');portraitFrames.push({height:h,frame,clearance});
   }
+  await store.settings('白裙几何',{targetHeight:280,zoom:2,x:-.025,y:.756});win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));update(false);await capture('upper-body-complete.png');const upperBody=await metrics();assert.ok(upperBody.width>350);update();
   await store.settings('白裙几何',{targetHeight:280,zoom:1,x:0,y:0});win.webContents.send('characters',await store.snapshot());await new Promise(r=>setTimeout(r,200));
   await win.webContents.executeJavaScript(`document.querySelector('#character-tab').click()`);
   // Commit the newly selected tab to the hidden window's hit-test surface.

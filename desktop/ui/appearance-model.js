@@ -1,12 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.appearanceModel=api;})(globalThis,()=>{
   const palettes=[
-    {id:'blue',name:'克莱茵蓝',pair:'群青 × 雾白',base:'#002fa7',elevated:'#002c9d',sunken:'#002993',accent:'#e4e8f3',tone:'dark'},
-    {id:'oat',name:'申布伦黄',pair:'暖黄 × 深棕',base:'#fbd26a',elevated:'#fbd573',sunken:'#fbd77c',accent:'#57401a',tone:'light'},
-    {id:'rose',name:'勃艮第红',pair:'酒红 × 玫瑰白',base:'#470024',elevated:'#430022',sunken:'#3e0020',accent:'#e6c9c9',tone:'dark'},
-    {id:'sage',name:'马尔斯绿',pair:'蓝绿 × 墨绿',base:'#01847f',elevated:'#108b87',sunken:'#1f938e',accent:'#072c2a',tone:'light'},
-    {id:'forest',name:'凡戴克棕',pair:'深棕 × 香槟',base:'#492d22',elevated:'#452a20',sunken:'#40281e',accent:'#e3ccac',tone:'dark'},
-    {id:'midnight',name:'普鲁士蓝',pair:'深蓝 × 银白',base:'#003153',elevated:'#002e4e',sunken:'#002b49',accent:'#d4dfe8',tone:'dark'},
-    {id:'orange',name:'提香红',pair:'暖红 × 深红',base:'#d44848',elevated:'#d75353',sunken:'#d95e5e',accent:'#3b1414',tone:'light'}
+    {id:'blue',name:'克莱茵蓝',pair:'雾蓝 × 群青',base:'#e9edf6',elevated:'#eaeef7',sunken:'#eceff7',accent:'#002fa7',tone:'light'},
+    {id:'oat',name:'申布伦黄',pair:'燕麦 × 暖金',base:'#f3eee3',elevated:'#f4efe5',sunken:'#f4f0e6',accent:'#fbd26a',tone:'light'},
+    {id:'rose',name:'勃艮第红',pair:'玫瑰白 × 酒红',base:'#f1e9ed',elevated:'#f2eaee',sunken:'#f3ecef',accent:'#470024',tone:'light'},
+    {id:'sage',name:'马尔斯绿',pair:'雾绿 × 蓝绿',base:'#e7efeb',elevated:'#e8f0ec',sunken:'#eaf1ed',accent:'#01847f',tone:'light'},
+    {id:'forest',name:'凡戴克棕',pair:'米白 × 深棕',base:'#eee7df',elevated:'#efe8e1',sunken:'#f0eae3',accent:'#492d22',tone:'light'},
+    {id:'midnight',name:'普鲁士蓝',pair:'灰蓝 × 深蓝',base:'#e5edf0',elevated:'#e7eef1',sunken:'#e8eff2',accent:'#003153',tone:'light'},
+    {id:'orange',name:'提香红',pair:'杏白 × 暖红',base:'#f4e9e6',elevated:'#f5eae8',sunken:'#f5ece9',accent:'#d44848',tone:'light'}
   ];
   const defaults=()=>({palette:'oat'});
   function validate(value){
