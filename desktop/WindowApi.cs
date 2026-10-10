@@ -159,8 +159,9 @@ public static class QuotaWindows {
     public static bool IsFollowing() { var f = follower; return f != null && f.Running; }
     public static object FollowMetrics() {
         var f = follower;
-        return new { enabled = f != null && f.Running, events = f == null ? 0 : Interlocked.Read(ref f.Events), moves = f == null ? 0 : Interlocked.Read(ref f.Moves), error = f == null ? "" : f.Error };
+        return new { enabled = f != null && f.Running, events = f == null ? 0 : Interlocked.Read(ref f.Events), moves = f == null ? 0 : Interlocked.Read(ref f.Moves), wheels = f == null ? 0 : Interlocked.Read(ref f.Wheels), error = f == null ? "" : f.Error };
     }
+    public static object[] DrainWheels() { var f=follower;return f==null?new object[0]:f.DrainWheels(); }
     public static bool WidgetVisible(long overlayValue) { return overlayValue != 0 && IsWindowVisible(new IntPtr(overlayValue)) && !IsIconic(new IntPtr(overlayValue)); }
     public static void Detach(long overlayValue) { StopFollowing(); var overlay = new IntPtr(overlayValue); uint pid; GetWindowThreadProcessId(overlay, out pid); if (Image((int)pid).EndsWith(@"\electron\dist\electron.exe", StringComparison.OrdinalIgnoreCase)) SetWindowLongPtr(overlay, -8, IntPtr.Zero); }
     public static void StopFollowing() { var f = follower; follower = null; if (f != null) f.Stop(); }
@@ -176,6 +177,15 @@ public static class QuotaWindows {
             public uint Time; public Point Position; public uint Private;
         }
         delegate void WinEvent(IntPtr hook, uint ev, IntPtr hwnd, int obj, int child, uint thread, uint time);
+        [StructLayout(LayoutKind.Sequential)] struct MouseEvent {
+            public Point Position; public uint Data, Flags, Time; public UIntPtr Extra;
+        }
+        delegate IntPtr MouseHook(int code, UIntPtr message, IntPtr value);
+        [DllImport("user32.dll", SetLastError = true)] static extern IntPtr SetWindowsHookEx(int kind, MouseHook callback, IntPtr module, uint thread);
+        [DllImport("user32.dll")] static extern bool UnhookWindowsHookEx(IntPtr hook);
+        [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr hook, int code, UIntPtr message, IntPtr value);
+        [DllImport("user32.dll")] static extern bool ScreenToClient(IntPtr hwnd, ref Point point);
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)] static extern IntPtr GetModuleHandle(string name);
         [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint first, uint last, IntPtr module, WinEvent callback, uint process, uint thread, uint flags);
         [DllImport("user32.dll")] static extern bool UnhookWinEvent(IntPtr hook);
         [DllImport("user32.dll")] static extern bool PostThreadMessage(uint thread, uint message, UIntPtr w, IntPtr l);
@@ -196,7 +206,9 @@ public static class QuotaWindows {
         volatile bool stopping;
         public volatile bool Running;
         public string Error = "";
-        public long Events, Moves;
+        public long Events, Moves, Wheels;
+        readonly System.Collections.Generic.Queue<object> wheelQueue=new System.Collections.Generic.Queue<object>();
+        public object[] DrainWheels() { lock(wheelQueue) { var result=wheelQueue.ToArray();wheelQueue.Clear();return result; } }
         WinEvent callback;
         public NativeFollower(IntPtr overlay, IntPtr host) {
             this.overlay = overlay; this.host = host;
@@ -244,6 +256,34 @@ public static class QuotaWindows {
             // One bounded delay lets the down event arrive; bursts do not extend it.
             if (Interlocked.Exchange(ref focusPending, 1) == 0) focusTimer.Change(80, Timeout.Infinite);
         }
+        IntPtr OnMouse(int code, UIntPtr message, IntPtr value) {
+            // Foreground-only Windows wheel routing otherwise sends wheel to
+            // Codex after our focus recovery. Forward only over this overlay's
+            // native shape; outside it, or while another app is active, pass on.
+            if (code >= 0 && message.ToUInt64() == 0x020A && !stopping && GetForegroundWindow() == host &&
+                IsWindowVisible(overlay) && IsWindowEnabled(host) && !IsIconic(host) && GetWindow(overlay, 4) == host) {
+                try {
+                    var mouse = (MouseEvent)Marshal.PtrToStructure(value, typeof(MouseEvent));
+                    var context=SetThreadDpiAwarenessContext(new IntPtr(-4));
+                    bool inside;var point=mouse.Position;
+                    try { inside=GetAncestor(WindowFromPoint(point),2)==overlay && ScreenToClient(overlay,ref point); }
+                    finally { if(context!=IntPtr.Zero)SetThreadDpiAwarenessContext(context); }
+                    if (inside && point.X>=0 && point.Y>=0 && point.X<=32768 && point.Y<=32768) {
+                        // Chromium ignores an inactive HWND's posted WM_MOUSEWHEEL.
+                        // Drain bounded events through the existing authenticated
+                        // local pipe, then Electron sends native renderer input.
+                        lock(wheelQueue) {
+                            if(wheelQueue.Count<32) {
+                                wheelQueue.Enqueue(new {x=point.X,y=point.Y,delta=(int)unchecked((short)(mouse.Data>>16)),shift=(GetAsyncKeyState(0x10)&0x8000)!=0,control=(GetAsyncKeyState(0x11)&0x8000)!=0});
+                                Interlocked.Increment(ref Wheels);
+                                return new IntPtr(1);
+                            }
+                        }
+                    }
+                } catch { /* Fail open: never swallow an event we cannot forward. */ }
+            }
+            return CallNextHookEx(IntPtr.Zero, code, message, value);
+        }
         void RestoreFocus() {
             if (!CanRestoreFocus() || Interlocked.Exchange(ref restoringFocus, 1) != 0) return;
             bool attachedOverlay = false, attachedHost = false;
@@ -280,9 +320,10 @@ public static class QuotaWindows {
             else Error = "Window move failed: " + Marshal.GetLastWin32Error();
         }
         void Pump() {
-            IntPtr locationHook = IntPtr.Zero, moveHook = IntPtr.Zero, lifecycleHook = IntPtr.Zero, showHook = IntPtr.Zero, foregroundHook = IntPtr.Zero, focusHook = IntPtr.Zero, previous = IntPtr.Zero;
+            IntPtr locationHook = IntPtr.Zero, moveHook = IntPtr.Zero, lifecycleHook = IntPtr.Zero, showHook = IntPtr.Zero, foregroundHook = IntPtr.Zero, focusHook = IntPtr.Zero, wheelHook = IntPtr.Zero, previous = IntPtr.Zero;
             WinEvent lifecycleCallback = OnLifecycle;
             WinEvent focusCallback = OnOverlayFocus;
+            MouseHook wheelCallback = OnMouse;
             try {
                 previous = SetThreadDpiAwarenessContext(new IntPtr(-4));
                 threadId = GetCurrentThreadId(); Message message;
@@ -298,7 +339,10 @@ public static class QuotaWindows {
                 // Activation recovery does not hide/show or remap the overlay.
                 foregroundHook = SetWinEventHook(0x0003, 0x0003, IntPtr.Zero, focusCallback, overlayPid, 0, 2);
                 focusHook = SetWinEventHook(0x8005, 0x8005, IntPtr.Zero, focusCallback, overlayPid, 0, 2);
-                Running = locationHook != IntPtr.Zero && moveHook != IntPtr.Zero && lifecycleHook != IntPtr.Zero && showHook != IntPtr.Zero && foregroundHook != IntPtr.Zero && focusHook != IntPtr.Zero;
+                // Low-level hooks run on this existing message-pump thread,
+                // out of process; no DLL injection or WndProc replacement.
+                wheelHook = SetWindowsHookEx(14, wheelCallback, GetModuleHandle(null), 0);
+                Running = locationHook != IntPtr.Zero && moveHook != IntPtr.Zero && lifecycleHook != IntPtr.Zero && showHook != IntPtr.Zero && foregroundHook != IntPtr.Zero && focusHook != IntPtr.Zero && wheelHook != IntPtr.Zero;
                 if (!Running) { Error = "Window event hooks unavailable"; return; }
                 initialized.Set(); QueueSync();
                 while (!stopping && GetMessage(out message, IntPtr.Zero, 0, 0) > 0) {
@@ -315,11 +359,14 @@ public static class QuotaWindows {
                 if (showHook != IntPtr.Zero) UnhookWinEvent(showHook);
                 if (foregroundHook != IntPtr.Zero) UnhookWinEvent(foregroundHook);
                 if (focusHook != IntPtr.Zero) UnhookWinEvent(focusHook);
+                if (wheelHook != IntPtr.Zero) UnhookWindowsHookEx(wheelHook);
+                lock(wheelQueue)wheelQueue.Clear();
                 if (focusTimer != null) focusTimer.Dispose();
                 if (previous != IntPtr.Zero) SetThreadDpiAwarenessContext(previous);
                 GC.KeepAlive(callback);
                 GC.KeepAlive(lifecycleCallback);
                 GC.KeepAlive(focusCallback);
+                GC.KeepAlive(wheelCallback);
             }
         }
     }

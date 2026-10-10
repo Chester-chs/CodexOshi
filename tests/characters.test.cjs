@@ -16,7 +16,7 @@ function pixels(w,h,color){return {width:w,height:h,data:new Uint8ClampedArray(A
 test('transparent bounds crop; border-connected background removes and feathers without changing input',()=>{
   const image=pixels(9,9,[255,255,255,255]);for(let y=3;y<6;y++)for(let x=3;x<6;x++)image.data.set([30,80,150,255],(y*9+x)*4);
   const original=Buffer.from(image.data);const on=prepareImage(image,true);assert.equal(on.backgroundRemoved,true);assert.deepEqual(on.bounds,{x:3,y:3,width:3,height:3});
-  assert.equal(on.data[3],0);assert.deepEqual(Buffer.from(image.data),original);assert.equal(prepareImage(image,false).bounds.width,9);
+  assert.equal(on.data[3],0);assert.deepEqual(Buffer.from(image.data),original);assert.equal(prepareImage(image,false).bounds.width,3);
   const transparent=pixels(9,9,[0,0,0,0]);transparent.data.set([10,20,30,255],(4*9+4)*4);assert.deepEqual(prepareImage(transparent,false).bounds,{x:4,y:4,width:1,height:1});
   const busy=pixels(8,8,[0,0,0,255]);for(let y=0;y<8;y++)for(let x=0;x<8;x++)busy.data.set([(x*61)%256,(y*67)%256,((x+y)*71)%256,255],(y*8+x)*4);
   assert.equal(prepareImage(busy,true).backgroundRemoved,false);

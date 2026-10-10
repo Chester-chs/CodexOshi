@@ -1,7 +1,7 @@
 // User-selected files are copied locally. No network, model or subprocess APIs.
 const fs=require('node:fs/promises'),path=require('node:path');
 const STATES=['ready','tired','low','exhausted'],MAX_BYTES=10*1024*1024;
-const defaults=()=>({background:true,zoom:1,x:0,y:0,images:{}});
+const defaults=()=>({background:true,zoom:1,x:0,y:0,targetHeight:280,images:{}});
 function safeName(value){
   if(typeof value!=='string'||value!==value.trim()||value.length<1||value.length>64||/[<>:"/\\|?*\x00-\x1f]/.test(value)||/[. ]$/.test(value)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value))throw Error('角色名需为 1–64 字，不能含路径符号或系统保留名称。');
   return value;
@@ -44,7 +44,7 @@ class CharacterStore{
   directory(name){safeName(name);const dir=path.resolve(this.root,name);if(path.dirname(dir)!==this.root)throw Error('角色路径无效。');return dir;}
   async checked(name){const dir=this.directory(name),stat=await fs.lstat(dir);if(!stat.isDirectory()||stat.isSymbolicLink()||path.resolve(await fs.realpath(dir))!==dir)throw Error('角色目录不能是链接。');return dir;}
   async read(name){const dir=await this.checked(name);try{const f=path.join(dir,'settings.json');if((await fs.lstat(f)).isSymbolicLink())throw Error();const q=JSON.parse(await fs.readFile(f,'utf8'));return {...defaults(),...this.validSettings(q),images:Object.fromEntries(STATES.filter(s=>new RegExp('^'+s+'\\.(png|jpg|jpeg|webp|gif|bmp)$').test(q.images?.[s])).map(s=>[s,q.images[s]]))};}catch{return defaults();}}
-  validSettings(value){const q={};for(const k of ['zoom','x','y'])if(k in value){const min=k==='zoom'?.5:-1,max=k==='zoom'?3:1;if(!Number.isFinite(value[k])||value[k]<min||value[k]>max)throw Error('取景参数超出范围。');q[k]=value[k];}if('background'in value){if(typeof value.background!=='boolean')throw Error('去背景开关无效。');q.background=value.background;}return q;}
+  validSettings(value){const q={};for(const k of ['zoom','x','y','targetHeight'])if(k in value){const min=k==='targetHeight'?180:k==='zoom'?.5:-1,max=k==='targetHeight'?420:k==='zoom'?3:1;if(!Number.isFinite(value[k])||value[k]<min||value[k]>max)throw Error(k==='targetHeight'?'角色大小需为 180–420px。':'取景参数超出范围。');q[k]=value[k];}if('background'in value){if(typeof value.background!=='boolean')throw Error('去背景开关无效。');q.background=value.background;}return q;}
   async write(file,value){try{if((await fs.lstat(file)).isSymbolicLink())throw Error('设置文件不能是链接。');}catch(e){if(e.code!=='ENOENT')throw e;}const temp=file+'.tmp';try{if((await fs.lstat(temp)).isSymbolicLink())throw Error('临时文件不能是链接。');}catch(e){if(e.code!=='ENOENT')throw e;}await fs.writeFile(temp,JSON.stringify(value,null,2),{flag:'w'});await fs.rename(temp,file);}
   async names(){return (await fs.readdir(this.root,{withFileTypes:true})).filter(e=>e.isDirectory()&&!e.isSymbolicLink()).map(e=>e.name).filter(n=>{try{safeName(n);return true;}catch{return false;}}).sort((a,b)=>a.localeCompare(b));}
   async create(name){const dir=this.directory(name);if((await this.names()).some(n=>n.toLowerCase()===name.toLowerCase()))throw Error('该角色名已存在。');await fs.mkdir(dir);await this.write(path.join(dir,'settings.json'),defaults());await this.select(name);}

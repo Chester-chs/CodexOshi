@@ -1,9 +1,20 @@
 const button=document.getElementById('widget'),details=document.getElementById('details');
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
+let wheelEvents=0,scrollReportPending=false;
+function reportScroll(){
+  if(scrollReportPending)return;scrollReportPending=true;
+  requestAnimationFrame(()=>{
+    scrollReportPending=false;const r=document.querySelector('#character-tab').getBoundingClientRect();
+    window.widget.panelScroll?.({top:Math.max(0,Math.round(details.scrollTop)),height:details.scrollHeight,clientHeight:details.clientHeight,wheelEvents,tab:document.querySelector('nav [aria-selected="true"]').id.replace('-tab',''),roleTab:{x:Math.max(0,Math.round(r.x+r.width/2)),y:Math.max(0,Math.round(r.y+r.height/2))}});
+  });
+}
+details.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+1);reportScroll();},{passive:true});
+details.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
-  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);render();
+  window.resizeCharacter?.(value.regions[0].width,value.regions[0].height);
+  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);render();reportScroll();
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
@@ -12,7 +23,7 @@ for(const name of ['quota','token','character'])document.getElementById(name+'-t
     document.getElementById(tab+'-panel').hidden=tab!==name;
     document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
   }
-  details.scrollTop=0;if(name==='token')window.widget.readTokens();
+  details.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
 });
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}

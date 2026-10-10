@@ -74,6 +74,11 @@ public static class QuotaMouseProbe {
         return sent;
     }
     public static uint Click(){ return Buttons(0x0002,0x0004); }
+    public static uint Wheel(int delta){
+        var inputs=new[]{new Input {Type=0,Mouse=new Mouse {Flags=0x0800,Data=unchecked((uint)delta)}}};
+        uint sent=SendInput(1,inputs,Marshal.SizeOf(typeof(Input)));
+        if(sent!=1)throw new Win32Exception(Marshal.GetLastWin32Error(),"Wheel SendInput failed");return sent;
+    }
     static object Observe(uint sent, Stopwatch clock) {
         long immediate=Foreground(); var samples=new List<object>();
         var transitions=new List<object>(); long last=immediate;

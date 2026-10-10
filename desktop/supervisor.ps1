@@ -20,6 +20,7 @@ try {
         $enabledFile = Join-Path $DataDir 'enabled.json'
         $enabled = (Test-Path -LiteralPath $enabledFile) -and ((Get-Content -LiteralPath $enabledFile -Raw | ConvertFrom-Json).enabled -eq $true)
         $hostState = [QuotaWindows]::Probe()
+        $hostState['nativeInput']=[QuotaWindows]::FollowMetrics()
         if ($process -and $process.HasExited) {
             [QuotaWindows]::StopFollowing()
             if ($writer) { $writer.Dispose(); $writer=$null }
@@ -62,6 +63,7 @@ try {
                 }
                 $hostState['attached']=($attached -eq $hostState.window -and [QuotaWindows]::IsFollowing())
                 $hostState['revision']=[QuotaWindows]::VisibilityRevision()
+                $hostState['nativeWheel']=[QuotaWindows]::DrainWheels()
                 $hostState.Remove('mouseButtons'); $hostState.Remove('mouseSampleAt')
                 # Ordinary location changes stay native; Chromium only needs dimensions / DPI.
                 $hostState.bounds = @{width=$hostState.bounds.width;height=$hostState.bounds.height}
