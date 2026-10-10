@@ -63,6 +63,7 @@ test('cached results keep their event cutoff until expiry, then roll the time wi
   let time=now;await fs.writeFile(path.join(root,'sessions','a.jsonl'),line(20,now-day+60000));
   const index=new TokenIndex({codexHome:root,now:()=>time});assert.equal((await index.refresh()).values.hours24,20);
   time+=120000;assert.equal((await index.refresh()).values.hours24,20);
+  const cached=await index.refresh();assert.equal(cached.metrics.bytesReadThisCycle,0);assert.equal(cached.series.hours24.bins.length,24);assert.equal(cached.series.days30.bins.length,30);
   time=now+CACHE_MS;const q=await index.refresh();assert.equal(q.values.hours24,0);assert.equal(q.values.days7,20);assert.equal(q.metrics.bytesReadThisCycle,0);
 }));
 test('known non-token oversized rows do not falsely mark completed token coverage as partial',async()=>fixture(async root=>{

@@ -56,6 +56,11 @@ public static class QuotaWindows {
     [DllImport("user32.dll")] static extern bool ClientToScreen(IntPtr h, ref Point p);
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr hwnd, StringBuilder title, int count);
+    public static bool TextEditing(long value) {
+        var title=new StringBuilder(128);GetWindowText(new IntPtr(value),title,title.Capacity);
+        return title.ToString()=="Codex Quota Widget [Text editing]";
+    }
     [DllImport("user32.dll")] static extern bool AttachThreadInput(uint source, uint target, bool attach);
     [DllImport("user32.dll")] static extern short GetAsyncKeyState(int key);
     [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
@@ -250,7 +255,7 @@ public static class QuotaWindows {
                 !IsWindowVisible(host) || !IsWindowEnabled(host) || IsIconic(host) || GetWindow(overlay, 4) != host) return false;
             uint currentHostPid, currentOverlayPid;
             GetWindowThreadProcessId(host, out currentHostPid); GetWindowThreadProcessId(overlay, out currentOverlayPid);
-            return currentHostPid == hostPid && currentOverlayPid == overlayPid;
+            return currentHostPid == hostPid && currentOverlayPid == overlayPid && !TextEditing(overlay.ToInt64());
         }
         void OnOverlayFocus(IntPtr hook, uint ev, IntPtr hwnd, int obj, int child, uint sourceThread, uint time) {
             // Observe activation out of process; never replace Chromium's WndProc
@@ -343,7 +348,7 @@ public static class QuotaWindows {
             else Error = "Window move failed: " + Marshal.GetLastWin32Error();
         }
         void Pump() {
-            IntPtr locationHook = IntPtr.Zero, moveHook = IntPtr.Zero, lifecycleHook = IntPtr.Zero, showHook = IntPtr.Zero, foregroundHook = IntPtr.Zero, focusHook = IntPtr.Zero, wheelHook = IntPtr.Zero, previous = IntPtr.Zero;
+            IntPtr locationHook = IntPtr.Zero, moveHook = IntPtr.Zero, lifecycleHook = IntPtr.Zero, showHook = IntPtr.Zero, foregroundHook = IntPtr.Zero, focusHook = IntPtr.Zero, nameHook = IntPtr.Zero, wheelHook = IntPtr.Zero, previous = IntPtr.Zero;
             WinEvent lifecycleCallback = OnLifecycle;
             WinEvent focusCallback = OnOverlayFocus;
             MouseHook wheelCallback = OnMouse;
@@ -362,10 +367,13 @@ public static class QuotaWindows {
                 // Activation recovery does not hide/show or remap the overlay.
                 foregroundHook = SetWinEventHook(0x0003, 0x0003, IntPtr.Zero, focusCallback, overlayPid, 0, 2);
                 focusHook = SetWinEventHook(0x8005, 0x8005, IntPtr.Zero, focusCallback, overlayPid, 0, 2);
+                // Ending deliberate inline text entry changes this exact window's
+                // title. Reuse the 80ms recovery even if foreground did not change.
+                nameHook = SetWinEventHook(0x800C, 0x800C, IntPtr.Zero, focusCallback, overlayPid, 0, 2);
                 // Low-level hooks run on this existing message-pump thread,
                 // out of process; no DLL injection or WndProc replacement.
                 wheelHook = SetWindowsHookEx(14, wheelCallback, GetModuleHandle(null), 0);
-                Running = locationHook != IntPtr.Zero && moveHook != IntPtr.Zero && lifecycleHook != IntPtr.Zero && showHook != IntPtr.Zero && foregroundHook != IntPtr.Zero && focusHook != IntPtr.Zero && wheelHook != IntPtr.Zero;
+                Running = locationHook != IntPtr.Zero && moveHook != IntPtr.Zero && lifecycleHook != IntPtr.Zero && showHook != IntPtr.Zero && foregroundHook != IntPtr.Zero && focusHook != IntPtr.Zero && nameHook != IntPtr.Zero && wheelHook != IntPtr.Zero;
                 if (!Running) { Error = "Window event hooks unavailable"; return; }
                 initialized.Set(); QueueSync();
                 while (!stopping && GetMessage(out message, IntPtr.Zero, 0, 0) > 0) {
@@ -382,6 +390,7 @@ public static class QuotaWindows {
                 if (showHook != IntPtr.Zero) UnhookWinEvent(showHook);
                 if (foregroundHook != IntPtr.Zero) UnhookWinEvent(foregroundHook);
                 if (focusHook != IntPtr.Zero) UnhookWinEvent(focusHook);
+                if (nameHook != IntPtr.Zero) UnhookWinEvent(nameHook);
                 if (wheelHook != IntPtr.Zero) UnhookWindowsHookEx(wheelHook);
                 lock(wheelQueue)wheelQueue.Clear();
                 if (focusTimer != null) focusTimer.Dispose();

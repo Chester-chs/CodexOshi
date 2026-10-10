@@ -1,6 +1,6 @@
 :root{
   color-scheme:var(--color-scheme);
-  --font-system:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI","PingFang SC","DengXian","等线","Noto Sans SC","Microsoft YaHei UI",sans-serif;
+  --font-system:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI","PingFang SC","Microsoft YaHei UI","Noto Sans SC","DengXian","等线",sans-serif;
   --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;
   --radius-widget:12px;--radius-panel:14px;--radius-card:10px;--radius-control:8px;--radius-badge:6px;--radius-track:3px;
   --ease:cubic-bezier(.32,.72,0,1);--duration:200ms;--duration-hover:150ms;--duration-panel:240ms;
@@ -97,7 +97,63 @@ article>strong,.appearance-heading{font-size:17px} .card-row,.token-label,.data-
 
 
 
-#speech{position:absolute;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:22px 28px 26px;background:var(--clear);color:var(--text-primary);font-size:15px;line-height:1.5}
-#speech::before{content:"";position:absolute;inset:0 0 12px;border:3px solid var(--accent);border-radius:50%;background:var(--bg-elevated)}#speech::after{content:"";position:absolute;right:90px;bottom:6px;width:14px;height:14px;transform:rotate(45deg);background:var(--bg-elevated);border-right:3px solid var(--accent);border-bottom:3px solid var(--accent)}#speech>*{position:relative;z-index:1}
-#speech-text{flex:0 1 auto;min-height:0;max-height:66px;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap;margin:0 0 6px;font-size:16px;line-height:1.6;font-weight:400}.speech-data{display:flex;flex-direction:column;gap:3px;flex:none;font-size:14px;color:var(--accent-ink)}
-#speech.dialogue-only #speech-text{margin:0}
+
+/* Radix-inspired surfaces and Shadcn-style section hierarchy. All local CSS. */
+:root{--shadow-card:0 1px 2px rgba(0,0,0,.025);--shadow-panel:0 6px 18px rgba(0,0,0,.10);--shadow-control:0 1px 3px rgba(0,0,0,.06);--radius-panel:16px;--radius-card:12px}
+#details{padding:18px;background:var(--bg-base)}
+.panel-title{font-size:20px;font-weight:500;letter-spacing:-.35px}
+.panel-toolbar{margin-bottom:14px}header{margin-bottom:20px}
+nav{background:var(--bg-sunken);gap:3px;padding:4px;border-radius:10px}
+nav button{font-size:14px;min-height:42px;border-radius:7px}
+nav button[aria-selected="true"]{box-shadow:var(--shadow-control)}
+#panel-body{padding:1px 2px 2px 0}
+article{padding:18px;margin-bottom:14px}.card-row{margin:12px 0 14px;align-items:center}.card-row strong{font-size:23px;letter-spacing:-.5px}
+.section-heading{padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid var(--separator)}
+.section-heading h2{margin:0 0 4px;font-size:17px;line-height:1.4;font-weight:500;letter-spacing:-.2px}
+.section-heading p{margin:0;font-size:13px;line-height:1.6;color:var(--text-secondary)}
+.settings-group{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--separator)}
+.character-actions{margin:12px 0}.character-option{margin:18px 0;font-size:14px}
+.dialogue-settings{padding:0;border:0;background:var(--clear);margin-bottom:20px}
+.dialogue-settings legend{padding:0;margin-bottom:16px;font-size:17px}
+.dialogue-settings input,.dialogue-settings textarea{background:var(--bg-elevated);padding:10px 12px;line-height:1.6;font-size:14px;cursor:text}
+.dialogue-settings input:hover,.dialogue-settings textarea:hover{border-color:var(--accent)}
+.segmented{display:flex;gap:3px;min-width:0;max-width:100%;padding:3px;background:var(--bg-sunken);border-radius:9px;box-sizing:border-box}
+.segmented button{flex:1;min-width:0;border:0;border-radius:6px;background:var(--clear);color:var(--text-secondary);padding:8px 12px;font-size:13px;line-height:20px;white-space:nowrap}
+.segmented button[aria-pressed="true"]{background:var(--bg-elevated);color:var(--text-primary);box-shadow:var(--shadow-control);font-weight:500}
+.segmented button:hover{color:var(--accent-ink)}.language-setting{font-size:14px}
+.palette-options{gap:12px;padding:0}.palette-choice{box-shadow:none;padding:12px;gap:5px;border-width:1px}
+.palette-choice[aria-pressed="true"]{outline:none;border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.palette-choice:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--focus-ring)}
+.palette-preview{height:38px;border-radius:7px}.palette-choice strong{font-size:14px}.palette-pair{font-size:12px}
+/* C: cloud dialogue, drawn entirely inside the existing 280x152 region. */
+#speech{position:absolute;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:20px 36px 34px;background:var(--clear);color:var(--text-primary);font:500 17px/1.5 "Noto Sans SC","Microsoft YaHei UI",sans-serif}
+#speech::before,#speech::after{display:none}
+#speech>*{position:relative;z-index:1}
+#speech>.speech-cloud{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.speech-cloud path{fill:var(--bg-elevated);stroke:var(--accent);stroke-width:2;stroke-linejoin:round}
+#speech-text{flex:0 1 auto;min-height:0;max-height:56px;overflow:auto;overflow-wrap:anywhere;white-space:pre-wrap;text-wrap:balance;margin:0 0 5px;font-size:17px;line-height:1.5;font-weight:500}
+.speech-data{display:flex;flex-direction:column;gap:3px;flex:none;font-size:13px;line-height:1.5;font-weight:400;color:var(--text-secondary)}
+#speech.dialogue-only #speech-text{margin:0;max-height:76px}
+#token-panel>.section-heading{border:0;margin:0 0 12px;padding:0}#token-panel>.section-heading h2{display:none}
+#token-periods{width:100%;margin-bottom:12px}.chart-card{padding:14px;overflow:hidden;position:relative}.chart-total{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px}
+#token-range-label{font-size:13px;color:var(--text-secondary)}.token-number{font-size:32px;font-weight:500;line-height:1.3;letter-spacing:-1px}.token-value{gap:6px;margin-top:4px}.token-scale{font-size:12px}
+#token-chart{display:block;padding:0;border:0;box-shadow:none;background:var(--clear);min-width:0;width:100%}
+#token-chart svg{display:block;width:100%;height:170px;overflow:visible}
+.chart-axis{fill:var(--text-secondary);font-family:var(--font-system);font-size:16px;font-weight:400}
+.chart-grid{stroke:var(--separator);stroke-width:1;stroke-dasharray:3 4}.chart-bar{fill:var(--accent)}.chart-hit{cursor:crosshair}
+.chart-tooltip{position:absolute;top:76px;left:14px;right:14px;pointer-events:none;padding:6px 8px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-elevated);font-size:12px;line-height:1.5;color:var(--text-primary);margin:0;overflow-wrap:anywhere}.chart-tooltip:empty{display:none}
+#token-unit{font-size:12px;margin:8px 0 0;color:var(--text-secondary)}#token-exact-values{font-size:13px;max-height:240px;overflow:auto;padding-right:4px}
+#token-updated{font-size:12px}.token-badge{font-size:11px;white-space:nowrap}
+@container(max-width:340px){#token-chart svg{height:185px}.language-setting{flex-wrap:wrap}.segmented button{padding:8px 6px;font-size:12px}.palette-options{grid-template-columns:1fr}.chart-total{flex-wrap:wrap}nav button{font-size:12px}.card-row strong{font-size:20px}}
+.dialogue-actions{display:flex;gap:8px}.dialogue-settings input,.dialogue-settings textarea{cursor:text}
+#character-panel .dialogue-actions button{background:var(--bg-elevated);color:var(--text-primary);font-weight:400}
+.card-row .quota-remaining{font-size:14px;font-weight:400;letter-spacing:0;white-space:nowrap}
+.quota-percent,#status{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",sans-serif;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:0}
+.quota-percent{font-size:26px;line-height:1.2}
+#panel-resize{position:absolute;right:6px;bottom:6px;background:var(--bg-elevated);opacity:.85}
+#details[data-resize-x="left"] #panel-resize{left:6px;right:auto;transform:scaleX(-1);cursor:nesw-resize}
+#details[data-resize-y="top"] #panel-resize{top:6px;bottom:auto;transform:scaleY(-1);cursor:nesw-resize}
+#details[data-resize-x="left"][data-resize-y="top"] #panel-resize{transform:scale(-1);cursor:nwse-resize}
+#details[data-resize-x="left"][data-resize-y="top"] .panel-title{margin-left:28px}
+#details[data-resize-x="right"][data-resize-y="top"] #close{margin-right:28px}
+#details[data-resize-x="left"] .panel-sizebar{justify-content:flex-end}

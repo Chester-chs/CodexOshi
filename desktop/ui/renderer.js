@@ -2,6 +2,7 @@ const button=document.getElementById('widget'),details=document.getElementById('
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false;
 let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
+let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
 function clickFeedback(){
   feedbackAnimation?.cancel();
@@ -68,7 +69,11 @@ function render(){
   if(view.empty){const empty=document.createElement('p');empty.textContent=view.empty;cards.append(empty);}
   for(const card of view.cards){
     const article=document.createElement('article'),title=document.createElement('strong'),row=document.createElement('div'),reset=document.createElement('span'),remaining=document.createElement('strong'),track=document.createElement('div'),fill=document.createElement('div');
-    title.textContent=card.label;row.className='card-row';reset.textContent=card.resetText;remaining.textContent=text('剩余 {value}',{value:card.percentText});row.append(reset,remaining);fill.className='fill';track.append(fill);bar(track,fill,card.remainingPercent,card.tone);article.append(title,row,track);cards.append(article);
+    title.textContent=card.label;row.className='card-row';reset.textContent=card.resetText;
+    remaining.className='quota-remaining';
+    const parts=text('剩余 {value}',{value:'\uFFFC'}).split('\uFFFC'),number=document.createElement('span');
+    number.className='quota-percent';number.textContent=card.percentText;remaining.append(parts[0],number,parts[1]||'');
+    row.append(reset,remaining);fill.className='fill';track.append(fill);bar(track,fill,card.remainingPercent,card.tone);article.append(title,row,track);cards.append(article);
   }
   const age=Number.isFinite(quota.observedAt)?Math.max(0,Math.floor((Date.now()-quota.observedAt)/1000)):null;
   const ageText=age===null?text('尚未更新'):age<60?text('{value} 秒前更新',{value:age}):text('{value} 分钟前更新',{value:Math.floor(age/60)});
@@ -76,18 +81,30 @@ function render(){
   document.getElementById('metadata').textContent=text('套餐：{plan} · {source}',{plan:quota.planType||text('未知'),source:text(source)})+'\n'+ageText+(quota.stale?' · '+text('数据待更新'):'');
 }
 function renderTokens(){
-  const view=window.quotaView.presentTokens(tokens,window.uiText.language),chart=document.getElementById('token-chart'),exact=document.getElementById('token-exact-values');chart.replaceChildren();exact.replaceChildren();
-  document.getElementById('token-coverage').textContent=view.coverageText;
-  const indexing=document.getElementById('token-status');indexing.textContent=view.coverageText.split(' · ')[0];indexing.hidden=tokens?.coverage==='complete';
-  chart.setAttribute('aria-label',view.rows.map(row=>row.label+'：'+row.text+' token').join('，'));
-  for(const row of view.rows){
-    const item=document.createElement('div'),plot=document.createElement('div'),label=document.createElement('span'),value=document.createElement('div'),number=document.createElement('strong'),unit=document.createElement('span'),bar=document.createElement('div');
-    item.className='token-column';item.title=row.label+'：'+row.text+' token';plot.className='token-plot';label.className='token-label';label.textContent=row.label.replace('最近','');value.className='token-value'+(row.number.length>6?' token-dense':'');number.className='token-number';number.textContent=row.number;unit.className='token-scale';unit.textContent=row.unit;value.append(number,unit);
-    bar.className='token-bar';bar.style.width=row.percent+'%';plot.append(bar);item.append(label,value,plot);chart.append(item);
-    const term=document.createElement('dt'),count=document.createElement('dd');term.textContent=label.textContent;count.textContent=row.text;exact.append(term,count);
-  }
+  const coverage=window.quotaView.presentTokens(tokens,window.uiText.language),view=window.tokenChart.presentSeries(tokens,tokenPeriod,window.uiText.language),chart=document.getElementById('token-chart'),exact=document.getElementById('token-exact-values');chart.replaceChildren();exact.replaceChildren();
+  const label=text({hours24:'最近 24 小时',days7:'最近 7 天',days30:'最近 30 天'}[tokenPeriod]);
+  document.getElementById('token-range-label').textContent=label;
+  document.getElementById('token-total').textContent=view.known?view.number:'—';document.getElementById('token-total').title=view.known?view.total+' tokens':'';
+  document.getElementById('token-hover').textContent='';document.getElementById('token-coverage').textContent=coverage.coverageText;
+  const indexing=document.getElementById('token-status');indexing.textContent=coverage.coverageText.split(' · ')[0];indexing.hidden=tokens?.coverage==='complete';
+  chart.setAttribute('aria-label',label+' · '+(view.known?view.total+' tokens':text('历史正在补齐，当前为部分覆盖')));
+  if(view.known){
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 600 250');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('aria-hidden','true');
+    const element=(name,attrs,content)=>{const e=document.createElementNS(svg.namespaceURI,name);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,String(v));if(content!==undefined)e.textContent=content;svg.append(e);return e;};
+    for(const tick of view.ticks){const y=210-tick.percent*1.75;element('line',{x1:42,x2:592,y1:y,y2:y,class:'chart-grid'});element('text',{x:34,y:y+4,'text-anchor':'end',class:'chart-axis'},tick.label);}
+    const step=548/view.bins.length,stride=Math.ceil(view.bins.length/6);
+    view.bins.forEach((bin,i)=>{
+      const x=44+i*step,h=bin.percent*1.75;
+      const rect=element('rect',{x:x+step*.16,y:210-h,width:step*.68,height:h,rx:3,class:'chart-bar'});const title=document.createElementNS(svg.namespaceURI,'title');title.textContent=bin.tooltip;rect.append(title);
+      // Full-height hit targets also expose empty periods to the pointer.
+      const hit=element('rect',{x,y:30,width:step,height:185,fill:'transparent',class:'chart-hit'});hit.addEventListener('pointerenter',()=>document.getElementById('token-hover').textContent=bin.tooltip);hit.addEventListener('pointerleave',()=>document.getElementById('token-hover').textContent='');
+      if(i%stride===0||i===view.bins.length-1)element('text',{x:x+step/2,y:236,'text-anchor':'middle',class:'chart-axis'},bin.label);
+      const term=document.createElement('dt'),count=document.createElement('dd');term.textContent=bin.label;count.textContent=new Intl.NumberFormat(window.uiText.language).format(bin.value);exact.append(term,count);
+    });chart.append(svg);
+  }else{const note=document.createElement('p');note.textContent=text('历史正在补齐，当前为部分覆盖');chart.append(note);}
   document.getElementById('token-updated').textContent=Number.isFinite(tokens?.observedAt)?text('截至 {time} · 5 分钟缓存',{time:new Date(tokens.observedAt).toLocaleTimeString(window.uiText.language,{hour12:false})}):text('历史正在补齐，当前为部分覆盖');
 }
+for(const period of document.querySelectorAll('[data-period]'))period.addEventListener('click',()=>{tokenPeriod=period.dataset.period;for(const p of document.querySelectorAll('[data-period]'))p.setAttribute('aria-pressed',String(p===period));renderTokens();});
 button.addEventListener('pointerdown',event=>{
   if(event.button!==0)return;
   event.preventDefault();button.setPointerCapture(event.pointerId);

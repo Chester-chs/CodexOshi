@@ -14,7 +14,6 @@ const panelModel=require('./ui/panel-model.js');
 const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs');
 const dialogueModel=require('./ui/dialogue-model.js');
 const {DialoguePreferencesStore}=require('../runtime/dialogue-preferences.cjs');
-const {editDialogue}=require('./dialogue-edit.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -36,11 +35,16 @@ const panelStore=new PanelPreferencesStore(data);
 let panelPreferences=panelModel.defaults(),panelOffset=null,panelResizing=false;
 const dialogueStore=new DialoguePreferencesStore(data);
 let dialoguePreferences=dialogueModel.defaults(),speechVisible=false,speechIndex=-1;
+let textEditing=false;
+function setTextEditing(value){
+  if(textEditing===value)return;textEditing=value;
+  win.setTitle(value?'Codex Quota Widget [Text editing]':'Codex Quota Widget');
+}
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt,readResetCredits:true});
 const stateFile=path.join(data,'window-state.json');
 function writeDiagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,textEditing,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function diagnostic(){
   if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
@@ -53,7 +57,7 @@ function notifyLayout(){
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
 }
 function beginDrag(){
-  if(dragging)return;defaultPlacement=false;dragging=true;
+  if(dragging)return;setTextEditing(false);defaultPlacement=false;dragging=true;
   checkpointTimer=setTimeout(function checkpoint(){
     if(!dragging)return;savePosition();checkpointTimer=setTimeout(checkpoint,1000);
   },3000);
@@ -90,18 +94,16 @@ app.whenReady().then(async()=>{
   const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
   panelPreferences=await panelStore.read();
   dialoguePreferences=await dialogueStore.read();
-  let editingDialogue=false;
-  ipcMain.handle('dialogue-edit',async event=>{
-    if(event.sender!==win.webContents||editingDialogue||!expanded)return {ok:false};editingDialogue=true;
-    try{const value=await editDialogue(win,dialoguePreferences,panelPreferences.language);if(!value)return {ok:true,canceled:true};const saved=await dialogueStore.save(value);dialoguePreferences=saved;notifyLayout();return {ok:true,value:saved};}
-    catch(e){return {ok:false,error:e.message};}finally{editingDialogue=false;}
+  ipcMain.handle('dialogue-focus',(event,value)=>{
+    if(event.sender!==win.webContents||typeof value!=='boolean'||value&&(!expanded||dragging))return {ok:false};
+    setTextEditing(value);if(value)win.focus();return {ok:true};
   });
   ipcMain.handle('dialogue-read',event=>event.sender===win.webContents?dialoguePreferences:null);
   ipcMain.handle('dialogue-save',async(event,value)=>{
     if(event.sender!==win.webContents)return {ok:false};
-    try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
+    try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;setTextEditing(false);notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
   });
-  const dismiss=()=>{if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
+  const dismiss=()=>{setTextEditing(false);if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
   ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging)return;speechVisible=false;expanded=true;updateShape();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
@@ -112,7 +114,7 @@ app.whenReady().then(async()=>{
   });
   ipcMain.on('panel-resize',(event,value)=>{
     if(event.sender!==win.webContents||!value||!expanded||dragging)return;
-    if(value.type==='begin'&&viewLayout?.regions[1]){const p=viewLayout.regions[1];panelOffset={x:p.x-widget.x,y:p.y-widget.y};panelResizing=true;}
+    if(value.type==='begin'&&viewLayout?.regions[1]){panelOffset=null;panelResizing=true;}
     else if(value.type==='update'&&panelResizing&&panelModel.validSize(value)){panelPreferences={...panelPreferences,width:value.width,height:value.height};updateShape();}
     else if(value.type==='end'&&panelResizing){panelResizing=false;updateShape();diagnostic();savePanel();}
   });
@@ -160,7 +162,7 @@ app.whenReady().then(async()=>{
       savePosition();notifyLayout();
       if(pendingQuota){saveSnapshot('quota-state.json',pendingQuota);pendingQuota=null;}
       if(pendingTokens){saveSnapshot('tokens-state.json',pendingTokens);pendingTokens=null;}
-    } else if(value.type==='click'){if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=speechVisible?(speechIndex+1)%2:0;expanded=false;speechVisible=true;updateShape();}
+    } else if(value.type==='click'){setTextEditing(false);if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=speechVisible?(speechIndex+1)%2:0;expanded=false;speechVisible=true;updateShape();}
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=saved;defaultPlacement=false;}}catch{}

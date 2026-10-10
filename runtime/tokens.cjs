@@ -48,6 +48,29 @@ function buckets(states,now){
 function newState(entry,baseline=false){
   return {identity:entry.identity,size:entry.size,mtimeMs:entry.mtimeMs,offset:0,highWater:0,increments:[],records:0,baseline,skipLine:false,oversizedLines:0,unclassifiedLines:0,missingTimestamps:0,complete:false};
 }
+function timeSeries(states,now){
+  const hour=3600000,result={};
+  for(const [key,count,hourly] of [['hours24',24,true],['days7',7,false],['days30',30,false]]){
+    const end=new Date(now);
+    if(hourly)end.setTime(now-end.getMinutes()*60000-end.getSeconds()*1000-end.getMilliseconds());
+    else end.setHours(0,0,0,0);
+    const first=new Date(end);if(hourly)first.setTime(end.getTime()-(count-1)*hour);else first.setDate(first.getDate()-count+1);
+    const bins=[];let start=first.getTime();
+    for(let n=0;n<count;n++){const next=new Date(start);if(hourly)next.setTime(start+hour);else next.setDate(next.getDate()+1);bins.push({start,end:n===count-1?now:next.getTime(),value:0});start=next.getTime();}
+    result[key]={bins,total:0,asOf:now,period:hourly?'hour':'day'};
+  }
+  // Reuse only timestamp/delta metadata; no session I/O and no raw content.
+  for(const state of states)for(const event of state.increments){
+    if(event.at>now)continue;
+    for(const view of Object.values(result)){
+      if(event.at<view.bins[0].start)continue;
+      // Local calendar days can be 23 or 25 hours across daylight saving.
+      const index=view.bins.findLastIndex(b=>event.at>=b.start);
+      if(index>=0){view.bins[index].value+=event.value;view.total+=event.value;}
+    }
+  }
+  return result;
+}
 class TokenIndex{
   constructor(options={}){
     this.home=options.codexHome || process.env.CODEX_HOME || path.join(os.homedir(),'.codex');
@@ -94,7 +117,7 @@ class TokenIndex{
     const values=[...states.values()],indexed=[...this.states.values()].filter(s=>s.complete).length;
     const partial=this.errors>0||values.some(s=>!s.complete||s.unclassifiedLines||s.missingTimestamps);
     const asOf=this.busy?this.now():(this.lastRefreshAt??this.now());
-    return {values:buckets(values,asOf),highWaterTotal:values.reduce((sum,s)=>sum+s.highWater,0),
+    return {values:buckets(values,asOf),series:timeSeries(values,asOf),highWaterTotal:values.reduce((sum,s)=>sum+s.highWater,0),
       coverage:this.busy?'indexing':partial?'partial':'complete',filesIndexed:indexed,filesDiscovered:this.discovered,
       observedAt:this.lastRefreshAt,cacheHit,cacheHits:this.cacheHits,refreshes:this.refreshes,
       metrics:{...this.metrics},lastScan:this.lastScan,readErrors:this.errors,
@@ -183,4 +206,4 @@ class TokenIndex{
     }finally{this.busy=false;}
   }
 }
-module.exports={tokenRecord,addRecord,buckets,TokenIndex,TAIL_BYTES,CACHE_MS};
+module.exports={tokenRecord,addRecord,buckets,timeSeries,TokenIndex,TAIL_BYTES,CACHE_MS};

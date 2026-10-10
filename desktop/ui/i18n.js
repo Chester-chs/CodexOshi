@@ -1,6 +1,13 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '保存对话':'Save dialogue','取消编辑':'Cancel edits','在此编辑称呼和两段文本，保存后生效。关闭气泡后重新从第一段开始。':'Edit the address and two messages here, then save. Closing the bubble restarts the first message.',
+    '向外拖动调整大小':'Drag outward to enlarge',
+    '立绘设置':'Portrait','上传一张图片，调整角色的大小与取景':'Upload one image, then adjust size and framing.',
+    '关闭气泡后重新从第一段开始。点击编辑对话修改称呼和两段文本。':'Closing the bubble restarts the first dialogue. Click Edit dialogue to change the address and two messages.',
+    '查看本机用量随时间的变化':'Track usage over time on this computer.','统计范围':'Time range','24 小时':'24 hours','7 天':'7 days','30 天':'30 days',
+    '按自然小时 / 日期汇总，当前小时 / 当天尚未结束。':'Calendar hours / days; the current hour / day is incomplete.',
+    '按本机时间展示最近 24 个小时、7 个日期或 30 个日期。总数等于当前柱形之和，不含已删除会话或其他电脑。':'Shows the latest 24 calendar hours, 7 days or 30 days in local time. Total equals the displayed bars. Deleted sessions and other computers are excluded.',
     '设置':'Settings','挂件设置':'Widget settings','点击对话':'Click dialogue','称呼':'Address','第一段对话':'First dialogue','第二段对话':'Second dialogue','编辑对话':'Edit dialogue','关闭对话':'Close dialogue','额度小提醒':'Quota reminder','重置卡：{count} 次':'Reset credits: {count}','对话已保存。':'Dialogue saved.','对话保存失败。':'Could not save dialogue.','对话设置读取失败。':'Could not load dialogue settings.','对话编辑器无法打开。':'Could not open the dialogue editor.','请填写称呼和两段对话；称呼最多 32 字，对话每段最多 240 字。':'Enter an address (up to 32 characters) and two dialogues (up to 240 characters each).',
     '每次点击轮换一段；支持 {称呼}、{剩余额度}、{重置时间}、{重置卡次数}。':'Two alternating dialogues. Placeholders: {称呼}, {剩余额度}, {重置时间}, {重置卡次数}.','{label}，剩余 {value}，点击对话，拖动移动':'{label}, {value} remaining. Click for dialogue; drag to move.','额度挂件，拖动移动，点击对话':'Quota widget. Drag to move; click for dialogue.',
     'Codex 额度':'Codex Quota','额度管理':'Quota','token 用量':'Tokens','角色':'Character','外观选择':'Appearance','详情视图':'Detail views','额度与用量详情':'Quota and usage details','收起详情':'Close details',
