@@ -2,7 +2,7 @@
   "mcpServers": {
     "codex-quota-widget": {
       "command": "node",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/runtime/mcp.cjs"]
+      "args": ["runtime/mcp.cjs"]
     }
   }
 }

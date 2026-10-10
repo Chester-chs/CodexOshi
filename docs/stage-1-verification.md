@@ -2,11 +2,13 @@
 
 日期：2026-10-09。Windows x64；Codex Desktop 26.1007.2314.0；CLI 0.162.0-alpha.17.2；Electron 44.3.0；Node.js 24.19.0；Windows PowerShell 5.1。
 
+**2026-10-10 MCP 加载复核：验收方报告完整重启后新建聊天仍拿不到 widget_status，重启后 MCP 加载不通过。按要求仅将 .mcp.json 的 args 改为 runtime/mcp.cjs，重装后 Args 已更新，但 codex mcp list 的 Cwd 仍为 `-`。已触发用户指定的停止条件，不继续猜测配置、不使用绝对路径兜底、不将该门槛标为通过。**
+
 **2026-10-09 路线 A 修复：按新授权采用 focusable:true + C# 激活事件恢复，允许短暂激活，要求点击后 300ms 内回到宿主。立即恢复会打断输入；仅改为延后 80ms 后，点击、拖动、形状外穿透与切走防护均通过原生探针。跨 DPI 切换与重启后 MCP 加载仍待验收。没有进入阶段 2。此前 focusable:false 的通过结论仍已撤回，不将“短暂激活后恢复”等同于“从不激活”。**
 
 | 条件 | 当前证据 | 结论 |
 |---|---|---|
-| 1. 安装与自动跟随 | 实际运行安装脚本；CLI `plugin add` 返回安装路径，`plugin list` 显示 installed/enabled。C# owner 为当前 Codex HWND，WinEvent 跟随启用；用户确认移动跟随正常。首次完整重开 Codex、新建聊天尚未进行。 | 窗口与 CLI 安装已验证；重启后的 MCP 加载待确认 |
+| 1. 安装与自动跟随 | 窗口安装与跟随的既有证据保留。验收方报告重开 Codex、新建聊天后没有 widget_status；2026-10-10 相对路径修复重装后，mcp list 显示 Args=runtime/mcp.cjs、Cwd=`-`。 | 窗口与 CLI 安装已验证；**重启后的 MCP 加载不通过，相对路径的工作目录验收也未通过** |
 | 2. 无托盘、任务栏 | 无 Tray 对象；BrowserWindow 设置 skipTaskbar、toolbar、focusable:true，原生扩展样式包含 TOOLWINDOW、没有 APPWINDOW，且 owner 是 Codex。无独立挂件任务栏窗口。 | 通过 |
 | 3. 移动、最小化/还原、DPI | 用户明确确认移动、最小化消失和还原出现正常。诊断记录 DPI=144，即 150%；100%/150%/200% 的物理尺寸→DIP 单元测试通过。用户确认只有 150% 显示环境。 | 生命周期通过；跨 DPI 切换未实测 |
 | 4. 首次点击、拖动、恢复宿主焦点 | 路线 A 延后 80ms 后 clicks 0→1；复测 1→2、2→3，约 112～113ms 时已回到宿主 HWND=328082。完整 10 步拖动 (499,382)→(539,406)，position.json 同步。切走测试在定时器到期前将前台转到测试窗口，随后保持该窗口，未被拉回。用户确认“操作正常，闪烁可接受”。 | **按新授权的 300ms 恢复判据通过**；用户接受瞬间闪烁 |
@@ -126,3 +128,25 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.
 本轮仍为 32 个源码文件，首轮通过 CLI plugin add 重装后，逐文件 SHA256 核对 32/32 一致。补充最终探针和记录后，交付前再次按相同流程停止、重装、核对、启动，不重复下载 Electron。用户数据、临时测试窗口、日志及编译产物不进入源码或插件缓存。中文本地提交，不执行 push。最终挂件保持启用；跨 DPI 切换和完整重启后的 MCP 加载继续标记待验收。
 
 最终检查包括 9 项 Node 测试、5 类原生异常形状、8 个 PowerShell 文件解析、10 个 JS 文件语法与 git diff --check。几何函数和 runtime/read-policy.cjs 均无 diff。自查确认只在挂件激活后恢复已验证宿主，迟到事件不恢复其他前台窗口；没有宿主 WndProc 注入、MSVC 或阶段 2 功能。
+
+## 2026-10-10：MCP 启动路径的一行修复与停止记录
+
+采用验收方给出的根因证据，不重新排查安装、市场、服务器实现或插件启用状态。唯一配置变更：
+
+```diff
+-      "args": ["${CLAUDE_PLUGIN_ROOT}/runtime/mcp.cjs"]
++      "args": ["runtime/mcp.cjs"]
+```
+
+执行 scripts/stop.ps1 后，运行 codex plugin add codex-quota-widget@personal --json，返回安装路径 C:\Users\Chester\.codex\plugins\cache\personal\codex-quota-widget\0.1.0。32 个源码文件与缓存逐文件 SHA256 比对一致。随后执行 codex mcp list，目标行如下（仅压缩列间空白，未改列值）：
+
+```text
+Name                Command  Args             Env  Cwd  Status   Auth
+codex-quota-widget  node     runtime/mcp.cjs   -    -    enabled  Unsupported
+```
+
+该命令退出码为 0，但目标行的 **Cwd 仍为 `-`**；不能以命令正常退出或 Args 更新代替工作目录验收。因此按用户“如果 Cwd 仍为 `-`，停下来汇报”的要求，在步骤 2 停止。没有尝试补 cwd、绝对路径或其它配置，没有继续执行步骤 3～4 的完整退出重开及新聊天工具调用。**修复后新聊天调用 widget_status 的实测结果：未执行，不能标记通过。**
+
+本机 codex --version 实测为 `codex-cli 0.162.0-alpha.17.2`。验收方报告从 0.156.1 自动升级到该 alpha 版本；将版本和升级方式记录为后续插件/MCP 异常的排查变量，不由本次输出推断其必然是根因。
+
+本轮源码只改 .mcp.json 与本验收记录；桌面形状、1×1 回退、focusable:true、C# 80ms 恢复、读取允许清单及运行时实现均未修改。没有 MSVC、阶段 2、codex exec、review 或新 agent turn。挂件按要求停止，未重新启动；本轮提交为中文本地提交，不 push。补充本记录后再次同步缓存并核验最终文件哈希。
