@@ -12,7 +12,10 @@ $form=New-Object Windows.Forms.Form
 $form.Text=if($en){'Edit dialogue'}else{'编辑点击对话'}
 $form.ClientSize=New-Object Drawing.Size(540,410)
 $form.StartPosition='CenterParent';$form.FormBorderStyle='FixedDialog';$form.MaximizeBox=$false;$form.MinimizeBox=$false;$form.ShowInTaskbar=$false
-$form.Font=New-Object Drawing.Font('Microsoft YaHei UI',10)
+$fontCollection=New-Object Drawing.Text.InstalledFontCollection
+$fontFamily=if($fontCollection.Families.Name -contains 'Noto Sans SC'){'Noto Sans SC'}else{'Microsoft YaHei UI'}
+$fontCollection.Dispose()
+$form.Font=New-Object Drawing.Font($fontFamily,10,[Drawing.FontStyle]::Regular)
 $names=if($en){@('Address','First dialogue','Second dialogue')}else{@('称呼','第一段对话','第二段对话')}
 $values=@($initial.preferences.address,$initial.preferences.lines[0],$initial.preferences.lines[1])
 $inputs=@()

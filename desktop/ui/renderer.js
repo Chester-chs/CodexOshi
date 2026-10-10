@@ -43,6 +43,9 @@ gear.addEventListener('pointerdown',event=>event.stopPropagation());
 gear.addEventListener('click',event=>{event.stopPropagation();window.widget.openSettings();});
 function renderSpeech(){
   if(speech.hidden)return;
+  const dialogueOnly=speechIndex===1;
+  speech.classList.toggle('dialogue-only',dialogueOnly);
+  document.querySelector('.speech-data').hidden=dialogueOnly;
   const view=window.dialogueModel.present(dialoguePreferences,speechIndex,quota,Date.now(),window.uiText.language);
   document.getElementById('speech-text').textContent=view.line;
   document.getElementById('speech-reset').textContent=view.reset;

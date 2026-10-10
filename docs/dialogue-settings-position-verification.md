@@ -6,6 +6,7 @@
 
 - 点击立绘轮换两段对话，不再打开四页卡片。保留点击计数、220ms 渲染层反馈及拖动。
 - 气泡为 **280×152 DIP 的小椭圆**，默认第一段“主人，{重置时间}。”，下方显示可用重置卡次数；不重复百分比、标题或倒计时。第二段默认“主人，额度消耗好快呀，记得歇一歇。”。
+- 第二段只显示节奏提醒，不显示公共倒计时或重置卡信息栏；第三次点击回到第一段时恢复该信息栏。自定义两段文案仍按用户设置保留。
 - 底部额度长条后的齿轮打开“挂件设置”，保留额度管理、token 用量、角色、外观四页及尺寸、语言、主题功能。气泡和设置互斥。
 - 角色页的“编辑对话”可修改称呼和两段文案。使用本机原生输入对话框以支持键盘与中文输入法，不取消常驻挂件的 80ms 焦点恢复。称呼上限32字、每段240字；本机 `dialogue-preferences.json` 原子保存，不覆盖角色、素材或位置文件。自定义文案按原文保留，不因语言切换而重写。
 - 支持 `{称呼}`、`{重置时间}`、`{重置卡次数}`，也保留可选的 `{剩余额度}` 替换；默认第一段不使用剩余额度。
@@ -74,3 +75,28 @@
 ![简洁椭圆气泡](images/dialogue-bubble.png)
 
 ![保留四页的设置卡片](images/dialogue-settings-card.png)
+
+## 第二段信息栏与字体修订
+
+日期：2026-10-10，修订基线 `f78e9a8`。
+
+根因：`renderSpeech()` 无论当前是哪段对话都渲染公共 `.speech-data`，因而第二段节奏提醒也附带倒计时和重置卡。现按 `speechIndex === 1` 隐藏整个公共信息栏，正文居中；再次切回第一段时恢复。未改动几何、shape、点击计数、设置入口或拖动处理。
+
+界面统一采用本机已安装的 **Noto Sans SC（思源黑体）**，覆盖气泡、常驻额度数字、四页设置、按钮和输入框；未安装该字体的机器按本机字体栈回退，不下载字体。正文及气泡为400常规字重，标题、选中页签及关键数字从600减为500，禁用合成粗体。原生“编辑对话”也使用 Noto Sans SC 10pt Regular，缺失时回退 Microsoft YaHei UI；已验证本机实际创建出的字体为 Noto Sans SC / Regular，并通过 PowerShell 语法解析。原生输入/中文输入法体验仍待用户确认。
+
+可复现检查：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/Invoke-CardSmoke.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/Invoke-PopupSmoke.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1 -Native
+```
+
+- 回归测试先在旧代码明确失败：第二段信息栏实际 `display:flex`，预期 `none`。修订后真实 Electron renderer 点击第一→第二→第一全部通过：第二段 `display:none`，第一段恢复 `display:flex`，3次点击计数；气泡仍为280×152，第二段 region 与第一段逐字段相同。
+- 气泡 computed font family 首选 Noto Sans SC，正文 weight400。卡片关闭按钮44×44、四个等宽页签、480×560→620×720指针调节、640×720保存、中英文切换、角色页滚轮及小视口夹紧通过。
+- 四个页签无横向溢出；token 大数值在三种测试配色下无溢出；主题变化0次shape调用。已检查下方更新的气泡和设置截图，使用隔离测试数据及自由分发几何占位图。
+- **85/85** 单元回归通过，**10例**真实 Electron 异常shape回退通过（144 DPI下原生region为2×2物理像素，即1×1 DIP）。不以这些检查替代尚待验收的实机鼠标焦点、穿透和最小化循环。
+
+本轮仅修改渲染和字体及其验收文件，没有新增网络路径或图片上传；没有运行 `codex exec` / `review`，未重复10分钟静置观察。
+
+交付：停挂件后标准 `codex plugin add` 仍返回缓存备份拒绝访问（Windows error5），已将8个变更缓存文件备份后逐文件同步。源码与缓存 **161/161 SHA256一致**，无额外文件（忽略.git），报告 `dialogue-font-cache-hashes.json`。新版实际从缓存启动，PID18908，visible:true、attached:true、focused:false；位置仍为 `(1483,715)`。没有删除用户文件或结束其他 MCP 进程。

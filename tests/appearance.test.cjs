@@ -4,7 +4,7 @@ const {AppearanceStore}=require('../runtime/appearance.cjs');
 test('CSS color declarations use tokens and resources stay local',async()=>{
   const css=await fs.readFile(path.resolve(__dirname,'../desktop/ui/style.css'),'utf8');
   for(const match of css.matchAll(/(?:^|[;{])\s*([\w-]+)\s*:\s*([^;}]+)/g))if(!match[1].startsWith('--'))assert.doesNotMatch(match[2],/#[\da-f]{3,8}\b|\b(?:rgb|hsl)a?\(|\b(?:transparent|white|black)\b/i,match[0]);
-  assert.match(css,/-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif/);
+  assert.match(css,/--font-system:[^;]*"Noto Sans SC"[^;]*sans-serif;/);
   assert.doesNotMatch(css,/@import|url\(|backdrop-filter/);assert.match(css,/:focus-visible/);assert.doesNotMatch(css,/prefers-color-scheme:dark/);
 });
 test('curated palettes reject arbitrary colors and obsolete display controls',()=>{
