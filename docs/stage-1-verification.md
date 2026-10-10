@@ -2,17 +2,15 @@
 
 日期：2026-10-09。Windows x64；Codex Desktop 26.1007.2314.0；CLI 0.162.0-alpha.17.2；Electron 44.3.0；Node.js 24.19.0；Windows PowerShell 5.1。
 
-**2026-10-10 MCP 加载复核：验收方报告完整重启后新建聊天仍拿不到 widget_status，重启后 MCP 加载不通过。按要求仅将 .mcp.json 的 args 改为 runtime/mcp.cjs，重装后 Args 已更新，但 codex mcp list 的 Cwd 仍为 `-`。已触发用户指定的停止条件，不继续猜测配置、不使用绝对路径兜底、不将该门槛标为通过。**
+**2026-10-10 最终验收：阶段 1 全部通过。验收方已提供完整重启后 MCP 启动日志、新聊天 widget_status 成功应答，以及显示缩放 150%→100%、退出重开后的点击与宿主穿透证据。重启后 MCP 加载、跨 DPI 切换两项均更新为通过；DPI 数值不一致列为待观察，不阻塞阶段 1。本轮仅补充文档，未重新实测或修改代码。历史失败与当时待验收记录保留在下方。**
 
-**2026-10-10 第二轮：按新授权显式设置缓存绝对 cwd 与 10 秒启动超时，并增加静默启动日志。配置重装后 mcp list 的 Cwd 已为指定缓存目录；11 项测试通过。完整退出重开后的真实启动日志和新聊天 widget_status 调用尚未验证，MCP 加载门槛仍未标为通过。下方保留首轮失败的历史证据。**
-
-**2026-10-09 路线 A 修复：按新授权采用 focusable:true + C# 激活事件恢复，允许短暂激活，要求点击后 300ms 内回到宿主。立即恢复会打断输入；仅改为延后 80ms 后，点击、拖动、形状外穿透与切走防护均通过原生探针。跨 DPI 切换与重启后 MCP 加载仍待验收。没有进入阶段 2。此前 focusable:false 的通过结论仍已撤回，不将“短暂激活后恢复”等同于“从不激活”。**
+2026-10-09 路线 A 修复采用 focusable:true + C# 激活事件恢复，允许短暂激活，要求点击后 300ms 内回到宿主。立即恢复会打断输入；延后 80ms 后，点击、拖动、形状外穿透与切走防护通过原生探针，用户接受瞬间闪烁。此前 focusable:false 的通过结论仍已撤回，不将“短暂激活后恢复”等同于“从不激活”。本轮没有进入阶段 2。
 
 | 条件 | 当前证据 | 结论 |
 |---|---|---|
-| 1. 安装与自动跟随 | 窗口安装与跟随的既有证据保留。首轮相对路径配置 Cwd=`-`；第二轮显式 cwd 重装后，mcp list 显示指定缓存目录。启动日志写入和失败静默回归通过。 | 窗口与 CLI 安装已验证；**第二轮配置解析通过，完整重启后的进程启动与新聊天工具调用待验收** |
+| 1. 安装与自动跟随 | 窗口安装与跟随的既有证据保留。最终配置显式指定缓存 cwd；验收方提供重启后的 mcp-startup.json（PID=27772、缓存 cwd/argv）及新聊天 widget_status 成功应答。 | **通过，重启后 MCP 加载通过** |
 | 2. 无托盘、任务栏 | 无 Tray 对象；BrowserWindow 设置 skipTaskbar、toolbar、focusable:true，原生扩展样式包含 TOOLWINDOW、没有 APPWINDOW，且 owner 是 Codex。无独立挂件任务栏窗口。 | 通过 |
-| 3. 移动、最小化/还原、DPI | 用户明确确认移动、最小化消失和还原出现正常。诊断记录 DPI=144，即 150%；100%/150%/200% 的物理尺寸→DIP 单元测试通过。用户确认只有 150% 显示环境。 | 生命周期通过；跨 DPI 切换未实测 |
+| 3. 移动、最小化/还原、DPI | 移动、最小化消失和还原出现的既有确认保留。验收方将显示缩放从 150% 切至 100%，完全退出 Codex 后重开；clicks 8→13、visible=true、region=96×80@(298,98)、host.attached=true，用户确认挂件和宿主交互正常。 | **通过，跨 DPI 切换功能通过**；窗口仍报 144 DPI 的现象列为待观察 |
 | 4. 首次点击、拖动、恢复宿主焦点 | 路线 A 延后 80ms 后 clicks 0→1；复测 1→2、2→3，约 112～113ms 时已回到宿主 HWND=328082。完整 10 步拖动 (499,382)→(539,406)，position.json 同步。切走测试在定时器到期前将前台转到测试窗口，随后保持该窗口，未被拉回。用户确认“操作正常，闪烁可接受”。 | **按新授权的 300ms 恢复判据通过**；用户接受瞬间闪烁 |
 | 5. 宿主输入穿透 | 用户此前确认角色区域外能点击输入框、滚动聊天和选择文字。本次原生 WindowFromPoint 网格采样排除角色形状后全部命中宿主；窗口区域只裁剪到角色，右侧/底侧保留 24 DIP。 | 通过用户实测与窗口命中对照；不把有限采样等同于全部像素穷举 |
 | 6. 异常形状 1×1 | Node 测试覆盖空、非法、负尺寸、非整数、坐标超限、65 个矩形、越界及整窗形状；全部输出 1×1 DIP。真实隐藏 Electron 窗口顺序应用五类异常输入后，Win32 GetWindowRgn 返回简单矩形；150% 下是 2×2 物理像素，即 1×1 DIP，未恢复全窗。 | 通过 |
@@ -51,7 +49,7 @@ Electron 运行时已下载并运行：
 
 本地复核确认：初始窗口在显示前设为 1×1 形状；所有生产形状经过同一校验函数；窗口显示用 showInactive，不调用 focus；C# 移动使用 NOACTIVATE 且不改变尺寸；监督进程死亡时 launcher Job Object 清理自身子进程；数据读取策略在阶段 1 对所有源拒绝。不存在托盘对象、模型请求或 Codex agent 子进程调用。
 
-待拥有不同缩放环境后，完成跨 DPI 移动/缩放验收。待当前聊天结束后完全退出并重开 Codex、新建聊天，检查插件状态工具是否加载。以上通过前不推进阶段 2。
+上述两项最初待验收，现已由验收方提供最终证据并更新为通过，详见文末补记。阶段 1 验收完成；本轮不推进阶段 2。
 
 原建议远端：`Chester-chs/codex-quota-widget`，private。当前 Git 已配置 origin 为 `https://github.com/Chester-chs/codex-quota-widget.git`；本轮未创建或修改远端、未执行 push。远端可见性未在本轮核验；每次 push 仍须用户明确确认。
 
@@ -125,13 +123,13 @@ route-a-switch-away 额外点击后，在恢复定时器到期前切到测试自
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\Invoke-MouseProbe.ps1 -Label route-a-acceptance -RequirePass -VerifySwitchAway
 ```
 
-## 本轮交付与缓存核验
+## 路线 A 交付与缓存核验（历史记录）
 
-本轮仍为 32 个源码文件，首轮通过 CLI plugin add 重装后，逐文件 SHA256 核对 32/32 一致。补充最终探针和记录后，交付前再次按相同流程停止、重装、核对、启动，不重复下载 Electron。用户数据、临时测试窗口、日志及编译产物不进入源码或插件缓存。中文本地提交，不执行 push。最终挂件保持启用；跨 DPI 切换和完整重启后的 MCP 加载继续标记待验收。
+当时仍为 32 个源码文件，首轮通过 CLI plugin add 重装后，逐文件 SHA256 核对 32/32 一致。补充最终探针和记录后，交付前再次按相同流程停止、重装、核对、启动，不重复下载 Electron。用户数据、临时测试窗口、日志及编译产物不进入源码或插件缓存。中文本地提交，不执行 push。当时挂件保持启用；跨 DPI 切换和完整重启后的 MCP 加载当时标记待验收，现已通过。
 
 最终检查包括 9 项 Node 测试、5 类原生异常形状、8 个 PowerShell 文件解析、10 个 JS 文件语法与 git diff --check。几何函数和 runtime/read-policy.cjs 均无 diff。自查确认只在挂件激活后恢复已验证宿主，迟到事件不恢复其他前台窗口；没有宿主 WndProc 注入、MSVC 或阶段 2 功能。
 
-## 2026-10-10：MCP 启动路径的一行修复与停止记录
+## 2026-10-10：MCP 启动路径首轮修复（历史停止记录）
 
 采用验收方给出的根因证据，不重新排查安装、市场、服务器实现或插件启用状态。唯一配置变更：
 
@@ -147,13 +145,13 @@ Name                Command  Args             Env  Cwd  Status   Auth
 codex-quota-widget  node     runtime/mcp.cjs   -    -    enabled  Unsupported
 ```
 
-该命令退出码为 0，但目标行的 **Cwd 仍为 `-`**；不能以命令正常退出或 Args 更新代替工作目录验收。因此按用户“如果 Cwd 仍为 `-`，停下来汇报”的要求，在步骤 2 停止。没有尝试补 cwd、绝对路径或其它配置，没有继续执行步骤 3～4 的完整退出重开及新聊天工具调用。**修复后新聊天调用 widget_status 的实测结果：未执行，不能标记通过。**
+该命令退出码为 0，但目标行的 **Cwd 仍为 `-`**；不能以命令正常退出或 Args 更新代替工作目录验收。因此按用户“如果 Cwd 仍为 `-`，停下来汇报”的要求，在步骤 2 停止。没有尝试补 cwd、绝对路径或其它配置，没有继续执行步骤 3～4 的完整退出重开及新聊天工具调用。**该轮停止时，新聊天调用 widget_status 未执行，不能标记通过；后续最终验收现已通过。**
 
 本机 codex --version 实测为 `codex-cli 0.162.0-alpha.17.2`。验收方报告从 0.156.1 自动升级到该 alpha 版本；将版本和升级方式记录为后续插件/MCP 异常的排查变量，不由本次输出推断其必然是根因。
 
 本轮源码只改 .mcp.json 与本验收记录；桌面形状、1×1 回退、focusable:true、C# 80ms 恢复、读取允许清单及运行时实现均未修改。没有 MSVC、阶段 2、codex exec、review 或新 agent turn。挂件按要求停止，未重新启动；本轮提交为中文本地提交，不 push。补充本记录后再次同步缓存并核验最终文件哈希。
 
-## 2026-10-10：第二轮显式 cwd 与启动诊断
+## 2026-10-10：第二轮显式 cwd 与启动诊断（修复时记录）
 
 按验收方指定格式，.mcp.json 新增 cwd=C:/Users/Chester/.codex/plugins/cache/personal/codex-quota-widget/0.1.0、startup_timeout_sec=10，args 保持 runtime/mcp.cjs。没有改成源码目录或使用占位符。runtime/mcp.cjs 在主程序启动时写一次 mcp-startup.json，字段仅为 at、pid、cwd、argv、codexHome、nodeVersion；导入模块不写日志，目录创建及写文件异常全部静默忽略，stdout 不增加任何协议外输出。
 
@@ -167,10 +165,113 @@ codex-quota-widget  node                                                        
 
 配置解析结果：Cwd 已不是 `-`，为用户指定缓存目录。mcp list 之后正式 mcp-startup.json 未出现；这是完整重启前的观察，不能据此判断 Codex 是否会在新会话拉起第三方 MCP，也不能提前触发“步骤 8 未出现”的根因结论。
 
-步骤 6～9：尚未执行完整退出重开后的验收。当前聊天的工具清单里没有 widget_status；本次没有调用它，也没有用手动启动 Node 的应答替代新聊天工具调用。必须完全退出 Codex、在任务管理器确认 ChatGPT 进程全部消失，再重开 Codex并新建聊天，检查启动 JSON 并调用已加载的 widget_status。只有真实启动日志和真实工具调用都成功后，才能改为通过。
+步骤 6～9 的当时状态：尚未执行完整退出重开后的验收。当时聊天的工具清单里没有 widget_status；当时没有调用它，也没有用手动启动 Node 的应答替代新聊天工具调用。必须完全退出 Codex、在任务管理器确认 ChatGPT 进程全部消失，再重开 Codex并新建聊天，检查启动 JSON 并调用已加载的 widget_status。该后续验收现已由验收方完成，启动日志与工具调用均成功，见以下最终补记。
 
 自动创建聊天并发送提示会启动额外 agent turn，受用户零额度约束限制，因此此处需要用户在重启后发起新聊天中的工具调用。新聊天可直接使用下列验收提示：
 
 > 只使用已加载的 widget_status 工具调用一次并返回原始结果；不要运行 codex exec/review，不要手动启动 Node MCP。读取 C:\Users\Chester\.codex\codex-quota-widget\mcp-startup.json，原样返回其内容。源码仓库为 C:\Users\Chester\plugins\codex-quota-widget。若工具未加载或启动文件未出现，报告原始情况，不继续猜测或改配置。启动文件出现并且真实工具调用成功后，更新 docs/stage-1-verification.md 的第二轮验收结果，中文本地提交，不 push。
 
 本轮修改仅涉及 .mcp.json、runtime/mcp.cjs、对应回归测试及本记录。桌面 geometry.cjs、focusable:true、C# 80ms 恢复与数据读取允许清单无修改；没有阶段 2、MSVC、模型或 agent 子进程调用。挂件仍保持停止。补充记录后再次同步缓存并核验哈希，中文本地提交，不 push。
+
+## 2026-10-10：阶段 1 最终验收补记
+
+本节证据由验收方提供，记录者未重新执行测试、重启、工具调用或读取运行时诊断。仅更新本验收文档；docs/ 之外的文件不修改，不运行 codex exec/review，不 push。
+
+### 重启后 MCP 加载：通过
+
+最终修复配置如下，配置内容在本轮仅作记录：
+
+```json
+{
+  "mcpServers": {
+    "codex-quota-widget": {
+      "command": "node",
+      "cwd": "C:/Users/Chester/.codex/plugins/cache/personal/codex-quota-widget/0.1.0",
+      "args": ["runtime/mcp.cjs"],
+      "startup_timeout_sec": 10
+    }
+  }
+}
+```
+
+验收方确认根因是两处叠加：
+
+1. `${CLAUDE_PLUGIN_ROOT}` 是 Claude Code 的插件变量，Codex 不替换它，没有对应机制，因而按字面路径执行、进程无法启动。验收方扫描官方插件，未发现该占位符的用例。
+2. 插件 MCP 不会自动获得 cwd。仅改成相对 args 后，Cwd 仍为 `-`，相对路径无法解析；必须显式指定绝对 cwd。对照可用的 codex-app-tools 0.1.6，其 cwd 手写为 `C:/Users/Chester/.codex/plugins/cache/openai-bundled/codex-app-tools/0.1.6`，args 为 `["/d","/s","/c","call","./scripts/launch_codex_app_tools_mcp.cmd","./server.mjs"]`。
+
+验收方提供的 `mcp-startup.json` 原始内容：
+
+```json
+{
+  "at": "2026-10-10T12:59:25.120Z",
+  "pid": 27772,
+  "cwd": "C:\\Users\\Chester\\.codex\\plugins\\cache\\personal\\codex-quota-widget\\0.1.0",
+  "argv": [
+    "C:\\Program Files\\nodejs\\node.exe",
+    "C:\\Users\\Chester\\.codex\\plugins\\cache\\personal\\codex-quota-widget\\0.1.0\\runtime\\mcp.cjs"
+  ],
+  "codexHome": null,
+  "nodeVersion": "v24.19.0"
+}
+```
+
+时间线（Europe/London，当日为 BST/UTC+1）：Codex 于 13:58:45 启动，MCP 于 13:59:25 被拉起，约为重启后 40 秒；日志中的 `12:59:25.120Z` 对应本地 13:59:25.120。
+
+新聊天中实际调用 `widget_status` 成功返回：
+
+```json
+{"stage":1,"dataReadsEnabled":false,"running":false,
+ "acceptance":"pending-cross-dpi-and-restart","window":null}
+```
+
+启动日志证明进程从指定缓存目录被拉起，真实工具应答证明新聊天已加载 MCP 并能完成调用，两项均成功，故重启后 MCP 加载标为通过。应答中的 `running:false` 是当时挂件运行状态；`acceptance` 仍为代码中的旧标识，原样保留，不改变本次验收结论，也不在本任务修改代码。
+
+### 方法论：区分配置解析与真实启动
+
+`codex mcp list` 只反映配置解析结果，看不到进程是否真实被拉起。前两轮仅看该输出，无法区分“配置对但没启动”与“启动了但协议有问题”。解决办法是在 `runtime/mcp.cjs` 顶部增加静默启动诊断，写入含时间、PID、cwd、argv 的 `mcp-startup.json`；只写一次，不输出协议外内容，写文件失败静默忽略。
+
+在本次验收流程中，这份正式启动日志是证明进程真实启动的唯一直接证据；测试临时目录中的日志和手动启动服务的应答不能替代它。再结合新聊天中真实的 `widget_status` 调用结果，分别确认启动和协议/工具加载两个环节。
+
+### 跨 DPI 切换：通过
+
+验收方执行显示缩放 **150%→100%**，完全退出 Codex 后重开，从 `window-state.json` 独立读取：
+
+```text
+clicks        : 8 → 13
+visible       : true
+region        : 96x80 @ (298,98)
+host.attached : true
+```
+
+用户实测确认挂件本身可正常点击；挂件区域之外，Codex 页面的点击、滚动、选中文字全部正常。按此次显示缩放切换并重启后的功能验收，跨 DPI 切换标为通过。
+
+### 待观察：显示缩放与窗口 DPI 不一致
+
+验收方提供的数据：
+
+```text
+系统 DPI      = 96（显示缩放 100%）
+挂件窗口 dpi  = 144
+宿主窗口 dpi  = 144
+诊断 host.dpi = 144
+viewport      = 1707x1019
+```
+
+显示缩放已为 100%，两个窗口仍报 144 DPI；代码按 host.dpi 计算尺寸，因此窗口尺寸可能未随缩放真正重算。用户实测挂件可点、宿主交互不受影响，故列为**待观察，非阶段 1 阻塞项**。后续可核实 GetDpiForWindow 返回 144 是否因宿主进程的 DPI 感知上下文而保持旧值；这是待核实的解释，本轮不排查、不修复。
+
+### CLI 自动升级记录
+
+验收方确认 Codex CLI 从 **0.156.1 自动升级到 0.162.0-alpha.17.2**。若后续出现插件/MCP 行为异常，优先核查这一 alpha 版本及自动升级变量；本轮不据此认定其造成了缺陷。
+
+### 100% 缩放下尺寸观感与面积上限
+
+挂件固定尺寸为 96×80 DIP，DIP 口径与 Codex 自身一致。按缩放倍数换算的预期物理尺寸为：
+
+| 显示缩放 | 预期物理尺寸 |
+|---|---|
+| 150% | 144×120 像素 |
+| 100% | 96×80 像素 |
+
+DIP 几何口径自洽；在 2560 像素宽屏幕上 96px 的观感偏小属于尺寸偏好，不是该口径的 bug。上表为换算关系，不作为上述窗口 DPI 已重算的实测证明。
+
+`desktop/geometry.cjs` 固定 `SIZE={width:96,height:80}`，形状面积上限为 `SIZE.width*SIZE.height`，即 7680。若直接调大形状而未同步面积上限，超限会回退 1×1，表现为挂件消失。尺寸与校验上限的调整留待后续专门处理；本任务没有修改这些代码。
