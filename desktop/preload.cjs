@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('widget',{
   quota:callback=>ipcRenderer.on('quota',(_event,value)=>callback(value)),
   tokens:callback=>ipcRenderer.on('tokens',(_event,value)=>callback(value)),
   readTokens:()=>ipcRenderer.send('read-tokens'),
+  characters:callback=>ipcRenderer.on('characters',(_event,value)=>callback(value)),
+  characterAction:value=>ipcRenderer.invoke('character-action',value),
   layout:callback=>ipcRenderer.on('layout',(_event,value)=>callback(value))
 });

@@ -7,8 +7,8 @@ window.widget.layout(value=>{
 });
 window.widget.quota(value=>{quota=value;render();});
 window.widget.tokens(value=>{tokens=value;renderTokens();});
-for(const name of ['quota','token'])document.getElementById(name+'-tab').addEventListener('click',()=>{
-  for(const tab of ['quota','token']){
+for(const name of ['quota','token','character'])document.getElementById(name+'-tab').addEventListener('click',()=>{
+  for(const tab of ['quota','token','character']){
     document.getElementById(tab+'-panel').hidden=tab!==name;
     document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
   }
@@ -18,7 +18,9 @@ document.getElementById('close').addEventListener('click',()=>window.widget.coll
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
   const view=window.quotaView.present(quota,width);
+  window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;
+  button.setAttribute('aria-label',view.compact.label+'，剩余 '+view.compact.text+'，点击详情，拖动移动');
   document.getElementById('status').textContent=view.compact.text;
   document.getElementById('compact-track').hidden=!view.showCompactBar;
   bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);

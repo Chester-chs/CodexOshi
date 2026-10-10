@@ -19,3 +19,4 @@ codex-quota-widget/
 # User uploads are persisted outside the source repository.
 assets/user/
 assets/uploads/
+characters/

@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,screen} = require('electron');
+const {app,BrowserWindow,ipcMain,screen,protocol} = require('electron');
 const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
@@ -7,6 +7,9 @@ const {shape,viewport,layout}=require('./geometry.cjs');
 const {QuotaReader}=require('../runtime/quota.cjs');
 const {Worker}=require('node:worker_threads');
 const {visibility}=require('./visibility.cjs');
+const {CharacterStore}=require('../runtime/characters.cjs');
+const {installCharacters}=require('./characters.cjs');
+protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
 app.setPath('userData',path.join(data,'chromium'));
@@ -38,6 +41,7 @@ app.whenReady().then(async()=>{
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
+  const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
   const show=visibility(win);
   function sync(){
     if(host.bounds){

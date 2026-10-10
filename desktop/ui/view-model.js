@@ -5,7 +5,7 @@
     if(resetAt*1000<=now)return '等待更新';
     return Math.floor(hours/24)+' 天 '+hours%24+' 小时后重置';
   }
-  const tone=p=>p===null?'unknown':p>20?'normal':p>10?'orange':'red';
+  const tone=p=>p===null?'unknown':p>20?'normal':p>5?'orange':'red';
   const percent=p=>p===null?'未知':Math.round(p)+'%';
   function present(quota,width,now=Date.now()){
     const windows=Array.isArray(quota?.windows)?quota.windows:[];

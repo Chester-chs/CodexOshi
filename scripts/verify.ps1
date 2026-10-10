@@ -5,7 +5,7 @@ $tests=@(Get-ChildItem -LiteralPath (Join-Path $SourceRoot 'tests') -Filter '*.t
 & $node --test @tests
 if ($LASTEXITCODE) { throw 'Unit tests failed.' }
 $sourceFiles=@(& git -C $SourceRoot ls-files --cached --others --exclude-standard)
-$forbidden=@($sourceFiles | Where-Object { $_ -match '(^|/)(auth\.json|node_modules|userdata|cache|dist|build|assets/user|assets/uploads)(/|$)|\.token$|(^|/)\.env' })
+$forbidden=@($sourceFiles | Where-Object { $_ -match '(^|/)(auth\.json|node_modules|userdata|cache|dist|build|characters|assets/user|assets/uploads)(/|$)|\.token$|(^|/)\.env' })
 if ($forbidden.Count) { throw ('Forbidden source files: '+($forbidden -join ', ')) }
 if ($Native) {
     Add-Type -Path (Join-Path $SourceRoot 'desktop\WindowApi.cs')

@@ -1,13 +1,13 @@
 {
   "name": "codex-quota-widget",
   "version": "0.1.0",
-  "description": "Codex 额度挂件：真实额度与本机 token 用量柱状图",
+  "description": "Codex 额度挂件：角色状态显示、本机素材设置与 token 用量柱状图",
   "author": { "name": "Chester-chs" },
   "license": "MIT",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Codex 额度挂件",
-    "shortDescription": "显示剩余额度、本机 token 用量与重置倒计时，不启动模型任务",
+    "shortDescription": "用角色显示额度状态，支持本机 PNG、WebP、GIF 与 token 用量",
     "developerName": "Chester-chs",
     "category": "Productivity"
   }
