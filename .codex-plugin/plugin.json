@@ -1,13 +1,13 @@
 {
   "name": "codex-quota-widget",
   "version": "0.1.0",
-  "description": "Codex 额度挂件：真实额度、常驻进度条与点击详情",
+  "description": "Codex 额度挂件：真实额度与本机 token 用量柱状图",
   "author": { "name": "Chester-chs" },
   "license": "MIT",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Codex 额度挂件",
-    "shortDescription": "显示剩余额度与重置倒计时，不启动模型任务",
+    "shortDescription": "显示剩余额度、本机 token 用量与重置倒计时，不启动模型任务",
     "developerName": "Chester-chs",
     "category": "Productivity"
   }

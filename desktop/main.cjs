@@ -5,6 +5,7 @@ const net=require('node:net');
 const crypto=require('node:crypto');
 const {shape,viewport,layout}=require('./geometry.cjs');
 const {QuotaReader}=require('../runtime/quota.cjs');
+const {Worker}=require('node:worker_threads');
 const {visibility}=require('./visibility.cjs');
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
@@ -13,13 +14,14 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-features','CalculateNativeWinOcclusion');
 let win,ready=false,host={},region=[{x:0,y:0,width:1,height:1}],widget=null,clicks=0,dragging=false;
 let dip={width:1,height:1};
-let bridge,receivedAt=Date.now(),expanded=false,viewLayout=null,pollTimer;
+let bridge,receivedAt=Date.now(),expanded=false,viewLayout=null,pollTimer,tokenTimer,tokenWorker;
+let tokens={values:null,coverage:'indexing',filesIndexed:0,filesDiscovered:0};
 let savedQuota=null;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt});
 const stateFile=path.join(data,'window-state.json');
 function diagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,quota:reader.snapshot,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function updateShape(){
   viewLayout=layout(widget,dip.width,dip.height,expanded,reader.snapshot.windows.length);widget=viewLayout.widget;
@@ -46,7 +48,8 @@ app.whenReady().then(async()=>{
     show({...host,ready});
     diagnostic();
   }
-  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;win.webContents.send('quota',reader.snapshot);sync()});
+  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;win.webContents.send('quota',reader.snapshot);win.webContents.send('tokens',tokens);sync()});
+  ipcMain.on('read-tokens',event=>{if(event.sender===win.webContents)readTokens();});
   ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
   ipcMain.on('gesture',(event,value)=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object')return;
@@ -61,6 +64,20 @@ app.whenReady().then(async()=>{
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y))widget=saved;}catch{}
   await win.loadFile(path.join(__dirname,'ui','index.html'));
+  function readTokens(){
+    if(!tokenWorker){
+      const worker=tokenWorker=new Worker(path.join(__dirname,'../runtime/token-worker.cjs'),{workerData:{cacheFile:path.join(data,'token-index.json')}});
+      worker.on('message',message=>{
+        if(message?.type!=='tokens'||win.isDestroyed())return;tokens=message.value;
+        try{const temp=path.join(data,'tokens-state.json.tmp');fs.writeFileSync(temp,JSON.stringify(tokens,null,2));fs.renameSync(temp,path.join(data,'tokens-state.json'));}catch{}
+        if(ready)win.webContents.send('tokens',tokens);diagnostic();
+      });
+      worker.on('error',()=>{tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);});
+      worker.on('exit',()=>{if(tokenWorker===worker)tokenWorker=null;});
+    }
+    tokenWorker.postMessage({type:'read'});
+  }
+  readTokens();tokenTimer=setInterval(readTokens,30000);
   async function refresh(){
     const quota=await reader.refresh();if(win.isDestroyed())return;
     try{const temp=path.join(data,'quota-state.json.tmp');fs.writeFileSync(temp,JSON.stringify(quota,null,2));fs.renameSync(temp,path.join(data,'quota-state.json'));}catch{}
@@ -101,4 +118,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{clearInterval(pollTimer);if(bridge)bridge.close();});
+app.on('before-quit',()=>{clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});

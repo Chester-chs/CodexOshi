@@ -29,6 +29,9 @@ test('real stdio MCP process initializes and returns only local diagnostics',()=
   ];
   const fs=require('node:fs'),os=require('node:os');
   const fixture=fs.mkdtempSync(path.join(os.tmpdir(),'codex-quota-mcp-'));
+  const tokenSummary={values:{hours24:20,days7:50,days30:100},coverage:'complete'};
+  fs.mkdirSync(path.join(fixture,'codex-quota-widget'));
+  fs.writeFileSync(path.join(fixture,'codex-quota-widget','tokens-state.json'),JSON.stringify(tokenSummary));
   let child;
   try {child=spawnSync(process.execPath,[path.join(__dirname,'../runtime/mcp.cjs')],{env:{...process.env,CODEX_HOME:fixture},input:requests.map(x=>JSON.stringify(x)).join('\n')+'\n',encoding:'utf8',timeout:5000});}
   finally {assert.equal(path.dirname(path.resolve(fixture)),path.resolve(os.tmpdir()));fs.rmSync(fixture,{recursive:true,force:true});}
@@ -38,6 +41,8 @@ test('real stdio MCP process initializes and returns only local diagnostics',()=
   assert.equal(replies[0].result.protocolVersion,'2024-11-05');
   assert.equal(replies[1].result.tools.length,1);
   assert.equal(JSON.parse(replies[2].result.content[0].text).dataReadsEnabled,true);
+  const status=JSON.parse(replies[2].result.content[0].text);
+  assert.equal(status.stage,3);assert.deepEqual(status.tokens,tokenSummary);
 });
 test('MCP executable records startup metadata without polluting protocol output',()=>{
   const fs=require('node:fs'),path=require('node:path'),os=require('node:os');

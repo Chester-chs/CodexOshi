@@ -14,5 +14,14 @@
       compact:{label:selected?.label || '暂无可用额度数据',text:selected?percent(selected.remainingPercent):'暂无可用额度数据',remainingPercent:selected?.remainingPercent??null,tone:tone(selected?.remainingPercent??null)},
       cards:windows.map(w=>({...w,percentText:percent(w.remainingPercent),resetText:countdown(w.resetAt,now),tone:tone(w.remainingPercent)}))};
   }
-  return {present,countdown};
+  function presentTokens(tokens){
+    const names={hours24:'最近 24 小时',days7:'最近 7 天',days30:'最近 30 天'},max=tokens?.values?.days30;
+    const rows=Object.entries(names).map(([key,label])=>{
+      const value=tokens?.values?.[key],known=Number.isSafeInteger(value)&&value>=0;
+      return {label,text:known?new Intl.NumberFormat('en-US').format(value):'—',percent:known&&max>0?Math.min(100,value/max*100):0,known};
+    });
+    const label={indexing:'索引中',partial:'部分覆盖',complete:'完成'}[tokens?.coverage] || '索引中';
+    return {rows,coverageText:label+' · '+(tokens?.filesIndexed || 0)+'/'+(tokens?.filesDiscovered || 0)+' 个文件'};
+  }
+  return {present,countdown,presentTokens};
 });

@@ -4,5 +4,7 @@
 <title>Codex Quota Widget</title><link rel="stylesheet" href="style.css"></head>
 <body>
 <button id="widget" tabindex="-1" aria-label="额度挂件，拖动移动，点击展开详情"><span class="character">◉</span><small id="window-label"></small><div class="compact-line"><div id="compact-track" class="track"><div id="compact-fill" class="fill"></div></div><strong id="status">暂无可用额度数据</strong></div></button>
-<section id="details" hidden aria-label="套餐限额详情"><header><strong>套餐限额</strong><button id="close" tabindex="-1" aria-label="收起详情">×</button></header><div id="cards"></div><p id="metadata"></p><footer>Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池。<br>Chat 模式下的对话不计入此用量。<br>数据来自 Codex 自己的额度接口，非本插件估算。</footer></section>
+<section id="details" hidden aria-label="额度与用量详情"><header><nav role="tablist" aria-label="详情视图"><button id="quota-tab" role="tab" aria-selected="true" aria-controls="quota-panel" tabindex="-1">套餐限额</button><button id="token-tab" role="tab" aria-selected="false" aria-controls="token-panel" tabindex="-1">token 用量</button></nav><button id="close" tabindex="-1" aria-label="收起详情">×</button></header>
+<div id="quota-panel" role="tabpanel" aria-labelledby="quota-tab"><div id="cards"></div><p id="metadata"></p><footer>Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池。<br>Chat 模式下的对话不计入此用量。<br>数据来自 Codex 自己的额度接口，非本插件估算。</footer></div>
+<div id="token-panel" role="tabpanel" aria-labelledby="token-tab" hidden><p id="token-coverage" role="status">索引中</p><p id="token-unit">单位：token</p><div id="token-chart" role="img" aria-label="最近 24 小时、7 天、30 天 token 用量"></div><p id="token-updated"></p><footer id="token-statement">本机现存会话的汇总，并非 OpenAI 账户官方统计；<br>不含已删除会话及其他电脑上的会话。</footer></div></section>
 <script src="view-model.js"></script><script src="renderer.js"></script></body></html>

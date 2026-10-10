@@ -1,8 +1,8 @@
 # Codex 额度挂件
 
-阶段 2：Codex 插件包装、透明 Electron 挂件、C#/Win32 窗口跟随，以及真实额度的常驻细条和点击详情。角色继续使用 CSS 占位，不实现 token 统计、自定义立绘或音频。
+阶段 3：Codex 插件包装、透明 Electron 挂件、C#/Win32 窗口跟随、真实额度常驻细条，以及本机 token 用量柱状图。角色继续使用 CSS 占位，不实现自定义立绘、音频或尺寸调节。
 
-阶段 1 已全部验收；阶段 2 继续保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。详见 `docs/stage-1-verification.md` 与 `docs/stage-2-verification.md`。
+阶段 1、2 已全部验收；阶段 3 保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。详见 `docs/stage-1-verification.md`、`docs/stage-2-verification.md` 与 `docs/stage-3-verification.md`。
 
 ## 安装
 
@@ -41,12 +41,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 ## 零额度消耗
 
-挂件每 30 秒先 GET 固定的额度接口，读取前重读 auth.json，401 再重读并最多重试一次。失败时使用只读会话额度快照；没有可用快照才启动 `codex app-server --stdio`，逐条发送 `initialize`、`account/rateLimits/read`，最多每 5 分钟一次，完成即退出。历史会话只解析最近 4 MiB 内的额度快照，不保留聊天文本或 token 用量。访问令牌只留内存，不进入诊断、日志或源码。
+挂件每 30 秒先 GET 固定的额度接口，读取前重读 auth.json，401 再重读并最多重试一次。失败时使用只读会话额度快照；没有可用快照才启动 `codex app-server --stdio`，逐条发送 `initialize`、`account/rateLimits/read`，最多每 5 分钟一次，完成即退出。额度回退只解析最近 4 MiB 的额度快照；token 统计使用独立的只读 Worker。访问令牌只留内存，不进入诊断、日志或源码。
 
-`runtime/read-policy.cjs` 拒绝允许清单外的操作。没有模型补全、会话生成或启动 agent turn 的实现。MCP 仅提供 `widget_status`，读取本挂件自己保存的归一化额度与窗口诊断，不重复拉取账户数据。
+`runtime/read-policy.cjs` 拒绝允许清单外的操作。没有模型补全、会话生成或启动 agent turn 的实现。MCP 仅提供 `widget_status`，读取本挂件自己保存的归一化额度、token 汇总与窗口诊断，不重复拉取账户数据。
 
 界面显示剩余百分比，实心条代表剩余；>20% 为正常色，>10% 且 ≤20% 为橙色，≤10% 为红色。按实际时长显示 5 小时、每周、长期或短期窗口，双窗口时常驻条显示剩余比例较低者。没有窗口就显示“暂无可用额度数据”；重置时间过后显示“等待更新”，不会自行恢复 100%。读取失败保留较新的已有数值并标出更新年龄。
 
 额度是 Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池，Chat 模式下的对话不计入此用量。数据来自 Codex 自己的额度接口，非本插件估算。上述说明在展开详情中可见；离线快照或 RPC 数据同时标明来源。
 
 默认角色由 CSS 和 Unicode 符号组成，不使用参考项目的立绘与音频。改编代码署名见 `THIRD_PARTY_NOTICES.md`。远端仓库和推送仍须获得用户确认。
+
+## 本机 token 用量
+
+详情面板内切换「套餐限额」与「token 用量」。token 页签的三根柱显示最近 24 小时、7 天、30 天，统一按 30 天值缩放，柱顶显示整数与千分位，单位为 token；不套用额度阈值颜色。面板仍为 320×214/270/352 DIP，较矮面板内滚动查看完整声明。
+
+只读 sessions/**/*.jsonl 的 event_msg/token_count，累计字段为 payload.info.total_token_usage.total_tokens。每文件保留最大累计值，只有超过历史高水位的正增量进入后一条事件的时间桶；累计回退和重复不叠加，mtime 只用于发现与排序。冷启动先读最多 300 个候选文件、每文件最多尾部 768 KiB；截断尾部的首条累计值只作基线。Worker 后台以 256 KiB 块补齐历史，完整历史替换预览，不重复相加。
+
+结果缓存 5 分钟；过期只读新增偏移，未变化文件不重扫。索引保存在本挂件用户数据目录 token-index.json，仅保存文件元数据、高水位及增量时间和值，不保存会话正文。界面显示「索引中 / 部分覆盖 / 完成」和更新时间。超大非 token 行只解析有界元数据头；无法分类的超大行、读取错误或缺失事件时间会保留部分覆盖提示。
+
+这是本机现存会话的汇总，并非 OpenAI 账户官方统计；不含已删除会话及其他电脑上的会话。历史缺失、截断或累计值异常均可能影响结果，不承诺误差方向。token 统计无网络及子进程入口。
