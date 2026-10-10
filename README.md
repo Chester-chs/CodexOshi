@@ -1,6 +1,6 @@
 # Codex 额度挂件
 
-阶段 3b：角色成为常驻额度显示器，支持用户本机上传四态 PNG / WebP / GIF、去底预览与取景，保留真实额度细条和 token 用量柱状图。不实现 AI 重绘、音频或挂件尺寸调节。
+阶段 3b：角色成为常驻额度显示器，支持用户本机上传四态 PNG / JPG / JPEG / WebP / GIF / BMP、去底预览与取景，保留真实额度细条和 token 用量柱状图。不实现 AI 重绘、音频或挂件尺寸调节。
 
 阶段 1、2、3a 已全部验收；角色系统保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。详见 `docs/stage-1-verification.md`、`docs/stage-2-verification.md`、`docs/stage-3-verification.md` 与 `docs/stage-3b-verification.md`。
 
@@ -65,7 +65,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
 
 点击展开并进入「角色」页签，使用新建/更名、角色名按钮切换、四态上传入口和删除按钮。命名与选图使用系统对话框，命名对话框只取输入的名称创建角色目录，不在所选位置另建文件。用户素材不做来源判断；界面提示“请上传你有权使用的图片。素材保存在本机，不会上传。”
 
-素材复制到 `<CODEX_HOME>/codex-quota-widget/characters/<角色名>/ready.png|webp|gif` 等四态文件，保留实际格式及 GIF 动画；参数存入角色目录 settings.json，当前角色记在 characters/active.json。单文件最多 10 MiB，单边最多 4096px；错误在面板内提示。characters/ 已忽略且加入源码检查禁入列表，上传不会修改或移动原文件。
+素材复制到 `<CODEX_HOME>/codex-quota-widget/characters/<角色名>/ready.png|jpg|webp|gif|bmp` 等四态文件，按内容保存实际格式（JPEG 统一为 .jpg）及 GIF 动画；参数存入角色目录 settings.json，当前角色记在 characters/active.json。文件名与内容不一致时以内容为准；未知扩展名可通过“所有文件”选择，HEIC 不支持。单文件最多 10 MiB，单边最多 4096px；错误在面板内提示。characters/ 已忽略且加入源码检查禁入列表，上传不会修改或移动原文件。
+
+JPG/JPEG/BMP 格式修复及内容识别验收见 `docs/character-formats-verification.md`。
 
 多额度窗口取剩余最少者：>50% ready，>20% tired，>5% low，≤5% exhausted。无窗口/无有效数值使用中性占位，不猜状态。实际额度刷新后自动恢复相应状态，倒计时到零不会伪造额度重置。
 

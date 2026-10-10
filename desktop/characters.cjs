@@ -26,7 +26,7 @@ function installCharacters(win,store){
           if(!choice.canceled&&choice.filePath){const next=path.basename(choice.filePath);if(action==='create')await store.create(next);else await store.rename(name,next);}
         }else if(action==='import'){
           if(!['ready','tired','low','exhausted'].includes(state))throw Error('角色状态无效。');await store.checked(name);
-          const choice=await dialog.showOpenDialog(win,{title:'选择本机角色图片',filters:[{name:'角色图片',extensions:['png','webp','gif']}],properties:['openFile','dontAddToRecent']});
+          const choice=await dialog.showOpenDialog(win,{title:'选择本机角色图片',filters:[{name:'角色图片',extensions:['png','jpg','jpeg','webp','gif','bmp']},{name:'所有文件（按图片内容校验）',extensions:['*']}],properties:['openFile','dontAddToRecent']});
           if(!choice.canceled&&choice.filePaths[0])await store.importFile(name,state,choice.filePaths[0]);
         }else if(action==='delete'){
           await store.checked(name);const choice=await dialog.showMessageBox(win,{type:'question',message:'删除角色“'+name+'”？',detail:'删除本机保存的角色副本，原始图片保留。',buttons:['取消','删除'],defaultId:0,cancelId:0});if(choice.response===1)await store.remove(name);
