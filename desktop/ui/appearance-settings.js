@@ -1,6 +1,7 @@
 (()=>{
   const model=window.appearanceModel,$=id=>document.getElementById(id);
-  let settings=model.defaults(),custom={base:'#e9e5df',accent:'#786c60'},revision=0,timer,paintFrame,picker=null;const error=text=>{$('appearance-error').dataset.i18n=text;$('appearance-error').textContent=window.uiText.t(text);};
+  const initialTheme=model.resolve(model.defaults());
+  let settings=model.defaults(),custom={base:initialTheme.variables['--bg-base'],accent:initialTheme.variables['--accent']},revision=0,timer,paintFrame,picker=null;const error=text=>{$('appearance-error').dataset.i18n=text;$('appearance-error').textContent=window.uiText.t(text);};
   function paintPicker(){
     $('custom-color-picker').hidden=!picker||settings.palette!=='custom';if(!picker)return;
     const canvas=$('custom-color-plane'),ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
@@ -21,7 +22,11 @@
     paintFrame=requestAnimationFrame(()=>{paintFrame=requestAnimationFrame(()=>root.classList.remove('theme-changing'));});
   }
   async function persist(version,value){try{const result=await window.widget.appearanceSave?.(value);if(version===revision)error(result?.ok?'':result?.error||'配色未能保存。');}catch{if(version===revision)error('配色未能保存，请重试。');}}
-  function choose(palette){settings=model.validate(palette==='custom'?{palette,...custom}:{palette});revision++;paint();clearTimeout(timer);const version=revision,value={...settings};timer=setTimeout(()=>persist(version,value),150);}
+  function choose(palette){
+    if(palette==='custom'&&settings.palette!=='custom'){const current=model.resolve(settings);custom={base:current.variables['--bg-base'],accent:current.variables['--accent']};picker=null;}
+    if(palette!=='custom')picker=null;
+    settings=model.validate(palette==='custom'?{palette,...custom}:{palette});revision++;paint();clearTimeout(timer);const version=revision,value={...settings};timer=setTimeout(()=>persist(version,value),150);
+  }
   $('custom-palette').onclick=()=>choose('custom');
   for(const key of ['base','accent']){
     const color=$('custom-'+key+'-color'),hex=$('custom-'+key+'-hex');

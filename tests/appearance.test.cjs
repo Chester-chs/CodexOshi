@@ -11,7 +11,7 @@ test('curated palettes reject arbitrary colors and obsolete display controls',()
   assert.deepEqual(theme.validate({palette:'sage'}),{palette:'sage'});
   for(const patch of [{mode:'dark'},{accent:'#248a3d'},{palette:'unknown'},{surface:'image'},{path:'elsewhere'}])assert.throws(()=>theme.validate({...theme.defaults(),...patch}));
 });
-test('every paired palette keeps readable text including translucent resident host extremes',()=>{
+test('every paired palette keeps readable text on each surface with an opaque resident backing',()=>{
   for(const palette of theme.palettes){const q=theme.resolve({palette:palette.id});for(const [f,backgrounds]of q.contrastPairs)for(const b of backgrounds)assert.ok(theme.contrast(f,b)>=4.5,`${palette.id}: ${f} on ${b}`);}
 });
 test('appearance persistence reloads independently, rejects corruption/links, and never changes character or position files',async()=>{

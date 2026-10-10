@@ -1,12 +1,12 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.appearanceModel=api;})(globalThis,()=>{
   const palettes=[
-    {id:'oat',name:'莫兰迪',pair:'暖灰 × 燕麦',base:'#e9e5df',elevated:'#f7f4ef',sunken:'#d7d1c8',accent:'#786c60',tone:'light'},
-    {id:'blue',name:'克莱因蓝',pair:'群青 × 纸白',base:'#eef0fa',elevated:'#fafaff',sunken:'#dce0f5',accent:'#2434af',tone:'light'},
-    {id:'sage',name:'莫奈睡莲',pair:'雾绿 × 淡紫',base:'#e5ece7',elevated:'#f3f7f3',sunken:'#d3dfd8',accent:'#6b6088',tone:'light'},
-    {id:'rose',name:'蒂芙尼蓝',pair:'蓝绿 × 珍珠白',base:'#dff3f0',elevated:'#f4fcfa',sunken:'#c8e5df',accent:'#0abab5',tone:'light'},
-    {id:'forest',name:'黑白经典',pair:'墨黑 × 乳白',base:'#232323',elevated:'#2c2c2c',sunken:'#363636',accent:'#f0eee9',tone:'dark'},
-    {id:'midnight',name:'梵高星夜',pair:'夜蓝 × 星金',base:'#202d49',elevated:'#2b3a59',sunken:'#374767',accent:'#e8c96b',tone:'dark'},
-    {id:'orange',name:'爱马仕橙',pair:'暖橙 × 鞍棕',base:'#f6e9dd',elevated:'#fff8f0',sunken:'#ead4c0',accent:'#b74f13',tone:'light'}
+    {id:'blue',name:'克莱茵蓝',pair:'群青 × 雾白',base:'#002fa7',elevated:'#002c9d',sunken:'#002993',accent:'#e4e8f3',tone:'dark'},
+    {id:'oat',name:'申布伦黄',pair:'暖黄 × 深棕',base:'#fbd26a',elevated:'#fbd573',sunken:'#fbd77c',accent:'#57401a',tone:'light'},
+    {id:'rose',name:'勃艮第红',pair:'酒红 × 玫瑰白',base:'#470024',elevated:'#430022',sunken:'#3e0020',accent:'#e6c9c9',tone:'dark'},
+    {id:'sage',name:'马尔斯绿',pair:'蓝绿 × 墨绿',base:'#01847f',elevated:'#108b87',sunken:'#1f938e',accent:'#072c2a',tone:'light'},
+    {id:'forest',name:'凡戴克棕',pair:'深棕 × 香槟',base:'#492d22',elevated:'#452a20',sunken:'#40281e',accent:'#e3ccac',tone:'dark'},
+    {id:'midnight',name:'普鲁士蓝',pair:'深蓝 × 银白',base:'#003153',elevated:'#002e4e',sunken:'#002b49',accent:'#d4dfe8',tone:'dark'},
+    {id:'orange',name:'提香红',pair:'暖红 × 深红',base:'#d44848',elevated:'#d75353',sunken:'#d95e5e',accent:'#3b1414',tone:'light'}
   ];
   const defaults=()=>({palette:'oat'});
   function validate(value){
@@ -38,13 +38,13 @@
   function resolve(value){
     const settings=validate(value),custom=settings.palette==='custom',customDark=custom&&luminance(settings.base)<.179;
     const p=custom?{base:settings.base,accent:settings.accent,elevated:mix(settings.base,customDark?'#000000':'#ffffff',.06),sunken:mix(settings.base,customDark?'#000000':'#ffffff',.12),tone:customDark?'dark':'light'}:palettes.find(p=>p.id===settings.palette),dark=p.tone==='dark',rgba=(color,a)=>`rgba(${rgb(color).join(',')},${a})`;
-    const backgrounds=[p.base,p.elevated,p.sunken,...(custom?[]:[p.base,p.elevated].flatMap(c=>[mix('#000000',c,.94),mix('#ffffff',c,.94)]))];
-    const accent=readable(p.accent,backgrounds,3),soft=custom?p.sunken:mix(p.base,accent,.10);backgrounds.push(soft);
+    const backgrounds=[p.base,p.elevated,p.sunken];
+    const accent=readable(p.accent,backgrounds,3),soft=p.sunken;backgrounds.push(soft);
     const primary=readable(dark?'#f4f0e9':'#292521',backgrounds),secondary=readable(dark?'#c1c9c3':'#66605a',backgrounds),tertiary=secondary,ink=readable(accent,backgrounds);
     const contrastText=contrast('#ffffff',accent)>=4.5?'#ffffff':'#000000',hover=mix(accent,contrastText==='#ffffff'?'#000000':'#ffffff',.08),border=dark?'rgba(255,255,255,.10)':'rgba(0,0,0,.08)';
     const danger=dark?'#ff6961':'#ff3b30',dangerInk=readable(danger,backgrounds);
     const variables={
-      '--bg-base':p.base,'--bg-elevated':p.elevated,'--bg-sunken':p.sunken,'--bg-hover':soft,'--compact-surface':rgba(p.base,custom?1:.94),
+      '--bg-base':p.base,'--bg-elevated':p.elevated,'--bg-sunken':p.sunken,'--bg-hover':soft,'--compact-surface':rgba(p.base,1),
       '--text-primary':primary,'--text-secondary':secondary,'--text-tertiary':tertiary,'--border-subtle':border,'--separator':border,
       '--accent':accent,'--accent-hover':hover,'--accent-contrast':contrastText,'--accent-soft':soft,'--accent-ink':ink,'--focus-ring':accent,
       '--warning':dark?'#ffb340':'#ff9500','--danger':danger,'--danger-ink':dangerInk,'--success':dark?'#32d74b':'#248a3d',
