@@ -28,6 +28,7 @@ for(const name of ['quota','token','character'])document.getElementById(name+'-t
   details.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
 });
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
+document.getElementById('position-reset').addEventListener('click',()=>window.widget.resetPosition());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
   if(layoutDragging)return;

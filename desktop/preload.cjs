@@ -3,6 +3,7 @@ contextBridge.exposeInMainWorld('widget',{
   ready:()=>ipcRenderer.send('ready'),
   gesture:value=>ipcRenderer.send('gesture',value),
   collapse:()=>ipcRenderer.send('collapse'),
+  resetPosition:()=>ipcRenderer.send('reset-position'),
   quota:callback=>ipcRenderer.on('quota',(_event,value)=>callback(value)),
   tokens:callback=>ipcRenderer.on('tokens',(_event,value)=>callback(value)),
   readTokens:()=>ipcRenderer.send('read-tokens'),

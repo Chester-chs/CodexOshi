@@ -23,6 +23,7 @@ let tokens={values:null,coverage:'indexing',filesIndexed:0,filesDiscovered:0};
 let savedQuota=null;
 let characterSize={...COMPACT};
 let panelScroll=null;
+let defaultPlacement=true;
 let diagnosticTimer,layoutTimer,checkpointTimer;
 let pendingQuota=null,pendingTokens=null;
 try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'utf8'));}catch{}
@@ -42,7 +43,7 @@ function notifyLayout(){
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
 }
 function beginDrag(){
-  if(dragging)return;dragging=true;
+  if(dragging)return;defaultPlacement=false;dragging=true;
   checkpointTimer=setTimeout(function checkpoint(){
     if(!dragging)return;savePosition();checkpointTimer=setTimeout(checkpoint,1000);
   },3000);
@@ -51,8 +52,10 @@ function saveSnapshot(file,value){
   try{const temp=path.join(data,file+'.tmp');fs.writeFileSync(temp,JSON.stringify(value,null,2));fs.renameSync(temp,path.join(data,file));}catch{}
 }
 function updateShape(){
+  // Placeholder bounds must not turn an absent/saved position into (8,8).
+  if(!host.bounds||dip.width<=1||dip.height<=1)return;
   const previous=widget;
-  viewLayout=layout(widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize);widget=viewLayout.widget;
+  viewLayout=layout(defaultPlacement?null:widget,dip.width,dip.height,expanded,reader.snapshot.windows.length,characterSize);widget=viewLayout.widget;
   if(!dragging&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
@@ -103,6 +106,10 @@ app.whenReady().then(async()=>{
     if(host.bounds&&dip.width>32&&dip.height>32){updateShape();diagnostic();}
   });
   ipcMain.on('collapse',event=>{if(event.sender!==win.webContents)return;expanded=false;updateShape();diagnostic();});
+  ipcMain.on('reset-position',event=>{
+    if(event.sender!==win.webContents||dragging)return;
+    defaultPlacement=true;widget=null;updateShape();diagnostic();
+  });
   ipcMain.on('gesture',(event,value)=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object')return;
     if(value.type==='drag'){
@@ -117,7 +124,7 @@ app.whenReady().then(async()=>{
     } else if(value.type==='click'){clicks++;expanded=!expanded;updateShape();}
     diagnostic();
   });
-  try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y))widget=saved;}catch{}
+  try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=saved;defaultPlacement=false;}}catch{}
   await win.loadFile(path.join(__dirname,'ui','index.html'));
   function readTokens(){
     if(!tokenWorker){

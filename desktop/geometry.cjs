@@ -38,7 +38,7 @@ function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPA
   if(!requested||!['width','height'].every(k=>Number.isInteger(requested[k])&&requested[k]>0&&requested[k]<=ROLE_LIMIT[k]))requested=COMPACT;
   const scale=Math.min(1,Math.max(1,width-EDGE-8)/requested.width,Math.max(1,height-EDGE-8)/requested.height);
   const compact={width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
-  const point=position(widget?.x??width,widget?.y??height,width,height,compact);
+  const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-EDGE,width,height,compact);
   const regions=[{...point,...compact}],sizes=[compact];
   if(expanded){
     const panel={width:Math.max(1,Math.min(PANEL.width,width-EDGE-8)),height:Math.max(1,Math.min(windowCount>1?352:windowCount?270:214,height-EDGE-8))};

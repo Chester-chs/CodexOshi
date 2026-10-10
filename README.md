@@ -73,6 +73,8 @@ JPG/JPEG/BMP 格式修复及内容识别验收见 `docs/character-formats-verifi
 
 拖动回调不写盘：布局通知按 16ms 合并、诊断按 500ms 合并，松手保存位置；超过 3 秒仍未松手时每秒保存检查点。前后写入计数与桌面回归见 `docs/drag-performance-verification.md`。
 
+首次启动无有效保存位置时，挂件默认在 Codex 视口右下角；拖动后按 position.json 恢复，超出新视口时沿用既有夹紧规则。「角色」页签的「重置位置」可立即回到右下角并保存。验收见 `docs/default-position-verification.md`。
+
 多额度窗口取剩余最少者：>50% ready，>20% tired，>5% low，≤5% exhausted。无窗口/无有效数值使用中性占位，不猜状态。实际额度刷新后自动恢复相应状态，倒计时到零不会伪造额度重置。
 
 专属态图优先；缺图时使用 ready 图，仍缺时用占位。降级图 tired 饱和度 72%，low 饱和度 42% 且缩小至 94%，exhausted 灰度、65% 不透明度及 94% 尺寸。专属图不额外套降级滤镜。图像 contain 缩放，角色区占常驻态高度 92%，默认约 258 DIP；5px 额度条和百分比叠加在底部，配随主题变化的半透明底衬，常驻窗口背景透明。
