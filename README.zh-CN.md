@@ -56,7 +56,7 @@
 
 不需要 MSVC、C++ 原生模块或额外 C# SDK。当前实现不支持 macOS、Linux。
 
-**使用 Windows 安装包不必单独安装 Git 或 Node.js。** 仅源码安装需要 Node.js 24+；如果用 ZIP 下载源码，Git 也可以省略。
+**使用完整 Windows 安装包不必单独安装 Git 或 Node.js。** 如果电脑已有带 npm 的 Node.js 24+ 和 Git，也可以选择更小的 ZIP 安装包，直接复用现有工具。
 
 ## 安装
 
@@ -68,7 +68,15 @@
 
 安装包会把自带的 Node.js 放在 Codi 数据目录，注册 Codex 插件、启动挂件，并默认设置为登录 Windows 后自动运行。如果已经装过 Codi，请在 **Codi 设置 → 额度管理 → 检查更新 → 一键更新**，安装包不会覆盖已有源码文件。
 
-### 方法二：让 Codex 帮你安装
+### 方法二：已有 Node.js 24 和 Git，使用轻量安装包
+
+1. 从[最新版本发布页](https://github.com/Chester-chs/Codi/releases/latest)下载 **Codi-Node24-Git-*.zip**，先解压。
+2. 双击 **Install-Codi.cmd**。脚本会检查工具、克隆指定发布版本、校验对应提交，然后运行 Codi 安装脚本。过程中仍需联网下载 Electron。
+3. 完全退出并重新打开 Codex，新建聊天。
+
+这个 ZIP 不自带 Node.js。若电脑里已有 Codi 源码目录，安装会停止；已安装用户请使用设置中的「一键更新」。
+
+### 方法三：让 Codex 帮你安装
 
 在 Codex 桌面版新建一个本机聊天，把下面这段话发给它：
 
@@ -79,7 +87,7 @@
 安装后确认 Codi 能在 Codex 中显示，并告诉我如何使用可见开关。如果需要重启 Codex，请提醒我自行重启。
 ```
 
-### 方法三：开发者从源码安装
+### 方法四：开发者从源码安装
 
 1. 安装并登录 Codex 桌面版。没有 **Node.js 24+** 和 **Git** 的话，先安装这两个工具。
 2. 打开 Windows 开始菜单，搜索 **PowerShell** 并打开，复制运行下面几行：

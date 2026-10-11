@@ -56,7 +56,7 @@ These are English Codi UI captures with synthetic quota/token values. The origin
 
 MSVC, C++ native modules, and an additional C# SDK are not required. macOS and Linux are not supported by this implementation.
 
-**No separate Git or Node.js installation is needed for the Windows installer.** Developers using the source installation need Node.js 24+; Git is only needed if they clone instead of downloading a source ZIP.
+**No separate Git or Node.js installation is needed for the full Windows installer.** If you already have Node.js 24+ with npm and Git, the smaller ZIP installer uses those existing tools.
 
 ## Installation
 
@@ -68,7 +68,15 @@ MSVC, C++ native modules, and an additional C# SDK are not required. macOS and L
 
 The installer keeps its own Node.js copy under the Codi data directory. It adds Codi to Codex, starts the widget, and enables Windows login startup. It does not overwrite an existing source checkout; if Codi is already installed, use **Codi Settings → Quota → Check for updates → Update now**.
 
-### Option 2: ask Codex to install it
+### Option 2: smaller installer if you already have Node.js 24 and Git
+
+1. Download **Codi-Node24-Git-*.zip** from [the latest release](https://github.com/Chester-chs/Codi/releases/latest) and extract it.
+2. Double-click **Install-Codi.cmd**. It checks your tools, clones the pinned release, verifies the exact commit, and runs Codi's installer. It still downloads Electron and needs an internet connection.
+3. Fully quit and reopen Codex, then start a new chat.
+
+This ZIP does not bundle Node.js. It will stop if an existing Codi source folder is present; use the in-app update button for an existing installation.
+
+### Option 3: ask Codex to install it
 
 Open a local chat in the Codex desktop app and paste this prompt:
 
@@ -79,7 +87,7 @@ Run the installer. If Codi is already installed, use its in-app Update now butto
 Verify that Codi appears in Codex and explain how to use its visible switch. If Codex needs restarting, ask me to restart it myself.
 ```
 
-### Option 3: source installation for developers
+### Option 4: source installation for developers
 
 1. Install and sign in to Codex desktop. Install **Node.js 24+** and **Git** if needed.
 2. Open the Windows Start menu, search for **PowerShell**, and open it. Copy and run these lines:
