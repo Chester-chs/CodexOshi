@@ -10,7 +10,7 @@ Copy-Item -LiteralPath (Join-Path $SourceRoot 'package.json'),(Join-Path $Source
 $portableNode=Join-Path $DataRoot 'node-runtime\node.exe'
 $node=if (Test-Path -LiteralPath $portableNode -PathType Leaf) { $portableNode } else { (Get-Command node.exe -ErrorAction Stop).Source }
 $nodeMajor=[int](& $node -p 'process.versions.node.split(".")[0]')
-if ($LASTEXITCODE -or $nodeMajor -lt 24) { throw 'Codi requires Node.js 24 or later.' }
+if ($LASTEXITCODE -or $nodeMajor -lt 24) { throw 'CodexOshi requires Node.js 24 or later.' }
 $npmCli=Join-Path (Split-Path -Parent $node) 'node_modules\npm\bin\npm-cli.js'
 & $node $npmCli --prefix $runtime --cache (Join-Path $DataRoot 'npm-cache') ci --ignore-scripts --no-audit --no-fund
 if ($LASTEXITCODE) { throw 'Runtime dependency installation failed.' }

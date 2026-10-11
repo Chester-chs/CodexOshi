@@ -27,7 +27,7 @@ electron.ipcMain.handle=(channel,listener)=>{
 };
 for(const channel of Object.keys(updateHandlers))electron.ipcMain.handle(channel,updateHandlers[channel]);
 Module._load=function(name,parent,...args){
-  if(name==='electron')return {...electron,Notification:class{static isSupported(){return true;}constructor(value){this.value=value;}on(){}show(){notifications.push(this.value);}},shell:{openExternal:async url=>{assert.match(url,/^https:\/\/(?:github.com\/Chester-chs\/Codi|x.com\/thsottiaux)/);}}};
+  if(name==='electron')return {...electron,Notification:class{static isSupported(){return true;}constructor(value){this.value=value;}on(){}show(){notifications.push(this.value);}},shell:{openExternal:async url=>{assert.match(url,/^https:\/\/(?:github.com\/Chester-chs\/CodexOshi|x.com\/thsottiaux)/);}}};
   if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}async refresh(){return this.snapshot;}}};
   if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};
   return load.call(this,name,parent,...args);

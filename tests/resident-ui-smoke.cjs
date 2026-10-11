@@ -13,7 +13,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   async function waitFor(code){const deadline=Date.now()+4000;while(!(await js(code))){if(Date.now()>deadline)throw Error('UI condition timed out: '+code);await delay(25);}}
   let restartedOff=false;
   if(restart){
-    await waitFor(`!document.querySelector('#codi-launcher').hidden`);await delay(100);assert.equal(state().widgetEnabled,false);assert.deepEqual(state().region,[{x:1456,y:934,width:120,height:42}]);restartedOff=true;
+    await waitFor(`!document.querySelector('#codi-launcher').hidden`);await delay(100);assert.equal(state().widgetEnabled,false);assert.deepEqual(state().region,[{x:1428,y:934,width:148,height:42}]);restartedOff=true;
     await js(`document.querySelector('#codi-launcher').click()`);
   }
   await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(250);
@@ -32,7 +32,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   assert.equal(await js(`(()=>{const title=document.querySelector('.panel-title').getBoundingClientRect(),power=document.querySelector('#codi-power').getBoundingClientRect();return power.x-title.right>=8&&power.x-title.right<=12})()`),true);
   await js(`document.querySelector('#character-width').value=360;document.querySelector('#character-width').dispatchEvent(new Event('input'));`);await delay(300);assert.equal(state().region[0].width,360);assert.deepEqual(state().region[1],panelBefore);
   assert.equal(await js(`document.querySelectorAll('[data-framing],#character-framing,#character-zoom-minus,#character-zoom-plus').length`),0);
-  await js(`document.querySelector('#character-width').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.equal(win.getTitle(),'Codex Quota Widget');
+  await js(`document.querySelector('#character-width').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.equal(win.getTitle(),'CodexOshi');
   await js(`document.querySelector('#character-width').value=240;document.querySelector('#character-width').dispatchEvent(new Event('input'))`);await delay(300);assert.equal(state().region[0].width,240);assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')).targetWidth,240);
   for(const [id,key,value,min,max]of [['character-width-value','targetWidth',280,126,672],['character-size-value','targetHeight',320,180,420]]){
     assert.equal(await js(`document.querySelector('#${id}').type`),'number');
@@ -65,10 +65,11 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,true);await checkPlacement();
   const enabledRegion={...state().region[0]};
   await js(`document.querySelector('#codi-power').click()`);await delay(200);
-  assert.equal(state().widgetEnabled,false);assert.equal(state().expanded,false);assert.equal(state().speechVisible,false);assert.deepEqual(state().region,[{x:1456,y:934,width:120,height:42}]);
+  assert.equal(state().widgetEnabled,false);assert.equal(state().expanded,false);assert.equal(state().speechVisible,false);assert.deepEqual(state().region,[{x:1428,y:934,width:148,height:42}]);
   assert.equal(await js(`document.querySelector('#widget').hidden&&!document.querySelector('#codi-launcher').hidden`),true);
+  assert.equal(await js(`(()=>{const button=document.querySelector('#codi-launcher');return button.scrollWidth<=button.clientWidth})()`),true,'renamed switch label must fit');
   assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).widgetEnabled,false);
-  await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});fs.writeFileSync(path.join(output,'switch-off.png'),(await win.webContents.capturePage({x:1456,y:934,width:120,height:42},{stayHidden:true,stayAwake:true})).toPNG());
+  await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});fs.writeFileSync(path.join(output,'switch-off.png'),(await win.webContents.capturePage({x:1428,y:934,width:148,height:42},{stayHidden:true,stayAwake:true})).toPNG());
   const launcher={x:1516,y:955};for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...launcher,button:'left',clickCount:1});await delay(200);
   assert.equal(state().widgetEnabled,true);assert.deepEqual(state().region[0],enabledRegion);assert.equal(await js(`document.querySelector('#codi-launcher').hidden&&!document.querySelector('#widget').hidden`),true);
   await js(`window.widget.openSettings()`);await waitFor(`!document.querySelector('#details').hidden`);await js(`document.querySelector('#character-tab').click()`);await delay(100);
@@ -76,5 +77,5 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await js(`document.querySelector('#close').click()`);await delay(150);const reduced=await resize(800,600);await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});fs.writeFileSync(path.join(output,'small.png'),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());await resize(1600,1000);
   const gear=await js(`(()=>{const r=document.querySelector('#settings-open').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...gear,button:'left',clickCount:1});await delay(180);assert.equal(state().expanded,true);assert.equal(BrowserWindow.getAllWindows().length,1);
   await js(`document.querySelector('#codi-power').click()`);await delay(200);assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).widgetEnabled,false);
-  const result={passed:true,full,small,restored,reduced,widthControls:{heightAndWidthAdjacent:true,framingMultiplierRemoved:true,widthIndependent:true,persisted:240,numericWidthAndHeight:true,invalidInputRejected:true,settingsPanelStable:true,panelBefore},codiSwitch:{visible:true,offRegion:{width:120,height:42},persisted:true,pointerRestore:true,originalDimensionsRestored:true},originalFreePositionPreserved:true,scaledGearClickable:true};fs.writeFileSync(path.join(output,'resident-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
+  const result={passed:true,full,small,restored,reduced,widthControls:{heightAndWidthAdjacent:true,framingMultiplierRemoved:true,widthIndependent:true,persisted:240,numericWidthAndHeight:true,invalidInputRejected:true,settingsPanelStable:true,panelBefore},codiSwitch:{visible:true,offRegion:{width:148,height:42},persisted:true,pointerRestore:true,originalDimensionsRestored:true},originalFreePositionPreserved:true,scaledGearClickable:true};fs.writeFileSync(path.join(output,'resident-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
 })().catch(e=>{process.stderr.write(e.stack+'\n');app.exit(1);});

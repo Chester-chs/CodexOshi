@@ -7,10 +7,10 @@ using System.Windows.Forms;
 
 internal static class Installer {
     private static int Main(string[] args) {
-        string folder = Path.Combine(Path.GetTempPath(), "Codi-Setup-" + Guid.NewGuid().ToString("N"));
+        string folder = Path.Combine(Path.GetTempPath(), "CodexOshi-Setup-" + Guid.NewGuid().ToString("N"));
         try {
             Directory.CreateDirectory(folder);
-            using (Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("Codi.Payload")) {
+            using (Stream resource = Assembly.GetExecutingAssembly().GetManifestResourceStream("CodexOshi.Payload")) {
                 if (resource == null) throw new InvalidOperationException("Installer payload is missing.");
                 using (FileStream output = File.Create(Path.Combine(folder, "payload.zip"))) resource.CopyTo(output);
             }
@@ -25,16 +25,16 @@ internal static class Installer {
             using (Process process = Process.Start(start)) {
                 process.WaitForExit();
                 if (process.ExitCode != 0) {
-                    if (!Array.Exists(args, item => item == "--verify-only")) MessageBox.Show("Codi 安装未完成。请查看上方错误信息。\nCodi installation did not complete.", "Codi Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    if (!Array.Exists(args, item => item == "--verify-only")) MessageBox.Show("CodexOshi 安装未完成。请查看上方错误信息。\nCodexOshi installation did not complete.", "CodexOshi Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return process.ExitCode;
                 }
             }
             if (Array.Exists(args, item => item == "--verify-only")) return 0;
-            MessageBox.Show("Codi 已安装。请完全退出并重新打开 Codex，然后新建聊天。\nCodi is installed. Restart Codex and open a new chat.", "Codi Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("CodexOshi 已安装。请完全退出并重新打开 Codex，然后新建聊天。\nCodexOshi is installed. Restart Codex and open a new chat.", "CodexOshi Setup", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return 0;
         } catch (Exception error) {
             Console.Error.WriteLine(error);
-            if (!Array.Exists(args, item => item == "--verify-only")) MessageBox.Show(error.Message, "Codi Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!Array.Exists(args, item => item == "--verify-only")) MessageBox.Show(error.Message, "CodexOshi Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         } finally {
             try { Directory.Delete(folder, true); } catch { }

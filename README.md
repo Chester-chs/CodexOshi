@@ -1,51 +1,52 @@
-# Codi
+# CodexOshi
 
 <p align="center">
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
 </p>
 
-Your Codex desktop companion: a character widget with quota monitoring, local token usage charts, and customizable dialogue.
+Your Codex desktop companion: use a favorite anime or game character alongside quota monitoring, local token usage charts, and customizable dialogue.
 
-> Codi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
+> CodexOshi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
 
 **Character tip:** upload a favorite anime or game character as a transparent PNG chibi or regular portrait. Leave a little transparent space around the hair and clothing so framing does not cut them off. A full-body chibi is particularly readable at widget size; you can also frame a portrait from the chest up. Only use artwork you have permission to use.
 
 ## Release history
 
-- **[0.3.3](https://github.com/Chester-chs/Codi/releases/tag/v0.3.3):** fresher quota fallback, release-based updates, and expiry for old cached announcements.
-- **[0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2):** bar-only mode, visible stale-data status, and keyboard navigation in settings.
-- **[0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1):** a more balanced quota bar, vector settings icon, and refreshed documentation.
-- **[0.3.0](https://github.com/Chester-chs/Codi/releases/tag/v0.3.0):** the first Windows installer, with Codi's character, quota, chart, and customization features.
+- **[0.3.4](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.4):** renamed Codi to CodexOshi, with the same local characters and settings. The name reflects your own favorite anime or game character alongside Codex.
+- **[0.3.3](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.3):** fresher quota fallback, release-based updates, and expiry for old cached announcements.
+- **[0.3.2](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.2):** bar-only mode, visible stale-data status, and keyboard navigation in settings.
+- **[0.3.1](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.1):** a more balanced quota bar, vector settings icon, and refreshed documentation.
+- **[0.3.0](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.0):** the first Windows installer, with CodexOshi's character, quota, chart, and customization features.
 
 See the bilingual [changelog](CHANGELOG.md) for details.
 
 ## Features
 
-- **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. The resident bar marks stale readings while retaining the last known percentage. Codi displays reset credits; it does not spend them.
+- **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. The resident bar marks stale readings while retaining the last known percentage. CodexOshi displays reset credits; it does not spend them.
 - **Time-based token charts:** 24 hourly bars, 7 daily bars, or 30 daily bars, with the selected total and exact values. The current hour/day is still in progress.
 - **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
 - **Two click dialogues:** clicking the character always shows the first dialogue with reset information. Click the bubble to cycle between the two lines. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
-- **Click sound:** Starlight duo is the default sound. Under **Codi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
+- **Click sound:** Starlight duo is the default sound. Under **CodexOshi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
 - **Character controls:** height and width sit together, each with a slider and numeric input. Restore defaults returns to height 280, automatic width, and centered framing. The progress bar stays below the character.
 - **Window following:** pinning moves the character to the lower-right corner with a 24 px right margin and scales it down in smaller windows. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
 - **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota. For keyboard navigation, click the keyboard icon in the card header, then use Tab, arrow keys on the tabs, and Escape to close.
-- **Bar-only mode:** under **Codi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
+- **Bar-only mode:** under **CodexOshi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
-- **One-click updates:** Codi checks for new versions every 6 hours. When an update is available, click **Update now** in Codi Settings to download, install, and restart Codi while keeping your characters and settings.
+- **One-click updates:** CodexOshi checks for new versions every 6 hours. When an update is available, click **Update now** in CodexOshi Settings to download, install, and restart CodexOshi while keeping your characters and settings.
 - **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.
-- **Visible on/off control:** switch off from the settings card; a small Codi switch remains inside the Codex window so you can turn it back on.
+- **Visible on/off control:** switch off from the settings card; a small CodexOshi switch remains inside the Codex window so you can turn it back on.
 
 ## Preview
 
-These are English Codi UI captures with synthetic quota/token values. The original demo chibi was **generated by GPT** for the README; it is an example, not an installed default character.
+These are English CodexOshi UI captures with synthetic quota/token values. The original demo chibi was **generated by GPT** for the README; it is an example, not an installed default character.
 
 | Original transparent chibi | Companion |
 | --- | --- |
-| <img src="docs/images/demo-chibi.png" width="180" alt="Original transparent chibi portrait example"> | <img src="docs/images/codi-companion.png" width="230" alt="Codi transparent chibi companion and quota bar"> |
+| <img src="docs/images/demo-chibi.png" width="180" alt="Original transparent chibi portrait example"> | <img src="docs/images/codi-companion.png" width="230" alt="CodexOshi transparent chibi companion and quota bar"> |
 
 | Quota settings | 30-day token chart | Color themes |
 | --- | --- | --- |
-| <img src="docs/images/codi-quota.png" width="300" alt="Codi quota settings in a soft blue palette"> | <img src="docs/images/codi-token-30-days.png" width="300" alt="Thirty daily token bars"> | <img src="docs/images/codi-appearance.png" width="300" alt="Seven color themes with a clearly selected tab"> |
+| <img src="docs/images/codi-quota.png" width="300" alt="CodexOshi quota settings in a soft blue palette"> | <img src="docs/images/codi-token-30-days.png" width="300" alt="Thirty daily token bars"> | <img src="docs/images/codi-appearance.png" width="300" alt="Seven color themes with a clearly selected tab"> |
 
 ## Requirements
 
@@ -63,28 +64,28 @@ MSVC, C++ native modules, and an additional C# SDK are not required. macOS and L
 ### Option 1: Windows installer (recommended)
 
 1. Install and sign in to the Codex desktop app.
-2. Download the **Codi-Setup-*-win-x64.exe** file from [the latest release](https://github.com/Chester-chs/Codi/releases/latest) and run it. The installer is currently unsigned, so Windows may ask you to confirm that you trust the download. The first install downloads Electron and may take several minutes.
-3. Fully quit and reopen Codex, then start a new chat. Codi appears near the bottom-right; click its gear for settings.
+2. Download the **CodexOshi-Setup-*-win-x64.exe** file from [the latest release](https://github.com/Chester-chs/CodexOshi/releases/latest) and run it. The installer is currently unsigned, so Windows may ask you to confirm that you trust the download. The first install downloads Electron and may take several minutes.
+3. Fully quit and reopen Codex, then start a new chat. CodexOshi appears near the bottom-right; click its gear for settings.
 
-The installer keeps its own Node.js copy under the Codi data directory. It adds Codi to Codex, starts the widget, and enables Windows login startup. It does not overwrite an existing source checkout; if Codi is already installed, use **Codi Settings → Quota → Check for updates → Update now**.
+The installer keeps its own Node.js copy under the CodexOshi data directory. It adds CodexOshi to Codex, starts the widget, and enables Windows login startup. It does not overwrite an existing source checkout; if CodexOshi is already installed, use **CodexOshi Settings → Quota → Check for updates → Update now**.
 
 ### Option 2: smaller installer if you already have Node.js 24 and Git
 
-1. Download **Codi-Node24-Git-*.zip** from [the latest release](https://github.com/Chester-chs/Codi/releases/latest) and extract it.
-2. Double-click **Install-Codi.cmd**. It checks your tools, clones the pinned release, verifies the exact commit, and runs Codi's installer. It still downloads Electron and needs an internet connection.
+1. Download **CodexOshi-Node24-Git-*.zip** from [the latest release](https://github.com/Chester-chs/CodexOshi/releases/latest) and extract it.
+2. Double-click **Install-CodexOshi.cmd**. It checks your tools, clones the pinned release, verifies the exact commit, and runs CodexOshi's installer. It still downloads Electron and needs an internet connection.
 3. Fully quit and reopen Codex, then start a new chat.
 
-This ZIP does not bundle Node.js. It will stop if an existing Codi source folder is present; use the in-app update button for an existing installation.
+This ZIP does not bundle Node.js. It will stop if an existing CodexOshi source folder is present; use the in-app update button for an existing installation.
 
 ### Option 3: ask Codex to install it
 
 Open a local chat in the Codex desktop app and paste this prompt:
 
 ```text
-Please install Codi on this Windows computer: https://github.com/Chester-chs/Codi.
-Download the latest Codi-Setup-*-win-x64.exe from the GitHub Releases page and verify its SHA-256 using SHA256SUMS.txt.
-Run the installer. If Codi is already installed, use its in-app Update now button instead; preserve my local changes, characters, and settings.
-Verify that Codi appears in Codex and explain how to use its visible switch. If Codex needs restarting, ask me to restart it myself.
+Please install CodexOshi on this Windows computer: https://github.com/Chester-chs/CodexOshi.
+Download the latest CodexOshi-Setup-*-win-x64.exe from the GitHub Releases page and verify its SHA-256 using SHA256SUMS.txt.
+Run the installer. If CodexOshi is already installed, use its in-app Update now button instead; preserve my local changes, characters, and settings.
+Verify that CodexOshi appears in Codex and explain how to use its visible switch. If Codex needs restarting, ask me to restart it myself.
 ```
 
 ### Option 4: source installation for developers
@@ -94,25 +95,25 @@ Verify that Codi appears in Codex and explain how to use its visible switch. If 
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\plugins" | Out-Null
-git clone https://github.com/Chester-chs/Codi.git "$env:USERPROFILE\plugins\codex-quota-widget"
+git clone https://github.com/Chester-chs/CodexOshi.git "$env:USERPROFILE\plugins\codex-quota-widget"
 Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. Codi should appear at the bottom-right.
+3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. CodexOshi should appear at the bottom-right.
 
-Use the folder shown above: the source installer checks its location. Git is only used to clone the source. You can instead use **Code → Download ZIP** and extract it into the same folder. If Codi is already installed, update from Codi Settings rather than cloning over it.
+Use the folder shown above: the source installer checks its location. Git is only used to clone the source. You can instead use **Code → Download ZIP** and extract it into the same folder. If CodexOshi is already installed, update from CodexOshi Settings rather than cloning over it.
 
 Installation also enables Windows login startup by default. To skip that, add `-NoStartup` to the installation command; add `-NoStart` to skip starting immediately. After a later MCP service update, restart Codex and open a new chat again.
 
 ## Updates and reset announcements
 
-Open **Codi Settings → Quota** and scroll to **Updates & announcements**. Use **Check for updates**, **Check announcements**, or the **Check automatically** toggle. Automatic checks run while Codi is enabled and the Codex window is visible. Silent system notifications appear when supported, and a dot beside the gear indicates new information.
+Open **CodexOshi Settings → Quota** and scroll to **Updates & announcements**. Use **Check for updates**, **Check announcements**, or the **Check automatically** toggle. Automatic checks run while CodexOshi is enabled and the Codex window is visible. Silent system notifications appear when supported, and a dot beside the gear indicates new information.
 
-![One-click update in Codi Settings (synthetic version numbers)](docs/images/one-click-update.png)
+![One-click update in CodexOshi Settings (synthetic version numbers)](docs/images/one-click-update.png)
 
-- **Versions:** click **Check for updates → Update now** when a new version is found. Codi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. Public updates need no Git or GitHub login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
-- **Update storage:** application releases and a recovery backup stay in the local Codi data folder. Your source checkout is preserved. Maintainers must increase the application version in `package.json` and `package-lock.json` when publishing a new version; the plugin registration version remains separate.
+- **Versions:** click **Check for updates → Update now** when a new version is found. CodexOshi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. Public updates need no Git or GitHub login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
+- **Update storage:** application releases and a recovery backup stay in the local CodexOshi data folder. Your source checkout is preserved. Maintainers must increase the application version in `package.json` and `package-lock.json` when publishing a new version; the plugin registration version remains separate.
 - **Announcements:** reads [Tibo @thsottiaux](https://x.com/thsottiaux) through the free public timeline, with no X API key. This endpoint can be rate limited or unavailable. Failures retain the previous result; rate limits delay retries by at least 30 minutes. Manual checks have a one-minute cooldown.
 - **Times:** recognizes common explicit dates, today/tomorrow/weekdays, UTC or US Eastern/Pacific zones, and relative hours/minutes. Vague, conditional or unconfirmed times are shown with the original text rather than guessed. Announcements do not replace account quota data or mark quota as restored when the announced time passes.
 - **Notifications:** only recent new announcements trigger notifications; deduplication survives restarts. Post content is displayed as text. Displayed times update when the system timezone changes.
@@ -120,10 +121,10 @@ Open **Codi Settings → Quota** and scroll to **Updates & announcements**. Use 
 ## On / off inside Codex
 
 1. Click the gear beside the progress bar to open settings.
-2. Click the **Codi switch at the top** to turn the character widget off. The character, bar, dialogue, and settings card disappear; new quota reads and token indexing pause. A quota request already in flight may finish.
-3. A small **Codi switch** remains at the bottom-right of the Codex window. Click it to turn the widget back on and restore its dimensions and position.
+2. Click the **CodexOshi switch at the top** to turn the character widget off. The character, bar, dialogue, and settings card disappear; new quota reads and token indexing pause. A quota request already in flight may finish.
+3. A small **CodexOshi switch** remains at the bottom-right of the Codex window. Click it to turn the widget back on and restore its dimensions and position.
 
-The switch state is saved across restarts. This is Codi's own overlay control inside the Codex window, not an added control in Codex's native settings page. The × button closes the settings card only. The Codex plugin toggle controls the MCP service separately.
+The switch state is saved across restarts. This is CodexOshi's own overlay control inside the Codex window, not an added control in Codex's native settings page. The × button closes the settings card only. The Codex plugin toggle controls the MCP service separately.
 
 ![Small switch while the widget is off](docs/images/codi-switch-off.png)
 
@@ -137,15 +138,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugin
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugins\codex-quota-widget\scripts\stop.ps1"
 ```
 
-Stopping persists the monitor's disabled state; starting enables it again. To uninstall, run the following. It removes Codi's login task and plugin entry and retains user data:
+Stopping persists the monitor's disabled state; starting enables it again. To uninstall, run the following. It removes CodexOshi's login task and plugin entry and retains user data:
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugins\codex-quota-widget\scripts\uninstall.ps1"
 ```
 
-## Using Codi
+## Using CodexOshi
 
-1. Open Codex. Codi follows its client area and hides when the host is unavailable or minimized.
+1. Open Codex. CodexOshi follows its client area and hides when the host is unavailable or minimized.
 2. Click the character for a dialogue bubble. Click the gear to open settings.
 3. In **Character**, click **Upload portrait**. No separate create action is needed. Height and width can be entered directly; invalid values do not replace the last valid setting.
 4. Drag the processed preview to reposition the visible portion. Changing character dimensions keeps the open settings card stable.
@@ -156,8 +157,8 @@ Quota colors retain their thresholds: normal above 20%, orange above 10% through
 
 ## Data and privacy
 
-- **No model turns:** quota reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. Codi does not generate completions or start agent turns.
-- **Update and announcement requests:** additionally reads the fixed public GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. Codi does not need a GitHub login.
+- **No model turns:** quota reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. CodexOshi does not generate completions or start agent turns.
+- **Update and announcement requests:** additionally reads the fixed public GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. CodexOshi does not need a GitHub login.
 - **Local images:** PNG, JPEG, WebP, GIF, and BMP are checked by content, up to 10 MiB and 4096 pixels per side. HEIC is unsupported. Import copies the original; replacement preserves earlier copies. No image upload endpoint is used.
 - **Legacy characters:** an explicit single portrait takes priority. Otherwise, the first available image in `ready > tired > low > exhausted` order is used. Reading does not delete old images or rewrite their settings.
 - **Token scope:** charts summarize token-count increments in this computer's existing Codex session files. They are not official account-wide totals and exclude deleted sessions and other computers. Indexing or partial-coverage notices identify incomplete data.

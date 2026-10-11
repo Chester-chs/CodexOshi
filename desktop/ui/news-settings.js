@@ -2,12 +2,12 @@
   const $=id=>document.getElementById(id),t=(key,values)=>window.uiText.t(key,values);let snapshot=null;
   let update={status:'idle'},updatePending=false,updateRevision=0,updateReadFailed=false,updateReading=false;
   const activeUpdates=new Set(['preparing','downloading','installing','restarting']);
-  const updateStatuses={preparing:'正在准备更新…',downloading:'正在下载更新…',installing:'正在安装更新…',restarting:'正在重启 Codi…'};
+  const updateStatuses={preparing:'正在准备更新…',downloading:'正在下载更新…',installing:'正在安装更新…',restarting:'正在重启 CodexOshi…'};
   const updateErrors={
     network_error:'更新下载失败，请检查网络连接后重试。',authentication_required:'无法获取更新，请检查 GitHub 登录权限后重试。',
     invalid_release:'更新包无法验证，请稍后重新检查更新。',archive_unsafe:'更新包无法验证，请稍后重新检查更新。',download_too_large:'更新包无法验证，请稍后重新检查更新。',
-    prepare_failed:'更新准备失败，请重试。',install_failed:'更新安装失败，请重试。',rollback_failed:'更新未完成，恢复旧版本失败。请重新安装 Codi。',
-    unsupported_installation:'当前安装方式不支持一键更新，请重新安装 Codi。',update_in_progress:'更新正在进行，请稍候。',no_update:'暂时没有新版本，请重新检查更新。'
+    prepare_failed:'更新准备失败，请重试。',install_failed:'更新安装失败，请重试。',rollback_failed:'更新未完成，恢复旧版本失败。请重新安装 CodexOshi。',
+    unsupported_installation:'当前安装方式不支持一键更新，请重新安装 CodexOshi。',update_in_progress:'更新正在进行，请稍候。',no_update:'暂时没有新版本，请重新检查更新。'
   };
   const statuses={unchecked:'尚未检查',available:'发现新版本 {version}',current:'已是当前版本',ahead:'本机版本领先于仓库',ok:'检查完成', 'rate-limited':'请求受限，稍后自动重试','network-unavailable':'暂时无法连接，保留上次结果','github-access':'仓库为私有或不可访问，请登录有权限的 GitHub CLI 账号','timeline-unavailable':'公开时间线暂不可读取，稍后重试','invalid-version':'版本信息无效','response-too-large':'数据源响应异常'};
   function renderUpdate(){
@@ -24,7 +24,7 @@
   }
   function render(){
     renderUpdate();if(!snapshot)return;const {version,tibo}=snapshot,notice=window.newsModel.recentNotice(tibo.notice);$('news-auto').checked=snapshot.enabled;
-    $('codi-version').textContent='Codi '+version.current;$('version-result').textContent=t(statuses[version.status]||'暂时无法连接，保留上次结果',{version:version.latest});
+    $('codi-version').textContent='CodexOshi '+version.current;$('version-result').textContent=t(statuses[version.status]||'暂时无法连接，保留上次结果',{version:version.latest});
     $('tibo-result').textContent=t(statuses[tibo.status]||'暂时无法连接，保留上次结果');
     $('tibo-notice').textContent=window.newsModel.noticeText(notice,window.uiText.language);
     $('tibo-quote').textContent=notice?.text?.slice(0,500)||'';$('tibo-quote').hidden=!notice;

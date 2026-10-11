@@ -7,8 +7,8 @@ const cp=require('node:child_process');
 const {promisify}=require('node:util');
 const {prepareRelease}=require('../runtime/update-download.cjs');
 
-const SHA='a'.repeat(40), API='https://api.github.com/repos/Chester-chs/Codi';
-const ARCHIVE=`https://codeload.github.com/Chester-chs/Codi/zip/${SHA}`;
+const SHA='a'.repeat(40), API='https://api.github.com/repos/Chester-chs/CodexOshi';
+const ARCHIVE=`https://codeload.github.com/Chester-chs/CodexOshi/zip/${SHA}`;
 const realExec=promisify(cp.execFile);
 function crc32(bytes){let crc=0xffffffff;for(const byte of bytes){crc^=byte;for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}return (crc^0xffffffff)>>>0;}
 function zip(entries){
@@ -35,13 +35,13 @@ function files(version='0.2.0'){
     'scripts/stop.ps1':'stop','scripts/extract-update.ps1':'extract','runtime/mcp.cjs':'mcp',
     'runtime/update-service.cjs':'update service','runtime/update-download.cjs':'update download'
   };
-  return Object.entries(values).map(([name,data])=>({name:`Codi-${SHA}/${name}`,data}));
+  return Object.entries(values).map(([name,data])=>({name:`CodexOshi-${SHA}/${name}`,data}));
 }
 function metadata(version='0.2.0'){return {encoding:'base64',content:Buffer.from(JSON.stringify({name:'codex-quota-widget',version})).toString('base64')};}
 function publicFetch(archive,version='0.2.0',seen=[]){return async(url,options)=>{
   seen.push(url);assert.equal(options.redirect,'manual');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);
   if(url===`${API}/releases/latest`)return Response.json({tag_name:`v${version}`,draft:false,prerelease:false});
-  if(url===`${API}/commits/v${version}`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/Codi/commit/${SHA}`});
+  if(url===`${API}/commits/v${version}`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/CodexOshi/commit/${SHA}`});
   if(url===`${API}/contents/package.json?ref=${SHA}`)return Response.json(metadata(version));
   if(url===ARCHIVE)return new Response(archive);
   throw Error(`unexpected request: ${url}`);
@@ -54,7 +54,7 @@ test('update stages the latest published tag and never resolves main',async t=>{
   const result=await prepareRelease({jobDir,currentVersion:'0.1.0',fetch:async(url,options)=>{
     seen.push(url);assert.equal(options.credentials,'omit');
     if(url===`${API}/releases/latest`)return Response.json({tag_name:'v0.2.0',draft:false,prerelease:false});
-    if(url===`${API}/commits/v0.2.0`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/Codi/commit/${SHA}`});
+    if(url===`${API}/commits/v0.2.0`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/CodexOshi/commit/${SHA}`});
     if(url===`${API}/contents/package.json?ref=${SHA}`)return Response.json(metadata());
     if(url===ARCHIVE)return new Response(zip(files()));
     throw Error(`unexpected request: ${url}`);
@@ -79,13 +79,13 @@ test('same or older release stops before downloading or extracting',async t=>{
 });
 
 test('malformed commit and a commit URL from another repository cannot select a release',async t=>{
-  for(const payload of [{sha:'main'},{sha:SHA,html_url:`https://github.com/attacker/Codi/commit/${SHA}`}]){
+  for(const payload of [{sha:'main'},{sha:SHA,html_url:`https://github.com/attacker/CodexOshi/commit/${SHA}`}]){
     await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async url=>Response.json(url===`${API}/releases/latest`?{tag_name:'v0.2.0',draft:false,prerelease:false}:payload)}),code('invalid_release'));
   }
 });
 
 test('archive redirects reject other repositories, credentials, and protocols before requesting them',async t=>{
-  for(const location of [`https://codeload.github.com/evil/Codi/zip/${SHA}`,`https://github.com/Chester-chs/Codi/archive/main.zip`,`https://evil.test/a.zip`,`http://codeload.github.com/Chester-chs/Codi/zip/${SHA}`,`https://user@codeload.github.com/Chester-chs/Codi/zip/${SHA}`]){
+  for(const location of [`https://codeload.github.com/evil/CodexOshi/zip/${SHA}`,`https://github.com/Chester-chs/CodexOshi/archive/main.zip`,`https://evil.test/a.zip`,`http://codeload.github.com/Chester-chs/CodexOshi/zip/${SHA}`,`https://user@codeload.github.com/Chester-chs/CodexOshi/zip/${SHA}`]){
     const ordinary=publicFetch(zip(files()));let calls=0;
     await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async(url,options)=>{calls++;return url===ARCHIVE?new Response(null,{status:302,headers:{location}}):ordinary(url,options);}}),code('invalid_release'));
     assert.equal(calls,4);
@@ -93,7 +93,7 @@ test('archive redirects reject other repositories, credentials, and protocols be
 });
 
 test('archive redirects accept only pinned GitHub endpoints and stop at three hops',async t=>{
-  const next=`https://codeload.github.com/Chester-chs/Codi/legacy.zip/${SHA}`,ordinary=publicFetch(zip(files()));
+  const next=`https://codeload.github.com/Chester-chs/CodexOshi/legacy.zip/${SHA}`,ordinary=publicFetch(zip(files()));
   const accepted=await prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async(url,options)=>url===ARCHIVE?new Response(null,{status:302,headers:{location:next}}):url===next?new Response(zip(files())):ordinary(url,options)});
   assert.equal(accepted.commit,SHA);
   let redirects=0;
@@ -113,9 +113,9 @@ test('private GitHub fallback uses existing gh authentication and streams the pi
   const archive=zip(files()),jobDir=job(t),commands=[];
   const result=await prepareRelease({jobDir,currentVersion:'0.1.0',fetch:async()=>new Response(null,{status:404}),
     execFile:async(command,args,options)=>{if(command!=='gh')return realExec(command,args,options);commands.push(args);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return {stdout:JSON.stringify(args[1].endsWith('/releases/latest')?{tag_name:'v0.2.0',draft:false,prerelease:false}:args[1].endsWith('/commits/v0.2.0')?{sha:SHA}:metadata())};},
-    spawn:(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api',`repos/Chester-chs/Codi/zipball/${SHA}`,'--hostname','github.com']);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return cp.spawn(process.execPath,['-e','process.stdout.write(Buffer.from(process.argv[1],"base64"))',archive.toString('base64')],options);}
+    spawn:(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api',`repos/Chester-chs/CodexOshi/zipball/${SHA}`,'--hostname','github.com']);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return cp.spawn(process.execPath,['-e','process.stdout.write(Buffer.from(process.argv[1],"base64"))',archive.toString('base64')],options);}
   });
-  assert.equal(result.version,'0.2.0');assert.deepEqual(commands,[['api','repos/Chester-chs/Codi/releases/latest','--hostname','github.com'],['api','repos/Chester-chs/Codi/commits/v0.2.0','--hostname','github.com'],['api',`repos/Chester-chs/Codi/contents/package.json?ref=${SHA}`,'--hostname','github.com']]);
+  assert.equal(result.version,'0.2.0');assert.deepEqual(commands,[['api','repos/Chester-chs/CodexOshi/releases/latest','--hostname','github.com'],['api','repos/Chester-chs/CodexOshi/commits/v0.2.0','--hostname','github.com'],['api',`repos/Chester-chs/CodexOshi/contents/package.json?ref=${SHA}`,'--hostname','github.com']]);
 });
 
 test('missing private-repository credentials are reported without leaking CLI output',async t=>{

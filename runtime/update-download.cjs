@@ -7,17 +7,17 @@ const {Transform}=require('node:stream');
 const {pipeline}=require('node:stream/promises');
 const {compareVersions,publishedVersion}=require('./public-news.cjs');
 
-const REPOSITORY='Chester-chs/Codi';
+const REPOSITORY='Chester-chs/CodexOshi';
 const API=`https://api.github.com/repos/${REPOSITORY}`;
 const DOWNLOAD_LIMIT=128*1024*1024, METADATA_LIMIT=2*1024*1024, DOWNLOAD_TIMEOUT=120000;
 const execFile=promisify(childProcess.execFile);
 const MESSAGES={
   network_error:'The update could not be downloaded.',
-  authentication_required:'GitHub CLI access to the Codi repository is required.',
+  authentication_required:'GitHub CLI access to the CodexOshi repository is required.',
   invalid_release:'The release metadata or application files are invalid.',
   archive_unsafe:'The release archive failed safety validation.',
   download_too_large:'The release archive exceeds the download size limit.',
-  no_update:'No newer Codi version is available.'
+  no_update:'No newer CodexOshi version is available.'
 };
 function failure(code){return Object.assign(new Error(MESSAGES[code]),{code});}
 function scopedSignal(signal,timeout){return signal?AbortSignal.any([signal,AbortSignal.timeout(timeout)]):AbortSignal.timeout(timeout);}
@@ -33,7 +33,7 @@ async function requestPinned(url,allowed,options,signal){
     let response;
     try{response=await (options.fetch||globalThis.fetch)(url,{
       method:'GET',redirect:'manual',credentials:'omit',signal,
-      headers:{'User-Agent':'Codi','Accept':'application/vnd.github+json'}
+      headers:{'User-Agent':'CodexOshi','Accept':'application/vnd.github+json'}
     });}catch{throw failure('network_error');}
     if(response.redirected||(response.url&&response.url!==url)){
       await response.body?.cancel().catch(()=>{});throw failure('invalid_release');

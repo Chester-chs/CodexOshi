@@ -17,14 +17,14 @@ try {
 if($nodeHash -ne $expectedNodeHash){throw 'Bundled Node.js archive failed SHA-256 verification.'}
 $package=Get-Content -LiteralPath (Join-Path $app 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
 if($package.name -ne 'codex-quota-widget' -or $package.version -notmatch '^\d+\.\d+\.\d+$'){throw 'Invalid application package identity.'}
-if($VerifyOnly){Write-Output ('Package verified: Codi '+$package.version+'; official Node.js v24.19.0 checksum matches.');return}
-if([Environment]::Is64BitOperatingSystem -ne $true){throw 'Codi requires 64-bit Windows.'}
+if($VerifyOnly){Write-Output ('Package verified: CodexOshi '+$package.version+'; official Node.js v24.19.0 checksum matches.');return}
+if([Environment]::Is64BitOperatingSystem -ne $true){throw 'CodexOshi requires 64-bit Windows.'}
 $sourceRoot=Join-Path $env:USERPROFILE 'plugins\codex-quota-widget'
 $codexRoot=if($env:CODEX_HOME){[IO.Path]::GetFullPath($env:CODEX_HOME)}else{Join-Path $env:USERPROFILE '.codex'}
 $dataRoot=Join-Path $codexRoot 'codex-quota-widget'
 $nodeRoot=Join-Path $dataRoot 'node-runtime'
-if(Test-Path -LiteralPath $sourceRoot){throw 'Codi source already exists. Use Codi Settings → Check for updates, so existing work is preserved.'}
-if(Test-Path -LiteralPath $nodeRoot){throw 'Codi Node runtime already exists. Use Codi Settings → Check for updates.'}
+if(Test-Path -LiteralPath $sourceRoot){throw 'CodexOshi source already exists. Use CodexOshi Settings → Check for updates, so existing work is preserved.'}
+if(Test-Path -LiteralPath $nodeRoot){throw 'CodexOshi Node runtime already exists. Use CodexOshi Settings → Check for updates.'}
 [IO.Directory]::CreateDirectory((Split-Path -Parent $sourceRoot))|Out-Null
 [IO.Directory]::CreateDirectory($dataRoot)|Out-Null
 $extract=Join-Path $payload 'node-extracted'
@@ -37,10 +37,10 @@ if((& $node --version) -ne 'v24.19.0' -or $LASTEXITCODE){throw 'Bundled Node.js 
 try {
     Copy-Item -LiteralPath $app -Destination $sourceRoot -Recurse
     Move-Item -LiteralPath $extractedRoot -Destination $nodeRoot
-    Write-Output 'Installing Codi. Electron will be downloaded; this can take several minutes.'
+    Write-Output 'Installing CodexOshi. Electron will be downloaded; this can take several minutes.'
     & (Join-Path $sourceRoot 'scripts\install.ps1')
-    if($LASTEXITCODE){throw 'Codi installation failed.'}
-    Write-Output 'Codi installed. Fully quit and reopen Codex, then start a new chat.'
+    if($LASTEXITCODE){throw 'CodexOshi installation failed.'}
+    Write-Output 'CodexOshi installed. Fully quit and reopen Codex, then start a new chat.'
 } catch {
     Write-Error $_
     throw

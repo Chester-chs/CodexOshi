@@ -5,14 +5,14 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const source = path.join(__dirname, '..', 'packaging', 'nodegit', 'Install-Codi.ps1');
+const source = path.join(__dirname, '..', 'packaging', 'nodegit', 'Install-CodexOshi.ps1');
 
 function verify(manifest) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'codi-nodegit-test-'));
   try {
-    fs.copyFileSync(source, path.join(dir, 'Install-Codi.ps1'));
+    fs.copyFileSync(source, path.join(dir, 'Install-CodexOshi.ps1'));
     fs.writeFileSync(path.join(dir, 'release.json'), JSON.stringify(manifest));
-    return spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(dir, 'Install-Codi.ps1'), '-VerifyOnly'], { encoding: 'utf8', timeout: 20000 });
+    return spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(dir, 'Install-CodexOshi.ps1'), '-VerifyOnly'], { encoding: 'utf8', timeout: 20000 });
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

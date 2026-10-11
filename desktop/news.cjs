@@ -5,7 +5,7 @@ function installNews({win,data,ipcMain,Notification,shell,isActive,language}){
   const send=state=>{if(!win.isDestroyed())win.webContents.send('news-state',state);};
   const service=new NewsService({data,version,onChange:send,onNotice:notice=>{
     if(!isActive()||win.isDestroyed())return false;
-    try{if(!Notification?.isSupported())return true;const en=language()==='en-US',notification=new Notification({title:notice.type==='version'?'Codi':(en?'Codex reset announcement':'Codex 重置公告'),body:notice.type==='version'?(en?'Codi '+notice.version+' is available.':'Codi '+notice.version+' 可更新。'):noticeText(notice.notice,language()),silent:true});notification.on('click',()=>{const url=notice.type==='version'?REPO:notice.notice.url;if(safeUrl(url))shell.openExternal(url).catch(()=>{});});notification.show();return true;}catch{return false;}
+    try{if(!Notification?.isSupported())return true;const en=language()==='en-US',notification=new Notification({title:notice.type==='version'?'CodexOshi':(en?'Codex reset announcement':'Codex 重置公告'),body:notice.type==='version'?(en?'CodexOshi '+notice.version+' is available.':'CodexOshi '+notice.version+' 可更新。'):noticeText(notice.notice,language()),silent:true});notification.on('click',()=>{const url=notice.type==='version'?REPO:notice.notice.url;if(safeUrl(url))shell.openExternal(url).catch(()=>{});});notification.show();return true;}catch{return false;}
   }});
   const valid=event=>event.sender===win.webContents&&!win.isDestroyed();
   ipcMain.handle('news-read',event=>valid(event)?service.snapshot():null);

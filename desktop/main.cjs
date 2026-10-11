@@ -79,7 +79,7 @@ function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   if(!widgetEnabled()){
-    viewLayout=layout(null,dip.width,dip.height,false,0,{width:120,height:42});
+    viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42});
     region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);win.setShape(region);notifyLayout();return;
   }
   const previous=widget;

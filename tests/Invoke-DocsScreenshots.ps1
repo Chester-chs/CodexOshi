@@ -2,7 +2,7 @@
 $output=Join-Path $DataRoot 'docs-screenshots'
 [IO.Directory]::CreateDirectory($output)|Out-Null
 $fixtureData=Join-Path $output 'data'
-if(Test-Path -LiteralPath $fixtureData){Remove-Item -LiteralPath $fixtureData -Recurse -Force}
+if(Test-Path -LiteralPath $fixtureData){Remove-Item -LiteralPath (Assert-CodiChildPath $fixtureData $DataRoot) -Recurse -Force}
 $electron=Join-Path $DataRoot 'desktop-runtime\node_modules\electron\dist\electron.exe'
 $start=New-Object Diagnostics.ProcessStartInfo
 $start.FileName=$electron

@@ -55,17 +55,17 @@ test('manual portrait mirrors on the left side of the host midpoint and returns 
   h.gesture({type:'end'});assert.equal(h.layouts.at(-1).value.mirrored,false);
 });
 
-test('visible Codi switch persists off, pauses data reads and restores the original free position',async()=>{
+test('visible CodexOshi switch persists off, pauses data reads and restores the original free position',async()=>{
   const h=await mainHarness();const before=state(h);
   assert.equal(h.hasHandler('widget-enabled'),true);
   for(const value of [null,1,'false',{}])assert.equal((await h.ipc('widget-enabled',value))?.ok,false);
   assert.equal(h.writes.length,0);
   assert.equal((await h.ipc('widget-enabled',false)).ok,true);
-  assert.deepEqual(state(h).widget,before.widget);assert.deepEqual(state(h).region,[{x:656,y:534,width:120,height:42}]);
+  assert.deepEqual(state(h).widget,before.widget);assert.deepEqual(state(h).region,[{x:628,y:534,width:148,height:42}]);
   assert.equal(h.writes.filter(w=>w.file==='position.json').length,0);
   const saved=JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value);assert.equal(saved.widgetEnabled,false);
   const reads={...h.reads};h.advance(31000);assert.deepEqual(h.reads,reads);
-  h.ipc('open-settings');h.gesture({type:'click'});h.gesture({type:'drag',x:0,y:0});assert.deepEqual(state(h).region,[{x:656,y:534,width:120,height:42}]);
+  h.ipc('open-settings');h.gesture({type:'click'});h.gesture({type:'drag',x:0,y:0});assert.deepEqual(state(h).region,[{x:628,y:534,width:148,height:42}]);
   assert.equal((await h.ipc('widget-enabled',true)).ok,true);assert.deepEqual(state(h),before);assert.equal(h.reads.tokens,reads.tokens+1);assert.equal(h.reads.quota,reads.quota+1);
-  const restart=await mainHarness(undefined,{prepare:false,savedPanel:saved});resize(restart,800,600);assert.deepEqual(state(restart).region,[{x:656,y:534,width:120,height:42}]);assert.equal(restart.reads.quota,0);assert.equal(restart.reads.tokens,0);
+  const restart=await mainHarness(undefined,{prepare:false,savedPanel:saved});resize(restart,800,600);assert.deepEqual(state(restart).region,[{x:628,y:534,width:148,height:42}]);assert.equal(restart.reads.quota,0);assert.equal(restart.reads.tokens,0);
 });

@@ -62,7 +62,7 @@ test('timeline keeps only original Tibo posts, validates ids and rejects missing
 });
 test('version check follows the latest published release instead of an unreleased main version',async()=>{
   const result=await checkVersion('0.3.1',{fetch:async url=>{
-    assert.equal(url,'https://api.github.com/repos/Chester-chs/Codi/releases/latest');
+    assert.equal(url,'https://api.github.com/repos/Chester-chs/CodexOshi/releases/latest');
     return Response.json({tag_name:'v0.3.2',draft:false,prerelease:false});
   }});
   assert.equal(result.latest,'0.3.2');
@@ -70,7 +70,7 @@ test('version check follows the latest published release instead of an unrelease
 });
 test('public reads send no credentials, private GitHub fallback stays on the fixed repository',async()=>{
   const payload=JSON.stringify({tag_name:'v0.2.0',draft:false,prerelease:false});
-  const result=await checkVersion('0.1.0',{fetch:async(url,options)=>{assert.equal(url,VERSION_API);assert.equal(options.redirect,'error');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);return new Response('',{status:404});},execFile:async(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api','repos/Chester-chs/Codi/releases/latest','--hostname','github.com']);assert.equal(options.windowsHide,true);return {stdout:payload};}});
+  const result=await checkVersion('0.1.0',{fetch:async(url,options)=>{assert.equal(url,VERSION_API);assert.equal(options.redirect,'error');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);return new Response('',{status:404});},execFile:async(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api','repos/Chester-chs/CodexOshi/releases/latest','--hostname','github.com']);assert.equal(options.windowsHide,true);return {stdout:payload};}});
   assert.equal(result.status,'available');assert.equal(result.latest,'0.2.0');
   await assert.rejects(()=>readPublic('https://example.com'),/unsupported-source/);
   await assert.rejects(()=>readTimeline({fetch:async(url)=>{assert.equal(url,TIMELINE);return new Response('',{status:429,headers:{'retry-after':'3600'}});}}),e=>e.message==='rate-limited'&&e.retryMs===3600000);

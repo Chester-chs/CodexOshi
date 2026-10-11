@@ -11,10 +11,10 @@ if ($commit -notmatch '^[a-fA-F0-9]{40}$') { throw 'Published tag commit is inva
 $dist = Join-Path $sourceRoot 'dist'
 [IO.Directory]::CreateDirectory($dist) | Out-Null
 $stage = Join-Path $dist ('nodegit-' + [guid]::NewGuid().ToString('N'))
-$zip = Join-Path $dist ('Codi-Node24-Git-' + $version + '.zip')
+$zip = Join-Path $dist ('CodexOshi-Node24-Git-' + $version + '.zip')
 try {
     [IO.Directory]::CreateDirectory($stage) | Out-Null
-    foreach ($name in @('Install-Codi.ps1', 'Install-Codi.cmd', 'README.txt')) {
+    foreach ($name in @('Install-CodexOshi.ps1', 'Install-CodexOshi.cmd', 'README.txt')) {
         Copy-Item -LiteralPath (Join-Path $sourceRoot ('packaging\nodegit\' + $name)) -Destination $stage
     }
     $manifest = @{ version = $version; commit = $commit } | ConvertTo-Json
@@ -28,7 +28,7 @@ try {
         Remove-Item -LiteralPath $stage -Recurse -Force
     }
 }
-$files = @((Join-Path $dist ('Codi-Setup-' + $version + '-win-x64.exe')), $zip) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+$files = @((Join-Path $dist ('CodexOshi-Setup-' + $version + '-win-x64.exe')), $zip) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
 $checksums = foreach ($file in $files) { (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + (Split-Path -Leaf $file) }
 [IO.File]::WriteAllText((Join-Path $dist 'SHA256SUMS.txt'), (($checksums -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
 Write-Output ([pscustomobject]@{ package = $zip; bytes = (Get-Item -LiteralPath $zip).Length; sha256 = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant(); version = $version; commit = $commit } | ConvertTo-Json)
