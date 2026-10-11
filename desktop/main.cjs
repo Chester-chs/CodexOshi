@@ -61,13 +61,13 @@ const widgetEnabled=()=>panelPreferences.widgetEnabled!==false;
 const displaySize=(portrait=characterSize)=>panelPreferences.compactOnly?{width:Math.min(280,Math.max(180,portrait.width)),height:52}:portrait;
 const currentResident=(portrait=characterSize)=>residentSize(displaySize(portrait),dip.width,dip.height,docked()&&!panelPreferences.compactOnly);
 function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready){const portrait=viewLayout?.regions?.[0];win.webContents.send('layout',{...viewLayout,residentSize:displaySize(),docked:docked(),mirrored:Boolean(!docked()&&portrait&&portrait.x+portrait.width/2<dip.width/2),widgetEnabled:widgetEnabled(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}}
+function sendLayout(){if(ready){const portrait=viewLayout?.regions?.[0];win.webContents.send('layout',{...viewLayout,residentSize:displaySize(),docked:docked(),mirrored:Boolean(!docked()&&portrait&&portrait.x+portrait.width/2<dip.width/2),widgetEnabled:widgetEnabled(),expanded,keyboardMode,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}}
 function notifyLayout(){
   if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
 }
 function beginDrag(){
-  if(dragging)return;endPanelFocus();defaultPlacement=false;dragging=true;
+  if(dragging)return;if(!expanded)endPanelFocus();defaultPlacement=false;dragging=true;
   checkpointTimer=setTimeout(function checkpoint(){
     if(!dragging)return;savePosition();checkpointTimer=setTimeout(checkpoint,1000);
   },3000);
@@ -127,7 +127,7 @@ app.whenReady().then(async()=>{
     try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;setTextEditing(false);notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
   });
   const dismiss=()=>{endPanelFocus();if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
-  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging||!widgetEnabled())return;speechVisible=false;panelOffset=null;expanded=true;updateShape();diagnostic();});
+  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging||!widgetEnabled())return;speechVisible=false;panelOffset=null;expanded=true;keyboardMode=true;setTextEditing(fieldEditing);updateShape();win.focus();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   let booleanPreferenceQueue=Promise.resolve();
   const queueBooleanPreference=operation=>{const result=booleanPreferenceQueue.then(operation);booleanPreferenceQueue=result.catch(()=>{});return result;};

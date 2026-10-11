@@ -49,8 +49,12 @@ window.widget.layout(value=>{
   layoutDragging=Boolean(value.dragging);
   document.getElementById('character-stage').style.transform=value.mirrored?'scaleX(-1)':'none';
   window.resizeCharacter?.(base.width,base.height,residentDocked,Boolean(value.mirrored));
-  if(value.expanded&&details.hidden)selectTab('quota');
-  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);else keyboardButton.setAttribute('aria-pressed','false');
+  const opening=value.expanded&&details.hidden;
+  if(opening)selectTab('quota');
+  details.hidden=!value.expanded;
+  if(value.expanded)rectangle(details,value.regions[1]);
+  keyboardButton.setAttribute('aria-pressed',String(Boolean(value.expanded&&value.keyboardMode)));
+  if(opening&&value.keyboardMode)document.querySelector('nav [aria-selected="true"]').focus();
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}
   if(!layoutDragging&&!value.resizing){render();reportScroll();}
 });

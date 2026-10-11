@@ -12,6 +12,7 @@ Your Codex desktop companion: use a favorite anime or game character alongside q
 
 ## Release history
 
+- **[0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5):** settings keyboard mode starts automatically; language choices now have equal-width fills. Old local voice-test settings remain compatible.
 - **[0.3.4](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.4):** renamed Codi to CodexOshi, with the same local characters and settings. The name reflects your own favorite anime or game character alongside Codex.
 - **[0.3.3](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.3):** fresher quota fallback, release-based updates, and expiry for old cached announcements.
 - **[0.3.2](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.2):** bar-only mode, visible stale-data status, and keyboard navigation in settings.
@@ -29,12 +30,25 @@ See the bilingual [changelog](CHANGELOG.md) for details.
 - **Click sound:** Starlight duo is the default sound. Under **CodexOshi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
 - **Character controls:** height and width sit together, each with a slider and numeric input. Restore defaults returns to height 280, automatic width, and centered framing. The progress bar stays below the character.
 - **Window following:** pinning moves the character to the lower-right corner with a 24 px right margin and scales it down in smaller windows. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
-- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota. For keyboard navigation, click the keyboard icon in the card header, then use Tab, arrow keys on the tabs, and Escape to close.
+- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota with keyboard mode enabled automatically.
 - **Bar-only mode:** under **CodexOshi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
 - **One-click updates:** CodexOshi checks for new versions every 6 hours. When an update is available, click **Update now** in CodexOshi Settings to download, install, and restart CodexOshi while keeping your characters and settings.
 - **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.
 - **Visible on/off control:** switch off from the settings card; a small CodexOshi switch remains inside the Codex window so you can turn it back on.
+
+## Settings keyboard shortcuts
+
+Keyboard mode turns on each time you open the settings card. The keyboard icon in the header lets you turn it off or back on for that opening.
+
+| Keys | Action |
+| --- | --- |
+| `Tab` / `Shift+Tab` | Move to the next / previous control. |
+| `←` / `→` on a top tab | Switch between Quota, Tokens, Character, and Appearance. |
+| `Home` / `End` on a top tab | Jump to the first / last tab. |
+| `Enter` / `Space` | Activate the focused button or switch. |
+| Arrow keys on the card resize handle | Adjust the card size by 20 px. |
+| `Esc` | Close the settings card while keyboard mode is on. |
 
 ## Preview
 

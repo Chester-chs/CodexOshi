@@ -18,6 +18,18 @@ test('card preferences persist independently and reject malformed, oversized and
   const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-panel-prefs-'));
   try{const store=new PanelPreferencesStore(root);await fs.writeFile(path.join(root,'appearance.json'),'{"palette":"sage"}');await store.save({width:700,height:740,language:'en-US'});assert.deepEqual(await new PanelPreferencesStore(root).read(),{width:700,height:740,language:'en-US'});await assert.rejects(store.save({width:800,height:800,language:'en-US'}));assert.equal(await fs.readFile(path.join(root,'appearance.json'),'utf8'),'{"palette":"sage"}');await fs.writeFile(store.file,'x'.repeat(8192));assert.deepEqual(await store.read(),{width:480,height:560,language:'zh-CN'});await fs.unlink(store.file);await fs.mkdir(path.join(root,'target'));await fs.symlink(path.join(root,'target'),store.file,'junction');await assert.rejects(store.save({width:500,height:600,language:'zh-CN'}));}finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+test('legacy voice preference is ignored without resetting other card settings',async()=>{
+  const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-legacy-voice-'));
+  try{
+    const store=new PanelPreferencesStore(root);
+    await fs.writeFile(store.file,JSON.stringify({width:620,height:700,language:'en-US',dockBottomRight:false,voiceEnabled:true}));
+    const preferences=await store.read();
+    assert.deepEqual(preferences,{width:620,height:700,language:'en-US',dockBottomRight:false});
+    await store.save(preferences);
+    assert.equal(Object.hasOwn(JSON.parse(await fs.readFile(store.file,'utf8')),'voiceEnabled'),false);
+  }finally{await fs.rm(root,{recursive:true,force:true});}
+});
 test('bar-only preference persists and rejects invalid values',async()=>{
   const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-bar-only-'));
   try{const store=new PanelPreferencesStore(root);await store.save({width:480,height:560,language:'zh-CN',compactOnly:true});assert.equal((await new PanelPreferencesStore(root).read()).compactOnly,true);await assert.rejects(store.save({width:480,height:560,language:'zh-CN',compactOnly:'yes'}));}finally{await fs.rm(root,{recursive:true,force:true});}
@@ -30,10 +42,12 @@ test('bar-only mode keeps the footer at its free-position baseline and restores 
   assert.equal((await h.ipc('panel-compact-only',false)).ok,true);
   const restored=h.shapes.at(-1)[0];assert.deepEqual(restored,before);
 });
-test('keyboard navigation holds focus only while the settings panel is open',async()=>{
+test('keyboard navigation starts automatically on every settings opening and ends on close',async()=>{
   const h=await mainHarness();h.ipc('open-settings');
-  assert.equal(h.ipc('panel-keyboard-mode',true).ok,true);
-  assert.equal(h.run('textEditing'),true);
+  assert.equal(h.run('keyboardMode'),true);assert.equal(h.run('textEditing'),true);
+  assert.equal(h.ipc('panel-keyboard-mode',false).ok,true);assert.equal(h.run('textEditing'),false);
+  h.ipc('collapse');assert.equal(h.run('textEditing'),false);
+  h.ipc('open-settings');assert.equal(h.run('keyboardMode'),true);assert.equal(h.run('textEditing'),true);
   h.ipc('collapse');assert.equal(h.run('textEditing'),false);
   assert.equal(h.ipc('panel-keyboard-mode',true).ok,false);
 });

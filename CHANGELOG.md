@@ -4,6 +4,15 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5) — 2026-10-11
+
+- Settings keyboard mode now turns on automatically whenever the card opens, and the bilingual README lists its shortcuts.
+- 每次打开设置卡片都会自动开启键盘操作；中英文 README 已列明快捷键。
+- Made both language choices equal-width, visibly filled segments.
+- 语言切换的两格固定等宽并分别填色，避免选中态看起来宽窄不一。
+- Old local test settings containing the withdrawn voice option continue to load without resetting other preferences.
+- 旧本机测试设置如含已撤回的朗读字段，仍可正常加载，不会重置其他偏好。
+
 ## [0.3.4](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.4) — 2026-10-11
 
 - Renamed the app and repository to **CodexOshi**, reflecting a favorite anime or game character beside Codex.
