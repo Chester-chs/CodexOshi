@@ -1,5 +1,6 @@
 const {app,BrowserWindow,ipcMain,screen,protocol,Notification,shell} = require('electron');
 const {installNews}=require('./news.cjs');
+const {installUpdates}=require('./updates.cjs');
 const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
@@ -30,7 +31,7 @@ let characterSize={...COMPACT};
 let panelScroll=null;
 let defaultPlacement=true;
 let freePosition=null;
-let diagnosticTimer,layoutTimer,checkpointTimer,news,newsTimer;
+let diagnosticTimer,layoutTimer,checkpointTimer,news,newsTimer,updates;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
 const panelStore=new PanelPreferencesStore(data);
@@ -46,7 +47,7 @@ try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'ut
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt,readResetCredits:true});
 const stateFile=path.join(data,'window-state.json');
 function writeDiagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,textEditing,panelScroll,widgetEnabled:widgetEnabled(),quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),version:require('../package.json').version,pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,textEditing,panelScroll,widgetEnabled:widgetEnabled(),quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function diagnostic(){
   if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
@@ -105,6 +106,7 @@ app.whenReady().then(async()=>{
   panelPreferences=await panelStore.read();
   dialoguePreferences=await dialogueStore.read();
   news=installNews({win,data,ipcMain,Notification,shell,isActive:()=>!quitting&&widgetEnabled()&&!dragging&&!panelResizing&&host.visible!==false&&host.attached===true,language:()=>panelPreferences.language});
+  updates=installUpdates({win,data,ipcMain});
   newsTimer=setInterval(()=>news.poll().catch(()=>{}),60000);
   ipcMain.handle('dialogue-focus',(event,value)=>{
     if(event.sender!==win.webContents||typeof value!=='boolean'||value&&(!expanded||dragging))return {ok:false};
@@ -271,4 +273,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{quitting=true;clearInterval(newsTimer);news?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
+app.on('before-quit',()=>{quitting=true;clearInterval(newsTimer);news?.close();updates?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});

@@ -49,10 +49,56 @@ internal static class QuotaLauncher {
             if (saved.ContainsKey("pid") && Convert.ToInt32(saved["pid"]) == pid) File.Delete(file);
         } catch { }
     }
+    static string UpdateJob(string dataDir) {
+        // A live worker deliberately starts the candidate monitor before finishing.
+        // Its exclusive lock prevents that monitor from interpreting recovery state.
+        try { using (File.Open(Path.Combine(dataDir, "update.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None)) { } }
+        catch (IOException) { return null; }
+        string request = Path.Combine(dataDir, "update-request.json");
+        bool requested = File.Exists(request);
+        string pointer = requested ? request : Path.Combine(dataDir, "update-pending.json");
+        if (!File.Exists(pointer)) return null;
+        var value = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(pointer));
+        if (!value.ContainsKey("jobDir") || !(value["jobDir"] is string)) throw new InvalidDataException("Invalid update request.");
+        string root = Path.Combine(dataDir, "updates");
+        string job = Path.GetFullPath((string)value["jobDir"]).TrimEnd(Path.DirectorySeparatorChar);
+        if (!string.Equals(Path.GetDirectoryName(job), root, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(job)) throw new InvalidDataException("Update job is outside its data directory.");
+        foreach (string path in new [] { dataDir, root, job }) {
+            if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("Update paths cannot contain reparse points.");
+        }
+        var plan = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(Path.Combine(job, "plan.json")));
+        if (!plan.ContainsKey("version") || !plan.ContainsKey("commit")) throw new InvalidDataException("Update plan is incomplete.");
+        if (requested) {
+            var state = Json.Deserialize<Dictionary<string, object>>(File.ReadAllText(Path.Combine(dataDir, "update-state.json")));
+            string status = state.ContainsKey("status") ? Convert.ToString(state["status"]) : "";
+            if (status != "ready" && status != "installing" && status != "preparing" && status != "restarting") throw new InvalidDataException("Update request is not active.");
+            // Persist recovery before consuming the one-shot request, including if the
+            // machine shuts down between this launcher and the worker starting.
+            WriteJson(Path.Combine(dataDir, "update-pending.json"), new { jobDir = job });
+            File.Move(request, Path.Combine(job, "handoff.json"));
+        }
+        return job;
+    }
+    static void StartUpdater(string script, string dataDir, string job) {
+        string root = Path.GetDirectoryName(Path.GetDirectoryName(script));
+        string worker = Path.Combine(root, @"scripts\apply-update.ps1");
+        if (!File.Exists(worker)) throw new FileNotFoundException("Update worker is unavailable.");
+        // The executable and script are fixed by the currently running installation;
+        // the request supplies a data directory, never a command to execute.
+        var start = new ProcessStartInfo {
+            FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"),
+            Arguments = "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File " + Argument(worker) + " -DataDir " + Argument(dataDir) + " -JobDir " + Argument(job),
+            WorkingDirectory = dataDir, UseShellExecute = false, CreateNoWindow = true, WindowStyle = ProcessWindowStyle.Hidden
+        };
+        start.EnvironmentVariables.Remove("ELECTRON_RUN_AS_NODE");
+        using (var child = Process.Start(start)) { if (child == null) throw new InvalidOperationException("Update worker did not start."); }
+    }
     [STAThread]
     static int Main(string[] args) {
         string dataDir = null, script = null;
         int ownPid = Process.GetCurrentProcess().Id;
+        int exitCode = 0;
+        string updateJob = null;
         try {
             for (int i = 0; i < args.Length; i += 2) {
                 if (i + 1 >= args.Length) throw new ArgumentException("Incomplete launcher arguments.");
@@ -66,6 +112,8 @@ internal static class QuotaLauncher {
             using (var mutex = new Mutex(true, "Local\\CodexQuotaLauncher-" + Identity(dataDir), out fresh)) {
                 if (!fresh) return 0;
                 try {
+                    updateJob = UpdateJob(dataDir);
+                    if (updateJob == null) {
                     var start = new ProcessStartInfo {
                         FileName = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe"),
                         Arguments = "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File " + Argument(script) + " -DataDir " + Argument(dataDir),
@@ -92,18 +140,24 @@ internal static class QuotaLauncher {
                             startedAt = DateTime.UtcNow.ToString("o"),
                             host = "WinExe", consoleAttached = GetConsoleWindow() != IntPtr.Zero,
                             createNoWindow = true, redirectedStreams = true, killChildrenOnExit = true,
+                            updateHandoff = 1,
                             script = script, executable = Process.GetCurrentProcess().MainModule.FileName
                         });
                         try {
                             // Stay alive so the Windows task tracks the real monitor lifetime.
                             child.WaitForExit();
-                            int code = child.ExitCode;
-                            if (code != 0) WriteJson(Path.Combine(dataDir, "launcher-error.json"), new { at = DateTime.UtcNow.ToString("o"), exitCode = code, message = "Supervisor exited with an error.", diagnosticTail = Tail.ToString() });
-                            return code;
+                            exitCode = child.ExitCode;
+                            if (exitCode != 0) WriteJson(Path.Combine(dataDir, "launcher-error.json"), new { at = DateTime.UtcNow.ToString("o"), exitCode = exitCode, message = "Supervisor exited with an error.", diagnosticTail = Tail.ToString() });
                         } finally { RemoveOwnState(stateFile, ownPid); }
+                    }
+                    updateJob = UpdateJob(dataDir);
                     }
                 } finally { mutex.ReleaseMutex(); }
             }
+            // Outside both ChildJob and the singleton mutex: a detached descendant
+            // started by Electron would still die when that job closes.
+            if (updateJob != null) StartUpdater(script, dataDir, updateJob);
+            return exitCode;
         } catch (Exception error) {
             if (dataDir != null) {
                 try { WriteJson(Path.Combine(dataDir, "launcher-error.json"), new { at = DateTime.UtcNow.ToString("o"), message = error.Message }); } catch { }

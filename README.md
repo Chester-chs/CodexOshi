@@ -20,7 +20,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 - **Window following:** pinned bottom-right by default, with proportional shrinking in smaller Codex windows. Turn off pinning to drag the character and save its position.
 - **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
-- **Update checks:** check the Codi version under Codi Settings → Quota → Updates & announcements. Automatic checks run every 6 hours and link to GitHub when a newer version is found.
+- **One-click updates:** Codi checks for new versions every 6 hours. When an update is available, click **Update now** in Codi Settings to download, install, and restart Codi while keeping your characters and settings.
 - **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.
 - **Visible on/off control:** switch off from the settings card; a small Codi switch remains inside the Codex window so you can turn it back on.
 
@@ -72,7 +72,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. Codi should appear at the bottom-right.
 
-Use the folder shown above: the installer checks its location. If you already installed Codi, use Option 1 to update it instead of cloning again. While the repository is private, your GitHub account needs access to download it.
+Use the folder shown above: the installer checks its location. If you already have Codi 0.2.0 or later, update from Codi Settings. For older versions, use Option 1 once instead of cloning again. While the repository is private, your GitHub account needs access to download it.
 
 Installation also enables Windows login startup by default. To skip that, add `-NoStartup` to the installation command; add `-NoStart` to skip starting immediately. After a later MCP service update, restart Codex and open a new chat again.
 
@@ -80,7 +80,10 @@ Installation also enables Windows login startup by default. To skip that, add `-
 
 Open **Codi Settings → Quota** and scroll to **Updates & announcements**. Use **Check for updates**, **Check announcements**, or the **Check automatically** toggle. Automatic checks run while Codi is enabled and the Codex window is visible. Silent system notifications appear when supported, and a dot beside the gear indicates new information.
 
-- **Versions:** compares local and GitHub main-branch `package.json` versions. It notifies and opens the repository; follow the installation steps to update. A private repository requires GitHub CLI signed in with access via `gh auth login`. Public repositories need no login. Increase `package.json`’s version when publishing a new version.
+![One-click update in Codi Settings (synthetic version numbers)](docs/images/one-click-update.png)
+
+- **Versions:** click **Check for updates → Update now** when a new version is found. Codi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. A private repository requires GitHub CLI signed in with access via `gh auth login`; public repositories need no login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
+- **Update storage:** application releases and a recovery backup stay in the local Codi data folder. Your source checkout is preserved. Maintainers must increase the application version in `package.json` and `package-lock.json` when publishing a new version; the plugin registration version remains separate.
 - **Announcements:** reads [Tibo @thsottiaux](https://x.com/thsottiaux) through the free public timeline, with no X API key. This endpoint can be rate limited or unavailable. Failures retain the previous result; rate limits delay retries by at least 30 minutes. Manual checks have a one-minute cooldown.
 - **Times:** recognizes common explicit dates, today/tomorrow/weekdays, UTC or US Eastern/Pacific zones, and relative hours/minutes. Vague, conditional or unconfirmed times are shown with the original text rather than guessed. Announcements do not replace account quota data or mark quota as restored when the announced time passes.
 - **Notifications:** only recent new announcements trigger notifications; deduplication survives restarts. Post content is displayed as text. Displayed times update when the system timezone changes.
@@ -125,7 +128,7 @@ Quota colors retain their thresholds: normal above 20%, orange above 10% through
 ## Data and privacy
 
 - **No model turns:** quota reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. Codi does not generate completions or start agent turns.
-- **Update and announcement requests:** additionally reads the fixed GitHub repository version endpoint and the fixed public X timeline. Codex tokens, conversations, and artwork are never sent to these services. Private-repository access uses the existing GitHub CLI login; Codi does not read or store its token.
+- **Update and announcement requests:** additionally reads the fixed GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. Private-repository access uses the existing GitHub CLI login; Codi does not read or store its token.
 - **Local images:** PNG, JPEG, WebP, GIF, and BMP are checked by content, up to 10 MiB and 4096 pixels per side. HEIC is unsupported. Import copies the original; replacement preserves earlier copies. No image upload endpoint is used.
 - **Legacy characters:** an explicit single portrait takes priority. Otherwise, the first available image in `ready > tired > low > exhausted` order is used. Reading does not delete old images or rewrite their settings.
 - **Token scope:** charts summarize token-count increments in this computer's existing Codex session files. They are not official account-wide totals and exclude deleted sessions and other computers. Indexing or partial-coverage notices identify incomplete data.

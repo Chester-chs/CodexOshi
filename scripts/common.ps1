@@ -19,10 +19,37 @@ function Get-CodexExecutable {
     if (Test-Path -LiteralPath $npmExe) { return $npmExe }
     throw 'Codex executable not found.'
 }
+function Assert-CodiChildPath {
+    param([string]$Path,[string]$Parent)
+    if (-not $Path -or -not $Parent) { throw 'A bounded path is required.' }
+    $full=[IO.Path]::GetFullPath($Path).TrimEnd('\','/')
+    $base=[IO.Path]::GetFullPath($Parent).TrimEnd('\','/')
+    if (-not $full.StartsWith($base+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Path is outside its allowed directory.' }
+    $item=$full
+    while ($item.Length -ge $base.Length) {
+        if ((Test-Path -LiteralPath $item) -and ((Get-Item -LiteralPath $item -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Reparse points are not supported for update paths.' }
+        if ($item -eq $base) { break }
+        $item=Split-Path -Parent $item
+    }
+    return $full
+}
+function Get-CodiActiveRoot {
+    param([string]$DataDirectory=$DataRoot,[string]$FallbackRoot=$SourceRoot)
+    try {
+        $receipt=Get-Content -LiteralPath (Join-Path $DataDirectory 'installation.json') -Raw | ConvertFrom-Json
+        if ($receipt.activeRoot) {
+            $root=Assert-CodiChildPath $receipt.activeRoot (Join-Path $DataDirectory 'releases')
+            if ((Split-Path -Parent $root) -ne (Join-Path $DataDirectory 'releases')) { throw 'Release must be a direct child.' }
+            if (Test-Path -LiteralPath (Join-Path $root 'desktop\supervisor.ps1') -PathType Leaf) { return $root }
+        }
+    } catch { }
+    return $FallbackRoot
+}
 function Build-Launcher {
-    $source = Join-Path $SourceRoot 'desktop\WidgetLauncher.cs'
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    $source = Join-Path $Root 'desktop\WidgetLauncher.cs'
     $hash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.Substring(0,16)
-    $native = Join-Path $DataRoot 'native'
+    $native = Join-Path $DataDirectory 'native'
     [IO.Directory]::CreateDirectory($native) | Out-Null
     $exe = Join-Path $native "QuotaLauncher-$hash.exe"
     if (-not (Test-Path -LiteralPath $exe)) {
@@ -31,4 +58,11 @@ function Build-Launcher {
         if ($LASTEXITCODE) { throw 'Windows C# launcher compilation failed.' }
     }
     return $exe
+}
+function Start-CodiMonitor {
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    if (-not (Test-Path -LiteralPath (Join-Path $DataDirectory 'desktop-runtime\node_modules\electron\dist\electron.exe'))) { throw 'Install the plugin first.' }
+    Write-JsonAtomic (Join-Path $DataDirectory 'enabled.json') @{enabled=$true}
+    $launcher=Build-Launcher -Root $Root -DataDirectory $DataDirectory
+    Start-Process -FilePath $launcher -ArgumentList ('--script "'+(Join-Path $Root 'desktop\supervisor.ps1')+'" --data "'+$DataDirectory+'"') -WindowStyle Hidden
 }

@@ -1,8 +1,8 @@
 {
   "name": "codex-quota-widget",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Codex desktop quota widget — stage 1 window skeleton",
+  "description": "Codi — a character companion for Codex quota and local token usage",
   "license": "MIT",
   "engines": { "node": ">=24" },
   "scripts": { "test": "node --test tests/*.test.cjs" },
