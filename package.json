@@ -1,10 +1,16 @@
 {
   "name": "codex-quota-widget",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "private": true,
   "description": "Codi — a character companion for Codex quota and local token usage",
   "license": "MIT",
-  "engines": { "node": ">=24" },
-  "scripts": { "test": "node --test tests/*.test.cjs" },
-  "devDependencies": { "electron": "44.3.0" }
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs"
+  },
+  "devDependencies": {
+    "electron": "44.3.0"
+  }
 }

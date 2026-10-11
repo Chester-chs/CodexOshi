@@ -8,7 +8,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 > Codi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
 
-**Character tip:** use a chibi-style character with a transparent background and the full body inside the image. Its compact proportions are easier to see in a small widget. Regular character artwork works too.
+**Character tip:** use a transparent PNG of a chibi character or a regular portrait. Leave a little transparent space around the hair and clothing so framing does not cut them off. A full-body chibi is particularly readable at widget size; you can also frame a portrait from the chest up. Only use artwork you have permission to use.
 
 ## Features
 
@@ -27,39 +27,49 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 ## Preview
 
-Screenshots use geometric placeholder artwork and synthetic usage data, not user character images.
+These are real Codi UI captures with synthetic quota/token values and an original demo chibi. The demo image is an example, not a bundled character.
 
-![Character height and width controls](docs/images/resident-framing-width.png)
+| Original transparent chibi | Companion |
+| --- | --- |
+| <img src="docs/images/demo-chibi.png" width="180" alt="Original transparent chibi portrait example"> | <img src="docs/images/codi-companion.png" width="230" alt="Codi transparent chibi companion and quota bar"> |
 
-![30-day token chart](docs/images/ui-redesign-token-30-days.png)
+| Quota settings | 30-day token chart | Color themes |
+| --- | --- | --- |
+| <img src="docs/images/codi-quota.png" width="300" alt="Codi quota settings in a soft blue palette"> | <img src="docs/images/codi-token-30-days.png" width="300" alt="Thirty daily token bars"> | <img src="docs/images/codi-appearance.png" width="300" alt="Seven color themes with a clearly selected tab"> |
 
 ## Requirements
 
 - Windows x64, Windows PowerShell 5.1, and the built-in .NET Framework C# compiler.
 - Codex desktop installed and signed in, with its CLI available to the installer.
-- Node.js 24+: installs Electron and runs the local plugin status service. This is the currently supported and tested version range; earlier versions have not been verified.
-- Git: downloads and updates the source in the instructions below. The running widget does not need Git.
-- Network access for installation downloads and account quota reads. No separate API key is required.
+- An internet connection during installation: the installer includes a private copy of Node.js 24 and downloads Electron. It does not modify your system-wide Node installation or PATH.
+- Network access for account quota reads, update checks, and optional announcement checks. No separate API key is required.
 
 MSVC, C++ native modules, and an additional C# SDK are not required. macOS and Linux are not supported by this implementation.
 
-You can skip Git by downloading the source with GitHub’s **Code → Download ZIP** and extracting it to the installation folder below. Codi currently uses source installation; a standalone installer is not available yet.
+**No separate Git or Node.js installation is needed for the Windows installer.** Developers using the source installation need Node.js 24+; Git is only needed if they clone instead of downloading a source ZIP.
 
 ## Installation
 
-### Option 1: ask Codex to install it
+### Option 1: Windows installer (recommended)
+
+1. Install and sign in to the Codex desktop app.
+2. Download **Codi-Setup-0.3.0-win-x64.exe** from [the latest release](https://github.com/Chester-chs/Codi/releases/latest) and run it. The installer is currently unsigned, so Windows may ask you to confirm that you trust the download. The first install downloads Electron and may take several minutes.
+3. Fully quit and reopen Codex, then start a new chat. Codi appears near the bottom-right; click its gear for settings.
+
+The installer keeps its own Node.js copy under the Codi data directory. It adds Codi to Codex, starts the widget, and enables Windows login startup. It does not overwrite an existing source checkout; if Codi is already installed, use **Codi Settings → Quota → Check for updates → Update now**.
+
+### Option 2: ask Codex to install it
 
 Open a local chat in the Codex desktop app and paste this prompt:
 
 ```text
 Please install Codi on this Windows computer: https://github.com/Chester-chs/Codi.
-Check that Codex, Git, and Node.js 24+ are available, and help install missing dependencies.
-Place the project in %USERPROFILE%\plugins\codex-quota-widget. If it already exists, check it first and preserve my local changes, characters, and settings.
-From the project folder, run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1.
+Download the latest Codi-Setup-*-win-x64.exe from the GitHub Releases page and verify its SHA-256 using SHA256SUMS.txt.
+Run the installer. If Codi is already installed, use its in-app Update now button instead; preserve my local changes, characters, and settings.
 Verify that Codi appears in Codex and explain how to use its visible switch. If Codex needs restarting, ask me to restart it myself.
 ```
 
-### Option 2: install it yourself
+### Option 3: source installation for developers
 
 1. Install and sign in to Codex desktop. Install **Node.js 24+** and **Git** if needed.
 2. Open the Windows Start menu, search for **PowerShell**, and open it. Copy and run these lines:
@@ -73,7 +83,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. Codi should appear at the bottom-right.
 
-Use the folder shown above: the installer checks its location. If you already have Codi 0.2.0 or later, update from Codi Settings. For older versions, use Option 1 once instead of cloning again. While the repository is private, your GitHub account needs access to download it.
+Use the folder shown above: the source installer checks its location. Git is only used to clone the source. You can instead use **Code → Download ZIP** and extract it into the same folder. If Codi is already installed, update from Codi Settings rather than cloning over it.
 
 Installation also enables Windows login startup by default. To skip that, add `-NoStartup` to the installation command; add `-NoStart` to skip starting immediately. After a later MCP service update, restart Codex and open a new chat again.
 
@@ -83,7 +93,7 @@ Open **Codi Settings → Quota** and scroll to **Updates & announcements**. Use 
 
 ![One-click update in Codi Settings (synthetic version numbers)](docs/images/one-click-update.png)
 
-- **Versions:** click **Check for updates → Update now** when a new version is found. Codi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. A private repository requires GitHub CLI signed in with access via `gh auth login`; public repositories need no login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
+- **Versions:** click **Check for updates → Update now** when a new version is found. Codi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. Public updates need no Git or GitHub login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
 - **Update storage:** application releases and a recovery backup stay in the local Codi data folder. Your source checkout is preserved. Maintainers must increase the application version in `package.json` and `package-lock.json` when publishing a new version; the plugin registration version remains separate.
 - **Announcements:** reads [Tibo @thsottiaux](https://x.com/thsottiaux) through the free public timeline, with no X API key. This endpoint can be rate limited or unavailable. Failures retain the previous result; rate limits delay retries by at least 30 minutes. Manual checks have a one-minute cooldown.
 - **Times:** recognizes common explicit dates, today/tomorrow/weekdays, UTC or US Eastern/Pacific zones, and relative hours/minutes. Vague, conditional or unconfirmed times are shown with the original text rather than guessed. Announcements do not replace account quota data or mark quota as restored when the announced time passes.
@@ -129,14 +139,14 @@ Quota colors retain their thresholds: normal above 20%, orange above 10% through
 ## Data and privacy
 
 - **No model turns:** quota reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. Codi does not generate completions or start agent turns.
-- **Update and announcement requests:** additionally reads the fixed GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. Private-repository access uses the existing GitHub CLI login; Codi does not read or store its token.
+- **Update and announcement requests:** additionally reads the fixed public GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. Codi does not need a GitHub login.
 - **Local images:** PNG, JPEG, WebP, GIF, and BMP are checked by content, up to 10 MiB and 4096 pixels per side. HEIC is unsupported. Import copies the original; replacement preserves earlier copies. No image upload endpoint is used.
 - **Legacy characters:** an explicit single portrait takes priority. Otherwise, the first available image in `ready > tired > low > exhausted` order is used. Reading does not delete old images or rewrite their settings.
 - **Token scope:** charts summarize token-count increments in this computer's existing Codex session files. They are not official account-wide totals and exclude deleted sessions and other computers. Indexing or partial-coverage notices identify incomplete data.
 - **Quota freshness:** failed reads retain available data with an age/status indication. An elapsed reset deadline does not fabricate a restored quota. Unavailable reset-credit data remains unknown.
 - **Storage:** data lives under `<CODEX_HOME>\codex-quota-widget`, or `%USERPROFILE%\.codex\codex-quota-widget` when `CODEX_HOME` is unset. Source, plugin cache, and user data are separate. Authentication tokens are not written to widget diagnostics.
 
-Only upload artwork you have permission to use. Bundled placeholder art is geometric; user character art is not distributed in this repository.
+Only upload artwork you have permission to use. The README's [original demo chibi](docs/images/demo-chibi.png) is for documentation; user character art is not distributed in this repository or installer.
 
 ## Verification and technical notes
 

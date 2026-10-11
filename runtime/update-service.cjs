@@ -10,13 +10,19 @@ function sameDependencies(a,b){
   return !!a&&!!b&&normalize(a)===normalize(b);
 }
 function fail(code){return Object.assign(Error(code),{code});}
+async function findInstallNode(data,execute){
+  const bundled=path.join(data,'node-runtime','node.exe');
+  const hasNpm=node=>fs.existsSync(node)&&fs.existsSync(path.join(path.dirname(node),'node_modules/npm/bin/npm-cli.js'));
+  if(hasNpm(bundled))return bundled;
+  const paths=(await execute('where.exe',['node.exe'],{windowsHide:true,timeout:10000})).stdout.trim().split(/\r?\n/);
+  return paths.find(hasNpm);
+}
 async function prepareRuntime({data,jobDir,appRoot,signal,execute=promisify(execFile)}){
   const current=path.join(data,'desktop-runtime'),electron='node_modules/electron/dist/electron.exe';
   const candidateLock=read(path.join(appRoot,'package-lock.json'));
   if(!candidateLock)throw fail('invalid_release');
   if(sameDependencies(candidateLock,read(path.join(current,'package-lock.json')))&&fs.existsSync(path.join(current,electron)))return null;
-  const nodePaths=(await execute('where.exe',['node.exe'],{windowsHide:true,timeout:10000,signal})).stdout.trim().split(/\r?\n/);
-  const node=nodePaths.find(p=>fs.existsSync(p)&&fs.existsSync(path.join(path.dirname(p),'node_modules/npm/bin/npm-cli.js')));
+  const node=await findInstallNode(data,execute);
   if(!node)throw fail('prepare_failed');
   const major=Number((await execute(node,['-p','process.versions.node.split(".")[0]'],{windowsHide:true,timeout:10000,signal})).stdout.trim());
   if(major<24||!Number.isFinite(major))throw fail('prepare_failed');
@@ -101,4 +107,4 @@ class UpdateService {
   }
   close(){this.controller.abort();}
 }
-module.exports={UpdateService,prepareRuntime,sameDependencies};
+module.exports={UpdateService,prepareRuntime,sameDependencies,findInstallNode};

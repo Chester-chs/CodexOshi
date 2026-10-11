@@ -8,7 +8,7 @@
 
 > 当前支持 **Windows x64 与 Codex 桌面应用**。Codi 只读取额度和本机用量，不生成模型回复。角色图片始终留在本机。
 
-**形象建议**：推荐使用透明背景、全身完整的 **Q 版角色**。比例紧凑，在小挂件中更容易看清。普通立绘也可以使用。
+**形象建议**：推荐透明背景的 **Q 版角色或普通立绘**，头发和服饰四周留一点透明边距。全身 Q 版在小挂件里更容易看清；普通立绘也可以调成胸部以上近景。请只使用有权使用的素材。
 
 ## 功能
 
@@ -27,39 +27,49 @@
 
 ## 效果预览
 
-截图使用几何占位图与合成用量，不包含用户角色素材。
+以下截图来自真实 Codi 界面，额度和 token 用量为合成示例；Q 版人物是原创演示图，不会作为默认角色安装。
 
-![高度与宽度调节](docs/images/resident-framing-width.png)
+| 原创透明 Q 版示例 | 桌面挂件 |
+| --- | --- |
+| <img src="docs/images/demo-chibi.png" width="180" alt="原创透明 Q 版人物示例"> | <img src="docs/images/codi-companion.png" width="230" alt="透明 Q 版人物与额度条"> |
 
-![30 天逐日 token 柱状图](docs/images/ui-redesign-token-30-days.png)
+| 额度管理 | 30 天 token 图 | 外观配色 |
+| --- | --- | --- |
+| <img src="docs/images/codi-quota.png" width="300" alt="灰蓝配色的额度管理页面"> | <img src="docs/images/codi-token-30-days.png" width="300" alt="每天一柱的 30 天 token 图"> | <img src="docs/images/codi-appearance.png" width="300" alt="外观主题与清晰的选中状态"> |
 
 ## 运行要求
 
 - Windows x64，系统自带 Windows PowerShell 5.1 与 .NET Framework C# 编译器。
 - 已安装并登录 Codex 桌面应用，安装程序可找到其 CLI。
-- Node.js 24+：安装 Electron，并运行插件的本机状态接口。24+ 是当前支持并测试的版本范围，尚未验证更早版本。
-- Git：仅用于下方的源码下载和更新，挂件运行不需要 Git。
-- 安装下载与账户额度读取需要网络，无需另外填写 API Key。
+- 初次安装需要联网：安装包自带一份 Node.js 24，并下载 Electron。不会修改系统级 Node 安装或 PATH。
+- 账户额度读取、版本检查和可选公告检查需要联网，无需另外填写 API Key。
 
 不需要 MSVC、C++ 原生模块或额外 C# SDK。当前实现不支持 macOS、Linux。
 
-如果通过 GitHub 的 **Code → Download ZIP** 下载源码并解压到指定安装目录，可以不安装 Git。当前提供源码安装，还没有免依赖的一键安装包。
+**使用 Windows 安装包不必单独安装 Git 或 Node.js。** 仅源码安装需要 Node.js 24+；如果用 ZIP 下载源码，Git 也可以省略。
 
 ## 安装
 
-### 方法一：让 Codex 帮你安装
+### 方法一：下载安装包（推荐）
+
+1. 安装并登录 Codex 桌面版。
+2. 到 [最新版本发布页](https://github.com/Chester-chs/Codi/releases/latest) 下载 **Codi-Setup-0.3.0-win-x64.exe**，双击运行。安装包目前没有代码签名，Windows 可能要求你确认信任下载文件；首次安装会下载 Electron，可能需要几分钟。
+3. 完全退出并重新打开 Codex，再新建一个聊天。Codi 会显示在右下方，点进度条旁的齿轮即可设置。
+
+安装包会把自带的 Node.js 放在 Codi 数据目录，注册 Codex 插件、启动挂件，并默认设置为登录 Windows 后自动运行。如果已经装过 Codi，请在 **Codi 设置 → 额度管理 → 检查更新 → 一键更新**，安装包不会覆盖已有源码文件。
+
+### 方法二：让 Codex 帮你安装
 
 在 Codex 桌面版新建一个本机聊天，把下面这段话发给它：
 
 ```text
 请帮我在这台 Windows 电脑上安装 Codi：https://github.com/Chester-chs/Codi。
-先检查 Codex、Git 和 Node.js 24+，缺少依赖请协助安装。
-把项目放在 %USERPROFILE%\plugins\codex-quota-widget。若目录已存在，先检查，保留我的本地修改、角色和设置。
-在项目目录运行：powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1。
+从 GitHub Releases 下载最新的 Codi-Setup-*-win-x64.exe，并用 SHA256SUMS.txt 校验 SHA-256。
+运行安装包。如果 Codi 已安装，请改用设置中的「一键更新」，保留我的本地修改、角色和设置。
 安装后确认 Codi 能在 Codex 中显示，并告诉我如何使用可见开关。如果需要重启 Codex，请提醒我自行重启。
 ```
 
-### 方法二：自己安装
+### 方法三：开发者从源码安装
 
 1. 安装并登录 Codex 桌面版。没有 **Node.js 24+** 和 **Git** 的话，先安装这两个工具。
 2. 打开 Windows 开始菜单，搜索 **PowerShell** 并打开，复制运行下面几行：
@@ -73,7 +83,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 3. 等安装完成后，完全退出并重新打开 Codex，再新建一个聊天。Codi 应出现在右下角。
 
-请使用上面的安装目录，脚本会检查路径。已安装 Codi 0.2.0 或更新版本，可以直接在 Codi 设置里更新；更早版本先用方法一更新一次，不要重复克隆。仓库保持私有时，你的 GitHub 账号需要有下载权限。
+请使用上面的目录，源码安装脚本会检查路径。Git 只负责克隆源码；也可以用 GitHub 的 **Code → Download ZIP**，解压到同一个目录。已安装 Codi 时请从设置页更新，不要在现有目录上重复克隆。
 
 安装后默认随 Windows 登录启动。不需要自启，可在安装命令末尾加 `-NoStartup`；加 `-NoStart` 则不立即启动。之后更新 MCP 服务，也需要重新打开 Codex 并新建聊天。
 
@@ -83,7 +93,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 ![Codi 设置中的一键更新（版本号为测试示例）](docs/images/one-click-update.png)
 
-- **版本**：点「检查更新」，发现新版后点「一键更新」即可。Codi 会先下载并准备好新版本，再自动重启。准备失败时继续运行当前版本；安装失败时尝试恢复原版。立绘、对话、配色和位置都会保留。私有仓库需要 GitHub CLI 已通过 `gh auth login` 登录有访问权限的账号；公开仓库无需登录。不会重启 Codex；MCP 服务的更新在下次重启 Codex 后生效。
+- **版本**：点「检查更新」，发现新版后点「一键更新」即可。Codi 会先下载并准备好新版本，再自动重启。准备失败时继续运行当前版本；安装失败时尝试恢复原版。立绘、对话、配色和位置都会保留。公开仓库更新无需 Git 或 GitHub 登录。不会重启 Codex；MCP 服务的更新在下次重启 Codex 后生效。
 - **更新存储**：新版本和恢复备份保存在本机 Codi 数据目录，源码文件夹保持原样。维护者发布新版时需提高 `package.json` 和 `package-lock.json` 中的应用版本号；插件注册版本单独管理。
 - **公告**：来源为 [Tibo @thsottiaux](https://x.com/thsottiaux)，免费、无需 X API 密钥。公开时间线可能限流或失效；失败会保留上次结果，限流至少等待 30 分钟再试。手动检查也有 1 分钟间隔。
 - **时间**：读取明确日期／今天／明天／星期、UTC 或美东／太平洋时区，以及「几小时后」等常见表达。模糊、条件式或无法确认的时间不会猜测，会显示原文供查看。公告时间与账户实际额度分开展示，时间到达不会自行认定额度已恢复。
@@ -129,14 +139,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugin
 ## 数据与隐私
 
 - **不启动模型任务**：额度读取限制为固定额度 HTTP GET、本机 `auth.json` 与 `sessions/**/*.jsonl`，以及 app-server 的 `initialize`／`account/rateLimits/read`。不生成补全、不启动 agent turn，因此不会因挂件读取而消耗模型额度。
-- **更新与公告联网**：额外读取固定 GitHub 仓库及 X 公开时间线；点击「一键更新」后下载仓库更新包，依赖变化时下载所需运行环境。不会向这些地址发送 Codex 令牌、对话或立绘。私有仓库通过 GitHub CLI 使用其已有登录，Codi 不读取或保存 GitHub 令牌。
+- **更新与公告联网**：额外读取固定的公开 GitHub 仓库及 X 公开时间线；点击「一键更新」后下载仓库更新包，依赖变化时下载所需运行环境。不会向这些地址发送 Codex 令牌、对话或立绘，也无需 GitHub 登录。
 - **图片仅在本机**：按内容校验 PNG、JPEG、WebP、GIF、BMP，单文件最多 10 MiB、单边最多 4096 像素；不支持 HEIC。上传入口只复制本机原图，替换保留此前副本，没有图片上传到网络的入口。
 - **旧角色兼容**：明确选择的单张立绘优先；否则按 `ready > tired > low > exhausted` 选择第一张可用图。读取不删除旧图、不改写旧设置。
 - **token 统计范围**：汇总本机现存 Codex 会话的 token-count 正增量，非账户官方总量，不含已删除会话和其他电脑的数据。索引中／部分覆盖提示表示统计尚不完整。
 - **额度时效**：读取失败保留可用数据，并标出更新年龄或状态。重置时间到达不会自行伪造已恢复额度；重置卡数据不可用时保持未知。
 - **本机存储**：数据位于 `<CODEX_HOME>\codex-quota-widget`；未设置 `CODEX_HOME` 时为 `%USERPROFILE%\.codex\codex-quota-widget`。源码、插件缓存和用户数据分离；认证令牌不写入挂件诊断文件。
 
-请只上传你有权使用的素材。仓库内置几何占位图，不分发用户角色图片。
+请只上传你有权使用的素材。README 的[原创 Q 版示例图](docs/images/demo-chibi.png)仅供介绍，不会作为默认角色安装；仓库和安装包都不分发用户的立绘。
 
 ## 验证与技术说明
 

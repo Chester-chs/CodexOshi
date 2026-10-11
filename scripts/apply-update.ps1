@@ -224,7 +224,11 @@ function Invoke-CodiUpdate {
         if ($plan.cacheRoot) {
             foreach ($entry in $cacheFiles) {
                 $target=Assert-CodiChildPath (Join-Path $plan.cacheRoot $entry.relative) $plan.cacheRoot
-                if ($entry.relative -eq '.mcp.json') { Write-JsonAtomic $target @{mcpServers=@{'codex-quota-widget'=@{command='node';cwd=$plan.cacheRoot;args=@('runtime/mcp.cjs');startup_timeout_sec=10}}} }
+                if ($entry.relative -eq '.mcp.json') {
+                    $portableNode=Join-Path $DataDir 'node-runtime\node.exe'
+                    $nodeCommand=if (Test-Path -LiteralPath $portableNode -PathType Leaf) { $portableNode } else { 'node' }
+                    Write-JsonAtomic $target @{mcpServers=@{'codex-quota-widget'=@{command=$nodeCommand;cwd=$plan.cacheRoot;args=@('runtime/mcp.cjs');startup_timeout_sec=10}}}
+                }
                 else { Copy-UpdateFile (Join-Path $release $entry.relative) $target }
             }
         }
