@@ -103,7 +103,11 @@ class QuotaReader{
       if(quota?.source==='local'&&Number.isFinite(this.snapshot.observedAt)&&quota.observedAt<this.snapshot.observedAt)quota={...this.snapshot,stale:true};
       let resetCredits=quota?.resetCredits||this.snapshot.resetCredits||null;
       if((!quota||this.readResetCredits)&&(this.lastRpcAttemptAt===null||this.now()-this.lastRpcAttemptAt>=300000)){
-        this.lastRpcAttemptAt=this.now();try{const rpc=await this.rpc();if(!quota)quota=rpc;resetCredits=rpc.resetCredits||null;}catch{if(resetCredits)resetCredits={...resetCredits,stale:true};}
+        this.lastRpcAttemptAt=this.now();try{
+          const rpc=await this.rpc();
+          if(!quota||(errorCode&&rpc.windows.some(w=>w.remainingPercent!==null)&&Number.isFinite(rpc.observedAt)&&(!Number.isFinite(quota.observedAt)||rpc.observedAt>quota.observedAt)))quota=rpc;
+          resetCredits=rpc.resetCredits||null;
+        }catch{if(resetCredits)resetCredits={...resetCredits,stale:true};}
       }
       this.snapshot={...(quota || this.snapshot),resetCredits,stale:!quota || Boolean(errorCode) || quota.source!=='http',lastAttemptAt:this.now(),lastRpcAttemptAt:this.lastRpcAttemptAt,errorCode};return this.snapshot;
     }finally{this.busy=false;}

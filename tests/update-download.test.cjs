@@ -40,7 +40,8 @@ function files(version='0.2.0'){
 function metadata(version='0.2.0'){return {encoding:'base64',content:Buffer.from(JSON.stringify({name:'codex-quota-widget',version})).toString('base64')};}
 function publicFetch(archive,version='0.2.0',seen=[]){return async(url,options)=>{
   seen.push(url);assert.equal(options.redirect,'manual');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);
-  if(url===`${API}/commits/main`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/Codi/commit/${SHA}`});
+  if(url===`${API}/releases/latest`)return Response.json({tag_name:`v${version}`,draft:false,prerelease:false});
+  if(url===`${API}/commits/v${version}`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/Codi/commit/${SHA}`});
   if(url===`${API}/contents/package.json?ref=${SHA}`)return Response.json(metadata(version));
   if(url===ARCHIVE)return new Response(archive);
   throw Error(`unexpected request: ${url}`);
@@ -48,11 +49,24 @@ function publicFetch(archive,version='0.2.0',seen=[]){return async(url,options)=
 function job(t){const root=fs.mkdtempSync(path.join(os.tmpdir(),'codi-update-download-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));return path.join(root,'job');}
 const code=value=>error=>error.code===value;
 
-test('release pins metadata and extracted app to the same main commit',async t=>{
+test('update stages the latest published tag and never resolves main',async t=>{
+  const jobDir=job(t),seen=[];
+  const result=await prepareRelease({jobDir,currentVersion:'0.1.0',fetch:async(url,options)=>{
+    seen.push(url);assert.equal(options.credentials,'omit');
+    if(url===`${API}/releases/latest`)return Response.json({tag_name:'v0.2.0',draft:false,prerelease:false});
+    if(url===`${API}/commits/v0.2.0`)return Response.json({sha:SHA,html_url:`https://github.com/Chester-chs/Codi/commit/${SHA}`});
+    if(url===`${API}/contents/package.json?ref=${SHA}`)return Response.json(metadata());
+    if(url===ARCHIVE)return new Response(zip(files()));
+    throw Error(`unexpected request: ${url}`);
+  }});
+  assert.equal(result.version,'0.2.0');
+  assert.deepEqual(seen,[`${API}/releases/latest`,`${API}/commits/v0.2.0`,`${API}/contents/package.json?ref=${SHA}`,ARCHIVE]);
+});
+test('release pins metadata and extracted app to the published tag commit',async t=>{
   const jobDir=job(t),seen=[];
   const result=await prepareRelease({jobDir,currentVersion:'0.1.0',fetch:publicFetch(zip(files()),'0.2.0',seen)});
   assert.deepEqual(result,{version:'0.2.0',commit:SHA,appRoot:path.join(jobDir,'app')});
-  assert.deepEqual(seen,[`${API}/commits/main`,`${API}/contents/package.json?ref=${SHA}`,ARCHIVE]);
+  assert.deepEqual(seen,[`${API}/releases/latest`,`${API}/commits/v0.2.0`,`${API}/contents/package.json?ref=${SHA}`,ARCHIVE]);
   assert.equal(fs.readFileSync(path.join(result.appRoot,'desktop/main.cjs'),'utf8'),'main');
   assert.equal(fs.existsSync(path.join(result.appRoot,'node_modules')),false);
 });
@@ -60,13 +74,13 @@ test('release pins metadata and extracted app to the same main commit',async t=>
 test('same or older release stops before downloading or extracting',async t=>{
   for(const latest of ['0.1.0','0.0.9']){
     const seen=[];await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:publicFetch(zip(files(latest)),latest,seen)}),code('no_update'));
-    assert.equal(seen.length,2);
+    assert.equal(seen.length,1);
   }
 });
 
 test('malformed commit and a commit URL from another repository cannot select a release',async t=>{
   for(const payload of [{sha:'main'},{sha:SHA,html_url:`https://github.com/attacker/Codi/commit/${SHA}`}]){
-    await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async()=>Response.json(payload)}),code('invalid_release'));
+    await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async url=>Response.json(url===`${API}/releases/latest`?{tag_name:'v0.2.0',draft:false,prerelease:false}:payload)}),code('invalid_release'));
   }
 });
 
@@ -74,7 +88,7 @@ test('archive redirects reject other repositories, credentials, and protocols be
   for(const location of [`https://codeload.github.com/evil/Codi/zip/${SHA}`,`https://github.com/Chester-chs/Codi/archive/main.zip`,`https://evil.test/a.zip`,`http://codeload.github.com/Chester-chs/Codi/zip/${SHA}`,`https://user@codeload.github.com/Chester-chs/Codi/zip/${SHA}`]){
     const ordinary=publicFetch(zip(files()));let calls=0;
     await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:async(url,options)=>{calls++;return url===ARCHIVE?new Response(null,{status:302,headers:{location}}):ordinary(url,options);}}),code('invalid_release'));
-    assert.equal(calls,3);
+    assert.equal(calls,4);
   }
 });
 
@@ -98,10 +112,10 @@ test('public download enforces streamed and declared size limits before extracti
 test('private GitHub fallback uses existing gh authentication and streams the pinned archive',async t=>{
   const archive=zip(files()),jobDir=job(t),commands=[];
   const result=await prepareRelease({jobDir,currentVersion:'0.1.0',fetch:async()=>new Response(null,{status:404}),
-    execFile:async(command,args,options)=>{if(command!=='gh')return realExec(command,args,options);commands.push(args);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return {stdout:JSON.stringify(args[1].endsWith('/commits/main')?{sha:SHA}:metadata())};},
+    execFile:async(command,args,options)=>{if(command!=='gh')return realExec(command,args,options);commands.push(args);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return {stdout:JSON.stringify(args[1].endsWith('/releases/latest')?{tag_name:'v0.2.0',draft:false,prerelease:false}:args[1].endsWith('/commits/v0.2.0')?{sha:SHA}:metadata())};},
     spawn:(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api',`repos/Chester-chs/Codi/zipball/${SHA}`,'--hostname','github.com']);assert.equal(options.shell,false);assert.equal(options.windowsHide,true);return cp.spawn(process.execPath,['-e','process.stdout.write(Buffer.from(process.argv[1],"base64"))',archive.toString('base64')],options);}
   });
-  assert.equal(result.version,'0.2.0');assert.deepEqual(commands,[['api','repos/Chester-chs/Codi/commits/main','--hostname','github.com'],['api',`repos/Chester-chs/Codi/contents/package.json?ref=${SHA}`,'--hostname','github.com']]);
+  assert.equal(result.version,'0.2.0');assert.deepEqual(commands,[['api','repos/Chester-chs/Codi/releases/latest','--hostname','github.com'],['api','repos/Chester-chs/Codi/commits/v0.2.0','--hostname','github.com'],['api',`repos/Chester-chs/Codi/contents/package.json?ref=${SHA}`,'--hostname','github.com']]);
 });
 
 test('missing private-repository credentials are reported without leaking CLI output',async t=>{

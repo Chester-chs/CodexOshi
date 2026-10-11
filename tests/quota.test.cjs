@@ -58,6 +58,15 @@ test('successful HTTP never reads offline data or launches RPC; failure keeps ne
   await reader.refresh();assert.equal(locals,0);assert.equal(rpcs,0);
   fail=true;await reader.refresh();assert.equal(reader.snapshot.windows[0].remainingPercent,55);assert.equal(reader.snapshot.observedAt,now);assert.equal(reader.snapshot.stale,true);assert.equal(rpcs,0);
 });
+test('a fresh RPC quota replaces an older local snapshot when HTTP fails',async()=>{
+  const older=normalize({primary:{used_percent:90,window_minutes:10080}},'local',now-60000);
+  const fresh=normalize({rateLimits:{primary:{usedPercent:10,windowDurationMins:10080}}},'rpc',now);
+  const reader=new QuotaReader({now:()=>now,http:async()=>{throw Error('http-503')},local:async()=>older,rpc:async()=>fresh,readResetCredits:true});
+  await reader.refresh();
+  assert.equal(reader.snapshot.source,'rpc');
+  assert.equal(reader.snapshot.observedAt,now);
+  assert.equal(reader.snapshot.windows[0].remainingPercent,90);
+});
 test('RPC sends initialize then quota read only after its response, and hides its child',async()=>{
   const {EventEmitter}=require('node:events'),{PassThrough,Writable}=require('node:stream');
   const child=new EventEmitter();child.stdout=new PassThrough();let initialized=false,killed=false;const methods=[];

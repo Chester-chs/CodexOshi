@@ -11,7 +11,7 @@ function installNews({win,data,ipcMain,Notification,shell,isActive,language}){
   ipcMain.handle('news-read',event=>valid(event)?service.snapshot():null);
   ipcMain.handle('news-check',async(event,kind)=>{if(!valid(event)||!isActive()||!['version','tibo'].includes(kind))return {ok:false};try{return {ok:true,state:await service.check(kind,true)};}catch{return {ok:false};}});
   ipcMain.handle('news-enabled',(event,value)=>{if(!valid(event)||typeof value!=='boolean')return {ok:false};try{const state=service.configure(value);send(state);return {ok:true,state};}catch{return {ok:false};}});
-  ipcMain.handle('news-open',async(event,kind)=>{if(!valid(event)||!['version','tibo'].includes(kind))return {ok:false};const url=kind==='version'?REPO:(service.state.tibo.notice?.url||'https://x.com/thsottiaux');if(!safeUrl(url))return {ok:false};try{await shell.openExternal(url);return {ok:true};}catch{return {ok:false};}});
+  ipcMain.handle('news-open',async(event,kind)=>{if(!valid(event)||!['version','tibo'].includes(kind))return {ok:false};const url=kind==='version'?REPO:(service.snapshot().tibo.notice?.url||'https://x.com/thsottiaux');if(!safeUrl(url))return {ok:false};try{await shell.openExternal(url);return {ok:true};}catch{return {ok:false};}});
   return {poll:async()=>{if(isActive()&&service.state.enabled)await Promise.allSettled(['version','tibo'].map(kind=>service.check(kind)));},close:()=>service.close()};
 }
 function safeUrl(url){return url===REPO||url==='https://x.com/thsottiaux'||/^https:\/\/x\.com\/thsottiaux\/status\/\d{1,25}$/.test(url);}

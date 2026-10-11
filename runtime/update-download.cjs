@@ -5,7 +5,7 @@ const childProcess=require('node:child_process');
 const {promisify}=require('node:util');
 const {Transform}=require('node:stream');
 const {pipeline}=require('node:stream/promises');
-const {compareVersions}=require('./public-news.cjs');
+const {compareVersions,publishedVersion}=require('./public-news.cjs');
 
 const REPOSITORY='Chester-chs/Codi';
 const API=`https://api.github.com/repos/${REPOSITORY}`;
@@ -148,16 +148,17 @@ async function prepareRelease(options={}){
   if(typeof jobDir!=='string'||!path.isAbsolute(jobDir))throw failure('invalid_release');
   try{compareVersions(currentVersion,currentVersion);}catch{throw failure('invalid_release');}
   checkAborted(options.signal);
-  const info=await readMetadata(`repos/${REPOSITORY}/commits/main`,options),commit=info?.sha;
+  const release=await readMetadata(`repos/${REPOSITORY}/releases/latest`,options);
+  let version;try{version=publishedVersion(release);}catch{throw failure('invalid_release');}
+  if(compareVersions(version,currentVersion)<=0)throw failure('no_update');
+  const info=await readMetadata(`repos/${REPOSITORY}/commits/${release.tag_name}`,options),commit=info?.sha;
   if(typeof commit!=='string'||!/^[0-9a-f]{40}$/.test(commit)||
     (info.html_url!==undefined&&info.html_url!==`https://github.com/${REPOSITORY}/commit/${commit}`))throw failure('invalid_release');
   const encoded=await readMetadata(`repos/${REPOSITORY}/contents/package.json?ref=${commit}`,options);
   if(encoded?.encoding!=='base64'||typeof encoded.content!=='string'||encoded.content.length>METADATA_LIMIT||
     !/^[A-Za-z0-9+/=\r\n]+$/.test(encoded.content))throw failure('invalid_release');
-  const pkg=parseJson(Buffer.from(encoded.content,'base64').toString('utf8')),version=pkg?.version;
-  if(pkg?.name!=='codex-quota-widget')throw failure('invalid_release');
-  let newer;try{newer=compareVersions(version,currentVersion)>0;}catch{throw failure('invalid_release');}
-  if(!newer)throw failure('no_update');
+  const pkg=parseJson(Buffer.from(encoded.content,'base64').toString('utf8'));
+  if(pkg?.name!=='codex-quota-widget'||pkg.version!==version)throw failure('invalid_release');
   checkAborted(options.signal);
   await fsp.mkdir(jobDir,{recursive:true});
   const stat=await fsp.lstat(jobDir);

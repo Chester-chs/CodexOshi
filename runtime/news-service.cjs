@@ -14,7 +14,11 @@ class NewsService {
       }
     }catch{}
   }
-  snapshot(){const {seen,...state}=this.state;return structuredClone(state);}
+  snapshot(){
+    const {seen,...state}=this.state,result=structuredClone(state);
+    if(result.tibo.notice?.createdAt<this.now()-7*86400000)result.tibo.notice=null;
+    return result;
+  }
   save(){fs.mkdirSync(path.dirname(this.file),{recursive:true});const temporary=this.file+'.tmp';fs.writeFileSync(temporary,JSON.stringify(this.state));fs.renameSync(temporary,this.file);}
   configure(enabled){if(typeof enabled!=='boolean')throw Error('invalid-preference');this.state.enabled=enabled;this.save();return this.snapshot();}
   deliver(kind){

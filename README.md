@@ -12,6 +12,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 ## Release history
 
+- **[0.3.3](https://github.com/Chester-chs/Codi/releases/tag/v0.3.3):** fresher quota fallback, release-based updates, and expiry for old cached announcements.
 - **[0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2):** bar-only mode, visible stale-data status, and keyboard navigation in settings.
 - **[0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1):** a more balanced quota bar, vector settings icon, and refreshed documentation.
 - **[0.3.0](https://github.com/Chester-chs/Codi/releases/tag/v0.3.0):** the first Windows installer, with Codi's character, quota, chart, and customization features.

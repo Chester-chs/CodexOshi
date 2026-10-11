@@ -1,11 +1,17 @@
 const {execFile}=require('node:child_process'),{promisify}=require('node:util');
-const REPO='https://github.com/Chester-chs/Codi',VERSION_API='https://api.github.com/repos/Chester-chs/Codi/contents/package.json?ref=main',TIMELINE='https://syndication.twitter.com/srv/timeline-profile/screen-name/thsottiaux';
+const REPO='https://github.com/Chester-chs/Codi',VERSION_API='https://api.github.com/repos/Chester-chs/Codi/releases/latest',TIMELINE='https://syndication.twitter.com/srv/timeline-profile/screen-name/thsottiaux';
 function compareVersions(a,b){
   function parse(v){const m=typeof v==='string'&&v.match(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/);if(!m||v.length>100)throw Error('invalid-version');return [m.slice(1,4).map(BigInt),m[4]?.split('.')];}
   const [x,xpre]=parse(a),[y,ypre]=parse(b),sign=(a,b)=>a>b?1:a<b?-1:0;
   for(let i=0;i<3;i++)if(x[i]!==y[i])return sign(x[i],y[i]);
   if(!xpre||!ypre)return xpre?-1:ypre?1:0;
   for(let i=0;i<Math.max(xpre.length,ypre.length);i++){const a=xpre[i],b=ypre[i];if(a===b)continue;if(a===undefined||b===undefined)return a===undefined?-1:1;const na=/^\d+$/.test(a),nb=/^\d+$/.test(b);return na&&nb?sign(BigInt(a),BigInt(b)):na!==nb?(na?-1:1):sign(a,b);}return 0;
+}
+function publishedVersion(release){
+  const tag=release?.tag_name;
+  if(release?.draft!==false||release?.prerelease!==false||typeof tag!=='string'||tag.length>100||!/^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(tag)||
+    release.html_url!==undefined&&release.html_url!==`${REPO}/releases/tag/${tag}`)throw Error('invalid-version');
+  return tag.slice(1);
 }
 function parseTimeline(html){
   const raw=html.match(/<script\b(?=[^>]*\bid=["']__NEXT_DATA__["'])[^>]*>([\s\S]*?)<\/script>/i)?.[1];
@@ -31,11 +37,11 @@ async function checkVersion(current,options={}){
   try{raw=await readPublic(VERSION_API,options);}catch(error){
     if(error.message!=='not-found')throw error;
     // Use the user's existing GitHub CLI login for this private repository; never read or expose its token.
-    try{raw=(await (options.execFile||promisify(execFile))('gh',['api','repos/Chester-chs/Codi/contents/package.json?ref=main'],{windowsHide:true,timeout:15000,maxBuffer:131072,signal:options.signal})).stdout;}catch{throw Error('github-access');}
+    try{raw=(await (options.execFile||promisify(execFile))('gh',['api','repos/Chester-chs/Codi/releases/latest','--hostname','github.com'],{windowsHide:true,timeout:15000,maxBuffer:131072,signal:options.signal})).stdout;}catch{throw Error('github-access');}
   }
-  const value=JSON.parse(raw);if(value.encoding!=='base64'||typeof value.content!=='string'||value.content.length>100000)throw Error('invalid-version');
-  const latest=JSON.parse(Buffer.from(value.content,'base64').toString('utf8')).version,result=compareVersions(latest,current);
+  let latest;try{latest=publishedVersion(JSON.parse(raw));}catch{throw Error('invalid-version');}
+  const result=compareVersions(latest,current);
   return {current,latest,status:result>0?'available':result===0?'current':'ahead',url:REPO};
 }
 async function readTimeline(options={}){return parseTimeline(await readPublic(TIMELINE,options));}
-module.exports={compareVersions,parseTimeline,checkVersion,readTimeline,readPublic,VERSION_API,TIMELINE,REPO};
+module.exports={compareVersions,publishedVersion,parseTimeline,checkVersion,readTimeline,readPublic,VERSION_API,TIMELINE,REPO};

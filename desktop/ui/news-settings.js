@@ -23,13 +23,13 @@
     result.textContent=message;result.hidden=!message;result.classList.toggle('update-error',update.status==='failed');
   }
   function render(){
-    renderUpdate();if(!snapshot)return;const {version,tibo}=snapshot;$('news-auto').checked=snapshot.enabled;
+    renderUpdate();if(!snapshot)return;const {version,tibo}=snapshot,notice=window.newsModel.recentNotice(tibo.notice);$('news-auto').checked=snapshot.enabled;
     $('codi-version').textContent='Codi '+version.current;$('version-result').textContent=t(statuses[version.status]||'暂时无法连接，保留上次结果',{version:version.latest});
     $('tibo-result').textContent=t(statuses[tibo.status]||'暂时无法连接，保留上次结果');
-    $('tibo-notice').textContent=window.newsModel.noticeText(tibo.notice,window.uiText.language);
-    $('tibo-quote').textContent=tibo.notice?.text?.slice(0,500)||'';$('tibo-quote').hidden=!tibo.notice;
+    $('tibo-notice').textContent=window.newsModel.noticeText(notice,window.uiText.language);
+    $('tibo-quote').textContent=notice?.text?.slice(0,500)||'';$('tibo-quote').hidden=!notice;
     for(const kind of ['version','tibo']){const item=snapshot[kind];$(kind+'-checked').textContent=item.checkedAt?t('上次检查：{time}',{time:window.newsModel.localTime(item.checkedAt,window.uiText.language)}):'';}
-    $('settings-open').classList.toggle('has-news',version.status==='available'||Boolean(tibo.notice&&tibo.notice.createdAt>Date.now()-2*86400000));
+    $('settings-open').classList.toggle('has-news',version.status==='available'||Boolean(notice&&notice.createdAt>Date.now()-2*86400000));
   }
   async function check(kind){const button=$(kind+'-check');button.disabled=true;$(kind+'-result').textContent=t('正在检查…');try{const result=await window.widget.newsCheck(kind);if(!result.ok)throw Error();snapshot=result.state;render();}catch{$(kind+'-result').textContent=t('检查未完成，请重试。');}finally{button.disabled=false;}}
   $('version-update').onclick=async()=>{

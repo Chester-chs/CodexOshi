@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {compareVersions,parseTimeline,checkVersion,readTimeline,readPublic,VERSION_API,TIMELINE}=require('../runtime/public-news.cjs');
 const {parseAnnouncement}=require('../runtime/reset-announcement.cjs');
 const {NewsService}=require('../runtime/news-service.cjs');
-const {localTime}=require('../desktop/ui/news-model.js');
+const {localTime,recentNotice}=require('../desktop/ui/news-model.js');
 test('version comparison uses numeric components and prerelease ordering',()=>{
   assert.equal(compareVersions('1.10.0','1.9.9'),1);
   assert.equal(compareVersions('v2.0.0','2.0.0-beta.2'),1);
@@ -17,6 +17,11 @@ test('local reset display follows system timezone and DST without changing the t
   assert.match(localTime(Date.parse('2026-12-12T18:00:00Z'),'en-US','Europe/London'),/18:00/);
   const before=process.env.TZ;try{process.env.TZ='Asia/Tokyo';assert.match(localTime(at,'en-US'),/02:00/);process.env.TZ='America/New_York';assert.match(localTime(at,'en-US'),/13:00/);}finally{if(before===undefined)delete process.env.TZ;else process.env.TZ=before;}
 });
+test('cached reset notice stops being visible after seven days even without a new fetch',()=>{
+  const now=Date.parse('2026-10-19T18:00:00Z'),notice={id:'123',createdAt:now-8*86400000};
+  assert.equal(recentNotice(notice,now),null);
+  assert.equal(recentNotice({...notice,createdAt:now-6*86400000},now).id,'123');
+});
 test('announcement cache deduplicates across restart and preserves known results on rate limit',async()=>{
   const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'codi-news-'));let now=Date.parse('2026-10-11T18:00:00Z'),calls=0,fail=false;
   const notifications=[],options={data:dir,version:'0.1.0',now:()=>now,readTimeline:async()=>{calls++;if(fail)throw Object.assign(Error('rate-limited'),{retryMs:3600000});return [{id:'123',url:'https://x.com/thsottiaux/status/123',text:'Codex resets tomorrow at 10am PT.',createdAt:now-1000}];},checkVersion:async()=>({current:'0.1.0',latest:'0.2.0',status:'available'}),onNotice:n=>notifications.push(n)};
@@ -27,6 +32,20 @@ test('announcement cache deduplicates across restart and preserves known results
     fail=true;now+=61000;await service.check('tibo',true);assert.equal(service.state.tibo.status,'rate-limited');assert.equal(service.state.tibo.notice.id,'123');const count=calls;
     now+=61000;await service.check('tibo',true);assert.equal(calls,count);
     await service.check('version',true);assert.equal(service.state.version.status,'available');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+test('an unavailable timeline does not keep displaying an eight-day-old reset notice',async()=>{
+  const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'codi-news-'));
+  let now=Date.parse('2026-10-11T18:00:00Z'),unavailable=false;
+  const service=new NewsService({data:dir,version:'0.1.0',now:()=>now,readTimeline:async()=>{
+    if(unavailable)throw Error('timeline-unavailable');
+    return [{id:'123',url:'https://x.com/thsottiaux/status/123',text:'Codex resets tomorrow at 10am PT.',createdAt:now}];
+  }});
+  try{
+    await service.check('tibo',true);assert.equal(service.snapshot().tibo.notice.id,'123');
+    now+=8*86400000;unavailable=true;await service.check('tibo',true);
+    assert.equal(service.snapshot().tibo.status,'timeline-unavailable');
+    assert.equal(service.snapshot().tibo.notice,null);
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('old posts do not notify, unrelated posts do not replace a recent reset, and in-flight requests coalesce',async()=>{
@@ -41,9 +60,17 @@ test('timeline keeps only original Tibo posts, validates ids and rejects missing
   assert.equal(posts.length,1);assert.equal(posts[0].url,'https://x.com/thsottiaux/status/123456789');
   assert.throws(()=>parseTimeline('<html>Sign in</html>'));
 });
+test('version check follows the latest published release instead of an unreleased main version',async()=>{
+  const result=await checkVersion('0.3.1',{fetch:async url=>{
+    assert.equal(url,'https://api.github.com/repos/Chester-chs/Codi/releases/latest');
+    return Response.json({tag_name:'v0.3.2',draft:false,prerelease:false});
+  }});
+  assert.equal(result.latest,'0.3.2');
+  assert.equal(result.status,'available');
+});
 test('public reads send no credentials, private GitHub fallback stays on the fixed repository',async()=>{
-  const payload=JSON.stringify({encoding:'base64',content:Buffer.from(JSON.stringify({version:'0.2.0'})).toString('base64')});
-  const result=await checkVersion('0.1.0',{fetch:async(url,options)=>{assert.equal(url,VERSION_API);assert.equal(options.redirect,'error');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);return new Response('',{status:404});},execFile:async(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api','repos/Chester-chs/Codi/contents/package.json?ref=main']);assert.equal(options.windowsHide,true);return {stdout:payload};}});
+  const payload=JSON.stringify({tag_name:'v0.2.0',draft:false,prerelease:false});
+  const result=await checkVersion('0.1.0',{fetch:async(url,options)=>{assert.equal(url,VERSION_API);assert.equal(options.redirect,'error');assert.equal(options.credentials,'omit');assert.equal(options.headers.Authorization,undefined);return new Response('',{status:404});},execFile:async(command,args,options)=>{assert.equal(command,'gh');assert.deepEqual(args,['api','repos/Chester-chs/Codi/releases/latest','--hostname','github.com']);assert.equal(options.windowsHide,true);return {stdout:payload};}});
   assert.equal(result.status,'available');assert.equal(result.latest,'0.2.0');
   await assert.rejects(()=>readPublic('https://example.com'),/unsupported-source/);
   await assert.rejects(()=>readTimeline({fetch:async(url)=>{assert.equal(url,TIMELINE);return new Response('',{status:429,headers:{'retry-after':'3600'}});}}),e=>e.message==='rate-limited'&&e.retryMs===3600000);

@@ -12,6 +12,7 @@
 
 ## 更新记录
 
+- **[0.3.3](https://github.com/Chester-chs/Codi/releases/tag/v0.3.3)**：优先显示较新的额度、只从正式发布版更新，并隐藏过旧的缓存公告。
 - **[0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2)**：新增仅显示额度条、常驻条过期提示和设置键盘操作。
 - **[0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1)**：优化额度进度条比例与设置图标，更新说明文档和截图。
 - **[0.3.0](https://github.com/Chester-chs/Codi/releases/tag/v0.3.0)**：首次提供 Windows 安装包，包含角色、额度、图表与外观自定义等功能。

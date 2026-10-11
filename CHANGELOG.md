@@ -4,6 +4,18 @@ This page records published Codi versions. For downloads and installation, use t
 
 这里记录已正式发布的 Codi 版本；下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.3](https://github.com/Chester-chs/Codi/releases/tag/v0.3.3) — 2026-10-11
+
+- When the direct quota request fails, a newer successful Codex read now replaces an older local snapshot.
+- Update checks and downloads now use the latest published GitHub release instead of unreleased changes on `main`.
+- Tibo timeline failures no longer leave announcements older than seven days visible in settings.
+
+**中文**
+
+- 在线额度读取失败时，较新的 Codex 只读额度会替换旧的本地快照。
+- 检查和下载更新改为使用最新正式发布版本，不再使用 `main` 上尚未发布的改动。
+- Tibo 公开时间线暂不可用时，设置页不再显示超过七天的旧公告。
+
 ## [0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2) — 2026-10-11
 
 - Added a saved **Show quota bar only** option for narrow Codex windows; the gear remains available and the portrait returns when switched off.
