@@ -16,12 +16,12 @@ function Assert-UpdateTree($Root) {
 function Get-UpdatePlan {
     $bounded=Assert-CodiChildPath $JobDir (Join-Path $DataDir 'updates')
     if ((Split-Path -Parent $bounded) -ne (Join-Path $DataDir 'updates') -or (Split-Path -Leaf $bounded) -notmatch '^[A-Za-z0-9_-]{1,100}$') { throw 'Invalid update job.' }
-    $plan=Get-Content -LiteralPath (Join-Path $bounded 'plan.json') -Raw | ConvertFrom-Json
+    $plan=Get-Content -LiteralPath (Join-Path $bounded 'plan.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($plan.version -notmatch '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$' -or $plan.version.Length -gt 100 -or $plan.commit -notmatch '^[a-f0-9]{40}$') { throw 'Invalid update identity.' }
     $app=Assert-CodiChildPath $plan.appRoot $bounded
     if ($app -ne (Join-Path $bounded 'app')) { throw 'Invalid staged application path.' }
     if ($plan.runtimeRoot -and (Assert-CodiChildPath $plan.runtimeRoot $bounded) -ne (Join-Path $bounded 'runtime')) { throw 'Invalid staged runtime path.' }
-    $receipt=Get-Content -LiteralPath (Join-Path $DataDir 'installation.json') -Raw | ConvertFrom-Json
+    $receipt=Get-Content -LiteralPath (Join-Path $DataDir 'installation.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($receipt.marketplace -notmatch '^[A-Za-z0-9_-]{1,100}$') { throw 'Invalid marketplace identity.' }
     $cacheBase=Join-Path (Split-Path -Parent $DataDir) 'plugins\cache'
     $expectedCache=Join-Path $cacheBase ($receipt.marketplace+'\codex-quota-widget\0.1.0')
@@ -48,8 +48,8 @@ function Assert-UpdateApp($Root,$Version) {
     foreach ($file in @('package.json','package-lock.json','.codex-plugin\plugin.json','.mcp.json','desktop\WidgetLauncher.cs','desktop\main.cjs','desktop\supervisor.ps1','scripts\common.ps1','scripts\start.ps1','scripts\stop.ps1','scripts\apply-update.ps1','runtime\mcp.cjs')) {
         if (-not (Test-Path -LiteralPath (Join-Path $Root $file) -PathType Leaf)) { throw 'Release files are incomplete.' }
     }
-    $package=Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw | ConvertFrom-Json
-    $manifest=Get-Content -LiteralPath (Join-Path $Root '.codex-plugin\plugin.json') -Raw | ConvertFrom-Json
+    $package=Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    $manifest=Get-Content -LiteralPath (Join-Path $Root '.codex-plugin\plugin.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($package.name -ne 'codex-quota-widget' -or $package.version -ne $Version -or $manifest.name -ne 'codex-quota-widget' -or $manifest.version -ne '0.1.0') { throw 'Release identity does not match the update.' }
 }
 function Copy-UpdateFile($From,$To) {
@@ -83,7 +83,7 @@ function Stop-UpdateMonitor {
     $launcherPid=0
     while ([DateTime]::UtcNow -lt $deadline) {
         $file=Join-Path $DataDir 'launcher-state.json'
-        if (Test-Path -LiteralPath $file) { $state=Get-Content -LiteralPath $file -Raw | ConvertFrom-Json;$launcherPid=[int]$state.pid }
+        if (Test-Path -LiteralPath $file) { $state=Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json;$launcherPid=[int]$state.pid }
         if (-not $launcherPid -or -not (Get-Process -Id $launcherPid -ErrorAction SilentlyContinue)) { return }
         Start-Sleep -Milliseconds 100
     }
@@ -95,12 +95,12 @@ function Get-UpdateHostAlive {
 }
 function Get-UpdateHealth($Root,$NotBefore) {
     try {
-        $state=Get-Content -LiteralPath (Join-Path $DataDir 'launcher-state.json') -Raw | ConvertFrom-Json
+        $state=Get-Content -LiteralPath (Join-Path $DataDir 'launcher-state.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         if ([DateTime]::Parse($state.startedAt).ToUniversalTime() -lt $NotBefore -or $state.script -ne (Join-Path $Root 'desktop\supervisor.ps1') -or $state.updateHandoff -ne 1 -or -not (Get-Process -Id $state.pid -ErrorAction SilentlyContinue) -or -not (Get-Process -Id $state.supervisorPid -ErrorAction SilentlyContinue)) { return $null }
         $identity=[string]$state.pid+':'+$state.supervisorPid
         if (Get-UpdateHostAlive) {
-            $version=(Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw | ConvertFrom-Json).version
-            $window=Get-Content -LiteralPath (Join-Path $DataDir 'window-state.json') -Raw | ConvertFrom-Json
+            $version=(Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json).version
+            $window=Get-Content -LiteralPath (Join-Path $DataDir 'window-state.json') -Raw -Encoding UTF8 | ConvertFrom-Json
             $now=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             if ($window.version -ne $version -or $window.updatedAt -lt ([DateTimeOffset]$NotBefore).ToUnixTimeMilliseconds() -or $now-$window.updatedAt -ge 3500 -or $now -lt $window.updatedAt -or -not (Get-Process -Id $window.pid -ErrorAction SilentlyContinue)) { return $null }
             $identity+=':'+$window.pid
@@ -154,14 +154,14 @@ function Invoke-CodiUpdate {
     try {
         $lock=[IO.File]::Open((Join-Path $DataDir 'update.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
         $plan=Get-UpdatePlan
-        $receipt=Get-Content -LiteralPath (Join-Path $DataDir 'installation.json') -Raw | ConvertFrom-Json
+        $receipt=Get-Content -LiteralPath (Join-Path $DataDir 'installation.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         $oldRoot=Get-PreviousUpdateRoot $plan $receipt
         if (-not (Test-Path -LiteralPath (Join-Path $oldRoot 'desktop\supervisor.ps1') -PathType Leaf)) { throw 'Original application is unavailable.' }
         $journalFile=Join-Path $JobDir 'journal.json'
         if (Test-Path -LiteralPath $journalFile) {
-            $journal=Get-Content -LiteralPath $journalFile -Raw | ConvertFrom-Json
+            $journal=Get-Content -LiteralPath $journalFile -Raw -Encoding UTF8 | ConvertFrom-Json
             # Only replay paths derived from this plan, never paths from an unrelated journal.
-            $original=Get-Content -LiteralPath (Join-Path $JobDir 'backup\installation.json') -Raw | ConvertFrom-Json
+            $original=Get-Content -LiteralPath (Join-Path $JobDir 'backup\installation.json') -Raw -Encoding UTF8 | ConvertFrom-Json
             $expectedRelease=Join-Path (Join-Path $DataDir 'releases') ($plan.version+'-'+$plan.commit.Substring(0,12))
             $allowedOld=@($original.sourceRoot,$original.activeRoot,(Join-Path (Split-Path -Parent $DataDir) ('plugins\cache\'+$original.marketplace+'\codex-quota-widget\0.1.0')))
             if ($journal.version -ne $plan.version -or $journal.commit -ne $plan.commit -or $journal.cacheRoot -ne $plan.cacheRoot -or $journal.releaseRoot -ne $expectedRelease -or $journal.oldRoot -notin $allowedOld) { $journal=$null;throw 'Update journal identity is invalid.' }

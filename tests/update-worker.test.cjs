@@ -25,6 +25,29 @@ test('transaction installs a release without changing checkout or user data and 
   const f=transactionFixture(dir);powershell(harness(f,`function Set-ScheduledTask { throw 'Startup opt-out changed' }; Invoke-CodiUpdate; if($script:startedRoot -notlike '*releases*') { throw 'Release not started' }`));
   const receipt=JSON.parse(fs.readFileSync(path.join(f.data,'installation.json'))),state=JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json')));assert.equal(receipt.sourceRoot,root);assert.equal(receipt.installedAt,'original');assert.match(receipt.activeRoot,/releases/);assert.equal(state.status,'complete');assert.ok(state.ownerPid>0);assert.equal(fs.readFileSync(path.join(f.cache,'runtime','mcp.cjs'),'utf8'),'candidate runtime/mcp.cjs');assert.equal(fs.readFileSync(path.join(f.cache,'unrelated.txt'),'utf8'),'keep cached extra');assert.equal(fs.readFileSync(path.join(f.data,'desktop-runtime','node_modules','electron','dist','electron.exe'),'utf8'),'new runtime');assert.equal(fs.readFileSync(path.join(f.data,'characters','art.png'),'utf8'),'keep artwork');assert.equal(fs.readFileSync(path.join(f.data,'panel-preferences.json'),'utf8'),'keep settings');assert.equal(fs.existsSync(path.join(f.data,'update-pending.json')),false);
 }));
+test('Windows PowerShell installs a release whose BOMless UTF-8 manifest contains Chinese text',()=>fixture(dir=>{
+  const f=transactionFixture(dir);
+  // Use the release's real text: its UTF-8 bytes are invalid JSON under the
+  // system ANSI code page used by Windows PowerShell's default Get-Content.
+  const manifest=fs.readFileSync(path.join(root,'.codex-plugin','plugin.json'),'utf8').replace(/^\uFEFF/,'');
+  assert.match(manifest,/桌面角色/);f.write(path.join(f.app,'.codex-plugin','plugin.json'),manifest);
+  powershell(harness(f,'Invoke-CodiUpdate'));
+  const state=JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json'),'utf8'));
+  assert.equal(state.status,'complete','UTF-8 release metadata must not trigger install_failed');
+  assert.equal(fs.readFileSync(path.join(f.cache,'.codex-plugin','plugin.json'),'utf8'),manifest);
+}));
+test('Windows PowerShell preserves Chinese installation paths through receipt resolution and journal recovery',()=>fixture(dir=>{
+  const f=transactionFixture(path.join(dir,'中文 用户'));
+  powershell(harness(f,'Invoke-CodiUpdate'));
+  const receipt=JSON.parse(fs.readFileSync(path.join(f.data,'installation.json'),'utf8'));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json'),'utf8')).status,'complete');
+  assert.ok(fs.existsSync(path.join(receipt.activeRoot,'desktop','supervisor.ps1')));
+  powershell(`. ${quote(path.join(root,'scripts','common.ps1'))}; if((Get-CodiActiveRoot -DataDirectory ${quote(f.data)} -FallbackRoot ${quote(root)}) -ne ${quote(receipt.activeRoot)}) { throw 'UTF-8 active release path was lost' }`);
+  f.write(path.join(f.data,'update-pending.json'),JSON.stringify({jobDir:f.job}));
+  powershell(harness(f,`Invoke-CodiUpdate; if($script:startedRoot -ne ${quote(receipt.activeRoot)}) { throw 'UTF-8 recovery path was lost' }`));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json'),'utf8')).status,'complete');
+  assert.equal(fs.existsSync(path.join(f.data,'update-pending.json')),false);
+}));
 test('failed restart restores receipt, runtime and overwritten cache files, and removes newly introduced cache files',()=>fixture(dir=>{
   const f=transactionFixture(dir);powershell(harness(f,`$script:checks=0; function Wait-UpdateMonitor { param($Root,$NotBefore) $script:checks++; if($script:checks -eq 1) { throw 'candidate failed' } }; function Stop-UpdateMonitor {}; Invoke-CodiUpdate`));
   const receipt=JSON.parse(fs.readFileSync(path.join(f.data,'installation.json'))),state=JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json')));assert.equal(receipt.activeRoot,undefined);assert.equal(state.status,'failed');assert.equal(state.error,'install_failed');assert.equal(fs.readFileSync(path.join(f.cache,'runtime','mcp.cjs'),'utf8'),'old cached code');assert.equal(fs.existsSync(path.join(f.cache,'desktop','main.cjs')),false);assert.equal(fs.readFileSync(path.join(f.data,'desktop-runtime','node_modules','electron','dist','electron.exe'),'utf8'),'old runtime');

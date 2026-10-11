@@ -36,7 +36,7 @@ function Assert-CodiChildPath {
 function Get-CodiActiveRoot {
     param([string]$DataDirectory=$DataRoot,[string]$FallbackRoot=$SourceRoot)
     try {
-        $receipt=Get-Content -LiteralPath (Join-Path $DataDirectory 'installation.json') -Raw | ConvertFrom-Json
+        $receipt=Get-Content -LiteralPath (Join-Path $DataDirectory 'installation.json') -Raw -Encoding UTF8 | ConvertFrom-Json
         if ($receipt.activeRoot) {
             $root=Assert-CodiChildPath $receipt.activeRoot (Join-Path $DataDirectory 'releases')
             if ((Split-Path -Parent $root) -ne (Join-Path $DataDirectory 'releases')) { throw 'Release must be a direct child.' }
