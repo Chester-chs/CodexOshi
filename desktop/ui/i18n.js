@@ -1,6 +1,7 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.uiText=api;})(globalThis,()=>{
   let language='zh-CN';
   const en={
+    '开启 Codi':'Turn Codi on','关闭 Codi':'Turn Codi off',
     '取景倍数 0.5–4×。':'Framing zoom: 0.5–4×.',
     '1× 全身，2× 上半身；头顶与左右完整保留。':'1× full body, 2× upper body. Head and sides stay complete.',
     '雾蓝 × 群青':'Mist blue × Ultramarine','燕麦 × 暖金':'Oat × Warm gold','玫瑰白 × 酒红':'Rose white × Burgundy','雾绿 × 蓝绿':'Mist green × Teal','米白 × 深棕':'Ivory × Dark brown','灰蓝 × 深蓝':'Grey blue × Deep blue','杏白 × 暖红':'Apricot white × Warm red',

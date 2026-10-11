@@ -14,7 +14,7 @@
   const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));}),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').dataset.i18n=text;$('character-processing').textContent=window.uiText.t(text);if(bad)error(text);});
   window.resizeCharacter=(width,height)=>{const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)));};
   async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');}catch{error('角色操作失败，请重试。');}}
-  window.renderCharacter=()=>{const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
+  window.renderCharacter=()=>{if(window.codiEnabled===false)return;const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
     const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent=window.uiText.t('上传立绘，即可添加角色');list.append(hint);}

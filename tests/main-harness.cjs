@@ -4,6 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),{Eve
 async function mainHarness(source,options={}){
   const filename=path.resolve(__dirname,'../desktop/main.cjs'),localRequire=createRequire(filename),handlers=new Map(),writes=[],layouts=[],shapes=[],timers=new Map();
   let now=10000,next=0,start,stringifies=0,connect;
+  const reads={quota:0,tokens:0,terminations:0};
   const appHandlers=new Map();
   const schedule=(fn,delay,repeat=false)=>{const id=++next;timers.set(id,{fn,at:now+delay,repeat:repeat?delay:0});return id;};
   const clock={setTimeout:(fn,d)=>schedule(fn,d),clearTimeout:id=>timers.delete(id),setInterval:(fn,d)=>schedule(fn,d,true),clearInterval:id=>timers.delete(id)};
@@ -19,8 +20,8 @@ async function mainHarness(source,options={}){
   const context=vm.createContext({process:{argv:['node','main','--data','C:/drag-fixture']},Buffer,console,...clock,Date:FakeDate,JSON:{parse:JSON.parse,stringify(...args){stringifies++;return JSON.stringify(...args);}},__dirname:path.dirname(filename),require:name=>{
     if(name==='electron')return electron;if(name==='node:fs')return testFs;
     if(name==='node:net')return {createServer(fn){connect=fn;return {listen(_name,fn){fn();},close(){}};}};
-    if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}refresh(){return new Promise(()=>{});}}};
-    if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};
+    if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}refresh(){reads.quota++;return new Promise(()=>{});}}};
+    if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){reads.tokens++;}terminate(){reads.terminations++;}}};
     if(name==='../runtime/panel-preferences.cjs')return {PanelPreferencesStore:class{async read(){return options.savedPanel||{width:480,height:560,language:'zh-CN'};}async save(value){writes.push({at:now,file:'panel-preferences.json',value:JSON.stringify(value)});return value;}}};
     if(name==='../runtime/dialogue-preferences.cjs')return {DialoguePreferencesStore:class{async read(){return localRequire('../desktop/ui/dialogue-model.js').defaults();}async save(value){return localRequire('../desktop/ui/dialogue-model.js').validate(value);}}};
     if(name==='../runtime/characters.cjs')return {CharacterStore:class{async init(){}}};
@@ -31,6 +32,6 @@ async function mainHarness(source,options={}){
   const event=vm.runInContext('({sender:win.webContents})',context);
   const bridgeInfo=JSON.parse(writes.find(w=>w.file==='bridge.json').value);
   function reset(){writes.length=0;layouts.length=0;shapes.length=0;stringifies=0;}
-  reset();return {context,writes,layouts,shapes,advance,reset,bridgeInfo,appEvent:name=>appHandlers.get(name)?.(),socket(){const socket=new EventEmitter();socket.setEncoding=()=>{};socket.destroy=()=>{socket.destroyed=true;};connect(socket);return socket;},get stringifies(){return stringifies;},ipc:(name,value)=>handlers.get(name)?.(event,value),hasHandler:name=>handlers.has(name),gesture:value=>handlers.get('gesture')(event,value),run:script=>vm.runInContext(script,context)};
+  reset();return {context,writes,layouts,shapes,reads,advance,reset,bridgeInfo,appEvent:name=>appHandlers.get(name)?.(),socket(){const socket=new EventEmitter();socket.setEncoding=()=>{};socket.destroy=()=>{socket.destroyed=true;};connect(socket);return socket;},get stringifies(){return stringifies;},ipc:(name,value)=>handlers.get(name)?.(event,value),hasHandler:name=>handlers.has(name),gesture:value=>handlers.get('gesture')(event,value),run:script=>vm.runInContext(script,context)};
 }
 module.exports={mainHarness};

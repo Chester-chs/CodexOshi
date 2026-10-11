@@ -19,3 +19,18 @@ test('pinning persists independently, rejects invalid input, and switching off r
   h.reset();assert.equal((await h.ipc('panel-dock',true)).ok,true);assert.deepEqual(state(h).widget,{x:1376,y:676});
   h.reset();for(let i=0;i<120;i++)h.gesture({type:'drag',x:i,y:i});h.gesture({type:'end'});assert.equal(h.writes.length,0);assert.deepEqual(state(h).widget,{x:1376,y:676});
 });
+
+test('visible Codi switch persists off, pauses data reads and restores the original free position',async()=>{
+  const h=await mainHarness();const before=state(h);
+  assert.equal(h.hasHandler('widget-enabled'),true);
+  for(const value of [null,1,'false',{}])assert.equal((await h.ipc('widget-enabled',value))?.ok,false);
+  assert.equal(h.writes.length,0);
+  assert.equal((await h.ipc('widget-enabled',false)).ok,true);
+  assert.deepEqual(state(h).widget,before.widget);assert.deepEqual(state(h).region,[{x:656,y:534,width:120,height:42}]);
+  assert.equal(h.writes.filter(w=>w.file==='position.json').length,0);
+  const saved=JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value);assert.equal(saved.widgetEnabled,false);
+  const reads={...h.reads};h.advance(31000);assert.deepEqual(h.reads,reads);
+  h.ipc('open-settings');h.gesture({type:'click'});h.gesture({type:'drag',x:0,y:0});assert.deepEqual(state(h).region,[{x:656,y:534,width:120,height:42}]);
+  assert.equal((await h.ipc('widget-enabled',true)).ok,true);assert.deepEqual(state(h),before);assert.equal(h.reads.tokens,reads.tokens+1);assert.equal(h.reads.quota,reads.quota+1);
+  const restart=await mainHarness(undefined,{prepare:false,savedPanel:saved});resize(restart,800,600);assert.deepEqual(state(restart).region,[{x:656,y:534,width:120,height:42}]);assert.equal(restart.reads.quota,0);assert.equal(restart.reads.tokens,0);
+});

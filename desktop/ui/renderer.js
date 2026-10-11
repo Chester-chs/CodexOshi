@@ -4,6 +4,15 @@ let wheelEvents=0,scrollReportPending=false,layoutDragging=false,residentDocked=
 let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
 let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
+const codiSwitch=document.getElementById('codi-power'),codiLauncher=document.getElementById('codi-launcher');
+window.codiEnabled=true;
+async function switchCodi(enabled){
+  codiSwitch.disabled=codiLauncher.disabled=true;
+  try{const result=await window.widget.setEnabled(enabled);if(!result.ok)throw Error(result.error||text('卡片设置未能保存，请检查本机文件权限。'));}
+  catch(error){document.getElementById('panel-error').textContent=error.message;codiLauncher.title=error.message;}
+  finally{codiSwitch.disabled=codiLauncher.disabled=false;}
+}
+codiSwitch.addEventListener('click',()=>switchCodi(false));codiLauncher.addEventListener('click',()=>switchCodi(true));
 function clickFeedback(){
   feedbackAnimation?.cancel();
   const animation=document.getElementById('character-canvas').animate([{transform:'scale(1)'},{transform:'scale(.96)',offset:.35},{transform:'scale(1)'}],{duration:220,easing:'ease-out'});
@@ -20,6 +29,9 @@ panelBody.addEventListener('wheel',()=>{wheelEvents=Math.min(100000,wheelEvents+
 panelBody.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
+  window.codiEnabled=value.widgetEnabled!==false;button.hidden=!window.codiEnabled;codiLauncher.hidden=window.codiEnabled;
+  codiSwitch.setAttribute('aria-checked',String(window.codiEnabled));codiLauncher.setAttribute('aria-checked',String(window.codiEnabled));
+  if(!window.codiEnabled){feedbackAnimation?.cancel();details.hidden=true;speech.hidden=true;rectangle(codiLauncher,value.regions[0]);return;}
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
   const base=value.residentSize||value.regions[0],scale=Math.min(value.regions[0].width/base.width,value.regions[0].height/base.height);
   width=base.width;
@@ -59,7 +71,7 @@ function renderSpeech(){
 document.getElementById('position-reset').addEventListener('click',()=>window.widget.resetPosition());
 function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style.width=(remaining??0)+'%';}
 function render(){
-  if(layoutDragging)return;renderSpeech();
+  if(layoutDragging||!window.codiEnabled)return;renderSpeech();
   const view=window.quotaView.present(quota,width,Date.now(),window.uiText.language);
   window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;

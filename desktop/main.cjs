@@ -45,15 +45,16 @@ try{savedQuota=JSON.parse(fs.readFileSync(path.join(data,'quota-state.json'),'ut
 const reader=new QuotaReader({snapshot:savedQuota || undefined,lastRpcAttemptAt:savedQuota?.lastRpcAttemptAt,readResetCredits:true});
 const stateFile=path.join(data,'window-state.json');
 function writeDiagnostic(){
-  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,textEditing,panelScroll,quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
+  fs.writeFileSync(stateFile,JSON.stringify({updatedAt:Date.now(),pid:process.pid,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString(),host,viewport:dip,widget,region,clicks,dragging,expanded,speechVisible,speechIndex,textEditing,panelScroll,widgetEnabled:widgetEnabled(),quota:reader.snapshot,tokens,visible:win.isVisible(),focused:win.isFocused()},null,2));
 }
 function diagnostic(){
   if(dragging||panelResizing){if(!diagnosticTimer)diagnosticTimer=setTimeout(()=>{diagnosticTimer=null;writeDiagnostic();},500);return;}
   clearTimeout(diagnosticTimer);diagnosticTimer=null;writeDiagnostic();
 }
 const docked=()=>panelPreferences.dockBottomRight!==false;
+const widgetEnabled=()=>panelPreferences.widgetEnabled!==false;
 function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,residentSize:characterSize,docked:docked(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
+function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,residentSize:characterSize,docked:docked(),widgetEnabled:widgetEnabled(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
 function notifyLayout(){
   if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
@@ -70,6 +71,10 @@ function saveSnapshot(file,value){
 function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
+  if(!widgetEnabled()){
+    viewLayout=layout(null,dip.width,dip.height,false,0,{width:120,height:42});
+    region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);win.setShape(region);notifyLayout();return;
+  }
   const previous=widget;
   const scale=docked()?Math.min(1,dip.width*.25/characterSize.width,dip.height*.30/characterSize.height):1;
   const resident={width:Math.max(1,Math.round(characterSize.width*scale)),height:Math.max(1,Math.round(characterSize.height*scale))};
@@ -108,9 +113,17 @@ app.whenReady().then(async()=>{
     try{const saved=await dialogueStore.save(value);dialoguePreferences=saved;setTextEditing(false);notifyLayout();return {ok:true};}catch(e){return {ok:false,error:e.message};}
   });
   const dismiss=()=>{setTextEditing(false);if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
-  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging)return;speechVisible=false;panelOffset=null;expanded=true;updateShape();diagnostic();});
+  ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging||!widgetEnabled())return;speechVisible=false;panelOffset=null;expanded=true;updateShape();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
+  ipcMain.handle('widget-enabled',async(event,value)=>{
+    if(event.sender!==win.webContents||typeof value!=='boolean'||dragging||panelResizing)return {ok:false};
+    const next={...panelPreferences,widgetEnabled:value};
+    try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+    panelPreferences=next;setTextEditing(false);expanded=false;speechVisible=false;panelOffset=null;
+    if(!value){const worker=tokenWorker;tokenWorker=null;worker?.terminate();}
+    updateShape();diagnostic();if(value){readTokens();refresh().catch(()=>{});}return {ok:true};
+  });
   ipcMain.handle('panel-language',async(event,language)=>{
     if(event.sender!==win.webContents||!panelModel.LANGUAGES.includes(language))return {ok:false};
     panelPreferences={...panelPreferences,language};notifyLayout();
@@ -175,7 +188,7 @@ app.whenReady().then(async()=>{
     defaultPlacement=true;widget=null;updateShape();diagnostic();
   });
   ipcMain.on('gesture',(event,value)=>{
-    if(event.sender!==win.webContents || !value || typeof value!=='object')return;
+    if(event.sender!==win.webContents || !value || typeof value!=='object'||!widgetEnabled())return;
     if(value.type==='drag'){
       if(docked())return;
       if(!Number.isFinite(value.x)||!Number.isFinite(value.y))return;
@@ -193,21 +206,23 @@ app.whenReady().then(async()=>{
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=freePosition=saved;defaultPlacement=false;}}catch{}
   await win.loadFile(path.join(__dirname,'ui','index.html'));
   function readTokens(){
+    if(!widgetEnabled())return;
     if(!tokenWorker){
       const worker=tokenWorker=new Worker(path.join(__dirname,'../runtime/token-worker.cjs'),{workerData:{cacheFile:path.join(data,'token-index.json')}});
       worker.on('message',message=>{
-        if(message?.type!=='tokens'||win.isDestroyed())return;tokens=message.value;
+        if(message?.type!=='tokens'||win.isDestroyed()||!widgetEnabled()||tokenWorker!==worker)return;tokens=message.value;
         if(dragging)pendingTokens=tokens;else saveSnapshot('tokens-state.json',tokens);
         if(ready)win.webContents.send('tokens',tokens);diagnostic();
       });
-      worker.on('error',()=>{tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);});
+      worker.on('error',()=>{if(!widgetEnabled()||tokenWorker!==worker)return;tokens={...tokens,coverage:'partial',readErrors:1};if(ready&&!win.isDestroyed())win.webContents.send('tokens',tokens);});
       worker.on('exit',()=>{if(tokenWorker===worker)tokenWorker=null;});
     }
     tokenWorker.postMessage({type:'read'});
   }
   readTokens();tokenTimer=setInterval(readTokens,30000);
   async function refresh(){
-    const quota=await reader.refresh();if(win.isDestroyed())return;
+    if(!widgetEnabled())return;
+    const quota=await reader.refresh();if(win.isDestroyed()||!widgetEnabled())return;
     if(dragging)pendingQuota=quota;else saveSnapshot('quota-state.json',quota);
     if(ready){win.webContents.send('quota',quota);updateShape();}diagnostic();
   }

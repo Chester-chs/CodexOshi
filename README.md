@@ -1,100 +1,124 @@
 # Codi
 
-你的 Codex 桌面小伙伴：看额度、查用量、自定义角色与对话。插件标识为 `codex-quota-widget`。
+<p align="center">
+  <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
+</p>
 
-阶段 5a：系统字体、分层卡片、轻阴影与统一设计变量。「外观」页签提供六套双配色，一次选择同时设置卡片底色与强调色。每个角色仍只需一张本机立绘，额度由底部数字与进度条颜色表达。保留此前的角色、额度、token 与窗口交互功能。
+Your Codex desktop companion: a character widget with quota monitoring, local token usage charts, and customizable dialogue. Previously named **codex-quota-widget**.
 
-阶段 1–4b 已验收；角色系统保留 focusable:true 和 C# 延后 80ms 恢复宿主焦点。形状外穿透、异常形状回退和 300ms 焦点门槛按修改范围复测。本次逐项证据、对比度数据与浅深色截图见 `docs/stage-5a-verification.md`；此前记录见 docs/ 下对应阶段文件。
+> Codi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
 
-点击角色一次，直接展开详情卡片，含额度管理、token用量、角色、外观选择四个等宽页签；默认480×560 DIP，可拖动右下角调整到360–760宽、360–800高，小视口下自动夹紧。关闭按钮为44×44，顶部和尺寸手柄固定，内容单独滚动。第一页可选择简体中文/English，四页文字即时切换；卡片尺寸与语言自动保存。正文15px，token使用三张简洁指标卡，完整说明按需展开。没有独立设置窗口。本轮实测见 `docs/card-resize-language-verification.md`。
+## Features
 
-## 安装
+- **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. Codi displays reset credits; it does not spend them.
+- **Time-based token charts:** 24 hourly bars, 7 daily bars, or 30 daily bars, with the selected total and exact values. The current hour/day is still in progress.
+- **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
+- **Two click dialogues:** the first click shows reset information; clicking again while the bubble is open shows the second dialogue. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
+- **Character controls:** size and width sit together, each with a slider and numeric input. Framing uses a 0.5–4× multiplier with −/+ adjustment. The progress bar stays below the character.
+- **Window following:** pinned bottom-right by default, with proportional shrinking in smaller Codex windows. Turn off pinning to drag the character and save its position.
+- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it.
+- **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
+- **Visible on/off control:** switch off from the settings card; a small Codi switch remains inside the Codex window so you can turn it back on.
 
-Windows x64，Node.js 24+，Codex 桌面应用。使用 Windows 自带 Windows PowerShell 5.1 和 .NET Framework C# 编译器；无需 MSVC、C++ 模块或额外 C# SDK。
+## Preview
 
-源码放在 `C:\Users\Chester\plugins\codex-quota-widget`，用户数据放在 `$CODEX_HOME\codex-quota-widget`，未设置 CODEX_HOME 时为 `C:\Users\Chester\.codex\codex-quota-widget`。源码、Codex 插件缓存与用户数据分离。
+Screenshots use geometric placeholder artwork and synthetic usage data, not user character images.
 
-在源码目录运行：
+![Character size, width, and framing controls](docs/images/resident-framing-width.png)
+
+![30-day token chart](docs/images/ui-redesign-token-30-days.png)
+
+## Requirements
+
+- Windows x64, Windows PowerShell 5.1, and the built-in .NET Framework C# compiler.
+- Codex desktop installed and signed in, with its CLI available to the installer.
+- Node.js 24+ and Git for the clone instructions below.
+- Network access for installation downloads and account quota reads. No separate API key is required.
+
+MSVC, C++ native modules, and an additional C# SDK are not required. macOS and Linux are not supported by this implementation.
+
+## Installation
+
+The current installer requires the source directory **`%USERPROFILE%\plugins\codex-quota-widget`**. The GitHub repository is named Codi; keep this local folder name because the installer checks it.
+
+Run in PowerShell:
 
 ```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\plugins" | Out-Null
+git clone https://github.com/Chester-chs/Codi.git "$env:USERPROFILE\plugins\codex-quota-widget"
+Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-安装使用锁定的 Electron 44.3.0，下载文件与编译产物只写用户数据目录。它合并个人市场的本插件条目，使用 Codex 的 `plugin add` 安装；不会修改其他插件条目。默认添加当前用户登录启动任务 `Codex Quota Widget`，不请求管理员权限。调试安装可加 `-NoStartup -NoStart`。
+If that directory already contains your installation, update it instead of cloning over it. While the repository is private, cloning requires GitHub access to it.
 
-首次加载或更新 MCP 服务需要**完全退出并重开 Codex，再新建聊天**。正在进行的聊天不能用来证明更新后的服务已经加载。
+The installer downloads the pinned Electron runtime, adds Codi to the personal Codex plugin marketplace, and starts the widget. By default, it also registers the current user's Windows login task **`Codex Quota Widget`**, without administrator privileges. Use `-NoStartup` to skip creating that task or `-NoStart` to skip starting immediately.
+
+After first installation or an MCP service update, fully quit and reopen Codex, then start a new chat to load the updated MCP service.
+
+## On / off inside Codex
+
+1. Click the gear beside the progress bar to open settings.
+2. Click the **Codi switch at the top** to turn the character widget off. The character, bar, dialogue, and settings card disappear; new quota reads and token indexing pause. A quota request already in flight may finish.
+3. A small **Codi switch** remains at the bottom-right of the Codex window. Click it to turn the widget back on and restore its dimensions and position.
+
+The switch state is saved across restarts. This is Codi's own overlay control inside the Codex window, not an added control in Codex's native settings page. The × button closes the settings card only. The Codex plugin toggle controls the MCP service separately.
+
+![Small switch while the widget is off](docs/images/codi-switch-off.png)
+
+To stop the entire background monitor, including the small switch, or start it again, use PowerShell:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\start.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\stop.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify.ps1 -Native
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\uninstall.ps1
+# Start the monitor; the saved visible-switch state is preserved
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugins\codex-quota-widget\scripts\start.ps1"
+
+# Stop the monitor; keep your characters and settings
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugins\codex-quota-widget\scripts\stop.ps1"
 ```
 
-停止会禁用本挂件的跟随；重新启动会启用。卸载停止自身进程、移除自身登录任务及市场条目，保留用户数据。Codex 内停用 MCP 插件与停止登录任务是两个入口；停用挂件应运行停止脚本，卸载应运行卸载脚本。
+Stopping persists the monitor's disabled state; starting enables it again. To uninstall, run the following. It removes Codi's login task and plugin entry and retains user data:
 
-## 窗口与交互
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugins\codex-quota-widget\scripts\uninstall.ps1"
+```
 
-透明窗口按 Codex 客户区定位，C# 控制物理位置、owner 和激活后的宿主焦点恢复；Electron 同步 Chromium 的 DIP 视口。常驻区域默认约 199×280 DIP，按角色内容比例和大小设置调整，空间不足时同比缩小；宽度低于 120 DIP 隐藏进度条，只显示百分比。点击展开独立的详情区域（默认480×560 DIP，可调节，空间不足时夹紧）。形状仅包含可见界面的矩形，两块之间和形状外的点击、滚动、选择文字交给宿主。逐矩形上限跟随实际布局，另有角色 672×420、面板 760×800 和合计 890,240 DIP² 的全局兜底；空、非法、超限及整窗形状统一回退 1×1，绝不传入空形状。没有托盘、任务栏挂件。
+## Using Codi
 
-点击展开或收起，拖动保存客户区坐标；点击计数继续用于诊断。当前使用 `focusable:true`、`showInactive()` 和形状外穿透。C# 在独立消息循环中监听挂件的前台/焦点事件，合并为一次 80ms 定时恢复；直接 SetForegroundWindow 被拒绝时才临时 AttachThreadInput，结束即解除。恢复前重新检查前台、宿主可见/启用状态、owner 和 PID；用户已切到其他应用时不恢复。立即恢复会打断 Chromium 输入，80ms 延迟在本机同时保留点击与完整拖动。
+1. Open Codex. Codi follows its client area and hides when the host is unavailable or minimized.
+2. Click the character for a dialogue bubble. Click the gear to open settings.
+3. In **Character**, click **Upload portrait**. No separate create action is needed. Size and width can be entered directly; invalid values do not replace the last valid setting.
+4. Adjust the framing multiplier and drag the processed preview to pan. Zooming changes the visible portion; width is controlled independently. Changing character dimensions keeps the open settings card stable.
+5. Edit the two dialogue lines in the same page. `{重置时间}` inserts a duration such as `3d 21h`; write the surrounding sentence yourself. Presets remain editable and take effect after saving.
+6. In **Appearance**, select a theme or customize its background and accent. Text and selected controls use adjusted contrast colors for readability.
 
-**该方案允许瞬间激活及可能的焦点闪烁，验收标准是点击后 300ms 内恢复宿主。** `tests/Invoke-MouseProbe.ps1 -Label acceptance -RequirePass -VerifySwitchAway` 会计算最新 region 中心、注入点击与 10 步拖动、记录 100/300/1000ms 及前台变化时间，并用测试自有窗口验证切到其他应用后不会被拉回。它不属于插件运行时。
+Quota colors retain their thresholds: normal above 20%, orange above 10% through 20%, and red at 10% or below. The character image does not change with quota.
 
-松手后距边界 12 DIP 内吸附；尺寸或视口变化后夹紧并保存位置。若 Windows 将滚轮发往前台 Codex，C# 在现有消息循环中用 WH_MOUSE_LL 仅接管鼠标命中自身形状的滚轮，经有界队列和本机认证桥交给 Electron 的 sendInputEvent；形状外、其他应用在前台或队列已满时继续正常投递。无需 DLL 注入，也不改系统滚轮设置。tests/Invoke-WheelProbe.ps1 验证角色面板滚动、焦点保持及形状外事件不转发。
+## Data and privacy
 
-**只承诺避让窗口外侧滚动条**，内部各分栏的滚动条不做承诺：外部进程无法可靠获取宿主 DOM 中全部滚动条位置。角色与右侧、底侧外缘保留至少 24 DIP；可拖到合适位置。
+- **No model turns:** runtime reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. Codi does not generate completions or start agent turns.
+- **Local images:** PNG, JPEG, WebP, GIF, and BMP are checked by content, up to 10 MiB and 4096 pixels per side. HEIC is unsupported. Import copies the original; replacement preserves earlier copies. No image upload endpoint is used.
+- **Legacy characters:** an explicit single portrait takes priority. Otherwise, the first available image in `ready > tired > low > exhausted` order is used. Reading does not delete old images or rewrite their settings.
+- **Token scope:** charts summarize token-count increments in this computer's existing Codex session files. They are not official account-wide totals and exclude deleted sessions and other computers. Indexing or partial-coverage notices identify incomplete data.
+- **Quota freshness:** failed reads retain available data with an age/status indication. An elapsed reset deadline does not fabricate a restored quota. Unavailable reset-credit data remains unknown.
+- **Storage:** data lives under `<CODEX_HOME>\codex-quota-widget`, or `%USERPROFILE%\.codex\codex-quota-widget` when `CODEX_HOME` is unset. Source, plugin cache, and user data are separate. Authentication tokens are not written to widget diagnostics.
 
-## 零额度消耗
+Only upload artwork you have permission to use. Bundled placeholder art is geometric; user character art is not distributed in this repository.
 
-挂件每 30 秒先 GET 固定的额度接口，读取前重读 auth.json，401 再重读并最多重试一次。失败时使用只读会话额度快照；没有可用快照才启动 `codex app-server --stdio`，逐条发送 `initialize`、`account/rateLimits/read`，最多每 5 分钟一次，完成即退出。额度回退只解析最近 4 MiB 的额度快照；token 统计使用独立的只读 Worker。访问令牌只留内存，不进入诊断、日志或源码。
+## Verification and technical notes
 
-`runtime/read-policy.cjs` 拒绝允许清单外的操作。没有模型补全、会话生成或启动 agent turn 的实现。MCP 仅提供 `widget_status`，读取本挂件自己保存的归一化额度、token 汇总与窗口诊断，不重复拉取账户数据。
+```powershell
+Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify.ps1 -Native
+```
 
-界面显示剩余百分比，实心条代表剩余；>20% 为正常色，>10% 且 ≤20% 为橙色，≤10% 为红色。角色图不随额度或数据是否可用变化。按实际时长显示 5 小时、每周、长期或短期窗口，双窗口时常驻条显示剩余比例较低者。没有窗口就显示“暂无可用额度数据”；重置时间过后显示“等待更新”，不会自行恢复 100%。读取失败保留较新的已有数值并标出更新年龄。
+Automated checks cover geometry limits, invalid-shape 1×1 fallback, persistence, migration, and the quota/token read policy. Hidden Electron fixtures exercise rendering and controls. Real desktop input, click-to-host focus timing, and cross-DPI behavior require separate live checks; passing automated tests does not establish those results.
 
-额度是 Codex / Work / 工作空间智能体 / ChatGPT for Excel 共享池，Chat 模式下的对话不计入此用量。数据来自 Codex 自己的额度接口，非本插件估算。上述说明在展开详情中可见；离线快照或 RPC 数据同时标明来源。
+The overlay is shaped around visible regions; outside regions pass input to Codex. Ordinary clicks use delayed host-focus restoration; editing fields temporarily retain focus. Free dragging does not write files in the event handler: position saves on release, with timer checkpoints after a drag exceeds three seconds. The outer scrollbar edge is reserved; individual internal pane scrollbars are not automatically located.
 
-默认占位是本项目自绘的几何 PNG，不携带或分发任何动漫/同人/官方角色图。改编代码署名见 `THIRD_PARTY_NOTICES.md`。远端仓库和推送仍须获得用户确认。
+Detailed records: [window docking and dimension controls](docs/resident-docking-width-verification.md), [visible switch](docs/codi-switch-verification.md), [drag performance](docs/drag-performance-verification.md), [UI and token charts](docs/ui-redesign-verification.md), and [character formats](docs/character-formats-verification.md). Older stage records document earlier behavior.
 
-## 本机 token 用量
+The plugin ID, runtime data directory, and login task retain their original identifiers for compatibility. The repository and plugin display name are **Codi**. The `v1.0` tag preserves an earlier rollback snapshot; it is not the plugin manifest version.
 
-详情面板内切换「额度管理」与「token 用量」。token 页签的三张指标卡显示最近24小时、7天、30天。概览用K/M/B和一位小数（千/百万/十亿），单位弱化；悬停或展开“精确数值”可查看完整千分位整数。细比较条按30天值缩放，不套用额度阈值颜色。三个累计窗口相互包含，不能相加。详情卡片默认480×560 DIP，可调节且空间不足时夹紧；完整声明与索引文件数在“统计口径”中展开查看，索引中/部分覆盖提示仍直接显示。
+## License
 
-只读 sessions/**/*.jsonl 的 event_msg/token_count，累计字段为 payload.info.total_token_usage.total_tokens。每文件保留最大累计值，只有超过历史高水位的正增量进入后一条事件的时间桶；累计回退和重复不叠加，mtime 只用于发现与排序。冷启动先读最多 300 个候选文件、每文件最多尾部 768 KiB；截断尾部的首条累计值只作基线。Worker 后台以 256 KiB 块补齐历史，完整历史替换预览，不重复相加。
-
-结果缓存 5 分钟；过期只读新增偏移，未变化文件不重扫。索引保存在本挂件用户数据目录 token-index.json，仅保存文件元数据、高水位及增量时间和值，不保存会话正文。界面显示「索引中 / 部分覆盖 / 完成」和更新时间。超大非 token 行只解析有界元数据头；无法分类的超大行、读取错误或缺失事件时间会保留部分覆盖提示。
-
-这是本机现存会话的汇总，并非 OpenAI 账户官方统计；不含已删除会话及其他电脑上的会话。历史缺失、截断或累计值异常均可能影响结果，不承诺误差方向。token 统计无网络及子进程入口。
-
-## 外观与配色
-
-第四个「外观」页签只保留「主题色」：燕麦摩卡、雾蓝米白、鼠尾草杏、藕粉可可、墨绿香槟、午夜雾蓝六套双配色。选择后卡片、按钮与进度条一起变化；默认燕麦摩卡。每套自带适合的浅色或深色层次，没有独立的卡片底色、显示模式或取色器，也不随系统明暗变化。
-
-文字、底色、强调色、语义色、边线、阴影与圆角统一使用 CSS 变量。文字与表面按 sRGB 相对亮度保证至少 4.5:1；强调色图形至少 3:1，强调色文字单独保证 4.5:1。常驻进度条底衬额外按纯黑/纯白宿主背景的最坏情况计算，未使用模糊或网络资源。
-
-设置在 `<CODEX_HOME>/codex-quota-widget/appearance.json`，格式为 `{ "palette":"oat" }`。配色即时预览，修改合并150ms后通过独立本机IPC异步原子保存；重启沿用。旧版 mode/accent/surface 设置读取时映射到接近的新配色，读取不改写原文件；用户选择后才保存新格式。文件损坏或不可读时回到默认；保存失败在外观页签提示。与角色设置、图片、位置、额度/token缓存分离，不改变形状或拖动保存时机。配色参考与六套实测见 `docs/stage-5a-palettes.md`。
-
-## 本机角色
-
-点击展开并进入「角色」页签，直接点击「上传立绘」选择图片，不需要先新建角色。上传通过校验后，使用图片文件名自动创建并选中角色；重名添加序号，已有角色与素材保留。可用角色名按钮切换、更名或删除；更名对话框只取输入的名称，不在所选位置另建文件。取消或无效图片不会创建空角色。用户素材不做来源判断；界面提示“请上传你有权使用的图片。素材保存在本机，不会上传。”直接上传验证见 `docs/direct-upload-verification.md`。
-
-素材复制到 `<CODEX_HOME>/codex-quota-widget/characters/<角色名>/portrait-<随机标识>.png|jpg|webp|gif|bmp`，按内容保存实际格式（JPEG 统一为 .jpg）及已有 GIF 动画；settings.json 的 portrait 字段选择当前副本，当前角色记在 characters/active.json。替换立绘不覆盖或删除此前副本。文件名与内容不一致时以内容为准；未知扩展名可通过“所有文件”选择，HEIC 不支持。单文件最多 10 MiB，单边最多 4096px；错误在面板内提示。characters/ 已忽略且加入源码检查禁入列表，上传不会修改或移动原文件。
-
-JPG/JPEG/BMP 格式修复及内容识别验收见 `docs/character-formats-verification.md`。
-
-拖动回调不写盘：布局通知按 16ms 合并、诊断按 500ms 合并，松手保存位置；超过 3 秒仍未松手时每秒保存检查点。前后写入计数与桌面回归见 `docs/drag-performance-verification.md`。
-
-首次启动无有效保存位置时，挂件默认在 Codex 视口右下角；拖动后按 position.json 恢复，超出新视口时沿用既有夹紧规则。「角色」页签的「重置位置」可立即回到右下角并保存。验收见 `docs/default-position-verification.md`。
-
-旧角色不需要重新上传：读取时按 ready > tired > low > exhausted，选择第一张存在的图（包括未写入 settings.json 的旧状态文件）；只有 tired 图也可直接使用。读取迁移不落盘，不删除旧图，不改写旧 settings.json；后续保存取景参数也保留旧 images 与其他字段。新的单图上传优先于旧图；没有任何可用图片才使用占位。
-
-角色没有额度状态滤镜或降级缩放。图像 contain 缩放，角色区占常驻态高度 92%，默认约 258 DIP；5px 额度条和百分比叠加在底部，配随主题变化的半透明底衬，常驻窗口背景透明。点击使用当前画布执行 220ms 的 1→0.96→1 缩放脉冲，结束后完全恢复；动画不发送布局/形状操作，原有点击展开/收起与计数保留。
-
-本机浏览器 Worker 解码图片，将工作帧长边限制在 1024px。从外向内逐行/逐列裁完全透明或近白边距（alpha≤8 或 RGB 三通道均≥240）；整条边带必须全为空白，遇到首个非白不透明像素立即停止，内部白色不用于统计或删除。全白/全透明图保留原范围。默认去底：采样一圈边缘，至少 80% 为不透明像素且至少 80% 属于同色簇才尝试；仅从边缘连通的背景区域扣除，颜色容差 40、18–40 范围羽化。复杂背景或近乎整图同色时保留原图，并提示结果。原图与显示效果并排预览，关闭去底仍裁白色/透明外边距，原始字节始终不变。动画逐帧处理，裁剪边界逐帧扩展并在循环中保留，保持帧间移动。
-
-「大小」滑杆控制目标高度 H（默认 280，范围 180–420，界面 px 为 CSS 像素/DIP），按裁剪内容 cw/ch 计算宽度 round(H×cw/ch)，夹在 round(0.45H)–round(1.60H)；宽度被夹紧时反算高度。极端比例再将窗口高度限制为 48–420，图像继续 contain、不会拉伸。大小实时更新并随角色保存；旧角色缺少该参数时使用默认值。精确公式、极端比例处理和安全边界见阶段 4a 验收记录。
-
-缩放为 0.5–3×，拖动右侧显示预览可平移，常驻图即时更新；参数随角色保存，切换回来继续生效。图片通过受限 character:// 本机协议提供给 renderer，没有远端图片地址或发送图片的入口；渲染页 CSP 仅允许该本机协议的图像读取，不允许 HTTP 图片/请求。素材处理无 AI、分割模型、外部服务或 MSVC 依赖。
-
-Token指标卡与数值格式的追加验证见 docs/stage-5a-token-presentation.md。
+[MIT](LICENSE). Third-party notices and bundled font licensing are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
