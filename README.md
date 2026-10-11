@@ -10,6 +10,13 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 **Character tip:** upload a favorite anime or game character as a transparent PNG chibi or regular portrait. Leave a little transparent space around the hair and clothing so framing does not cut them off. A full-body chibi is particularly readable at widget size; you can also frame a portrait from the chest up. Only use artwork you have permission to use.
 
+## Release history
+
+- **[0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1):** a more balanced quota bar, vector settings icon, and refreshed documentation.
+- **[0.3.0](https://github.com/Chester-chs/Codi/releases/tag/v0.3.0):** the first Windows installer, with Codi's character, quota, chart, and customization features.
+
+See the bilingual [changelog](CHANGELOG.md) for details.
+
 ## Features
 
 - **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. Codi displays reset credits; it does not spend them.
