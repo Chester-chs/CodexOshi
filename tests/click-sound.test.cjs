@@ -1,13 +1,13 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const sound=()=>require('../desktop/ui/click-sound.js');
 function audioFixture(state='running'){
-  const voices=[],contexts=[];let finishResume;
+  const voices=[],contexts=[],gains=[];let finishResume;
   const context={state,currentTime:1,sampleRate:48000,destination:{},resume(){return new Promise(resolve=>{finishResume=()=>{this.state='running';resolve();};});},close(){this.state='closed';return Promise.resolve();},
     createBuffer(channels,length,rate){const data=new Float32Array(length);return {length,sampleRate:rate,getChannelData:()=>data};},
-    createGain(){return {gain:{value:1,setValueAtTime(){},cancelScheduledValues(){},linearRampToValueAtTime(){}},connect(){},disconnect(){}};},
+    createGain(){const gain={gain:{value:1,setValueAtTime(value){this.value=value;},cancelScheduledValues(){},linearRampToValueAtTime(){}},connect(){},disconnect(){}};gains.push(gain);return gain;},
     createBufferSource(){const voice={started:0,stopped:0,connect(){},disconnect(){},start(){this.started++;},stop(){this.stopped++;}};voices.push(voice);return voice;}};
   const player=sound().createPlayer({createContext:()=>{if(context.state==='closed'){context.state='running';context.currentTime=0;}contexts.push(context);return context;}});
-  return {player,context,voices,contexts,resume:()=>finishResume()};
+  return {player,context,voices,contexts,gains,resume:()=>finishResume()};
 }
 test('local chime is short, quiet and fades to silence at both boundaries',()=>{
   for(const rate of [44100,48000]){const data=sound().renderChime(rate);assert.ok(data.length/rate>=.1&&data.length/rate<=.3);let peak=0,sum=0;for(const value of data){assert.ok(Number.isFinite(value));peak=Math.max(peak,Math.abs(value));sum+=value*value;}assert.ok(peak>.02&&peak<.2);assert.ok(Math.sqrt(sum/data.length)>.005);assert.equal(data[0],0);assert.ok(Math.abs(data.at(-1))<.00001);}
@@ -31,4 +31,21 @@ test('audio device failure is contained so character dialogue can still run',asy
 });
 test('recreating a closed audio device resets the playback clock',async()=>{
   const f=audioFixture();f.context.currentTime=100;await f.player.play();f.context.state='closed';assert.equal(await f.player.play(),true);assert.equal(f.contexts.length,2);
+});
+
+test('volume applies to playback and active notes, including zero-volume silence',async()=>{
+  const f=audioFixture();f.player.setVolume(25);await f.player.play();assert.equal(f.gains.at(-1).gain.value,.25);
+  f.player.setVolume(60);assert.equal(f.gains.at(-1).gain.value,.6);
+  f.context.currentTime+=.1;f.player.setVolume(0);assert.equal(await f.player.play(),false);assert.equal(f.voices.length,1);
+});
+test('custom sound decoding is cached; source changes cancel pending playback and reject overly long files',async()=>{
+  let finish;const decoded={duration:.12,length:5760},f=audioFixture();
+  f.context.decodeAudioData=()=>new Promise(resolve=>finish=()=>resolve(decoded));
+  const url='sound://local/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const player=sound().createPlayer({createContext:()=>f.context,fetch:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(44)})});
+  player.setSource(url);const pending=player.play();await new Promise(resolve=>setImmediate(resolve));player.setSource(null);finish();assert.equal(await pending,false);assert.equal(f.voices.length,0);
+  player.setSource(url);assert.equal(await player.play(),true);assert.equal(f.voices.at(-1).buffer,decoded);
+  f.context.decodeAudioData=async()=>({duration:31,length:48000*31});
+  await assert.rejects(player.prepare('sound://local/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'),/30/);
+  await assert.rejects(player.prepare('https://example.com/sound.mp3'));
 });

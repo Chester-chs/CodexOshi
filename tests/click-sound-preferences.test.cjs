@@ -15,6 +15,19 @@ test('click sound accepts only optional booleans and survives preference persist
   }finally{await fs.rm(root,{recursive:true,force:true});}
 });
 
+test('sound volume persists from zero to full volume and rejects out-of-range or nonnumeric input',async()=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'codi-click-volume-'));
+  try{const store=new PanelPreferencesStore(root),base=model.defaults();
+    for(const clickSoundVolume of [0,25,100]){await store.save({...base,clickSoundVolume});assert.equal((await new PanelPreferencesStore(root).read()).clickSoundVolume,clickSoundVolume);}
+    for(const clickSoundVolume of [-1,101,2.5,'25',null,NaN])await assert.rejects(store.save({...base,clickSoundVolume}));
+    const h=await mainHarness();assert.equal(h.hasHandler('panel-sound-volume'),true);
+    for(const value of [-1,101,'25',null])assert.equal((await h.ipc('panel-sound-volume',value)).ok,false);
+    assert.equal((await h.ipc('panel-sound-volume',25)).ok,true);
+    assert.equal((await h.ipc('panel-preferences-read')).clickSoundVolume,25);
+    assert.equal(JSON.parse(h.writes.filter(w=>w.file==='panel-preferences.json').at(-1).value).clickSoundVolume,25);
+  }finally{await fs.rm(root,{recursive:true,force:true});}
+});
+
 test('click sound IPC rejects invalid senders and values before saving or broadcasting',async()=>{
   const h=await mainHarness();assert.equal(h.hasHandler('panel-click-sound'),true);
   for(const value of [undefined,null,0,1,'false',{},[]])assert.equal((await h.ipc('panel-click-sound',value))?.ok,false);
@@ -63,12 +76,12 @@ test('overlapping dock, power and sound saves preserve all choices and later lan
     const h=await mainHarness(undefined,{savedPanel:{width:480,height:560,language:'zh-CN',dockBottomRight:false,widgetEnabled:true}});
     h.run('globalThis.originalSave=panelStore.save.bind(panelStore);globalThis.releaseFirst=null;let first=true;panelStore.save=value=>{const saved=originalSave(value);if(!first)return saved;first=false;return new Promise(resolve=>{globalThis.releaseFirst=()=>saved.then(resolve);});};');
     const pending=h.ipc(first,first==='panel-dock');await Promise.resolve();
-    const other=h.ipc(first==='panel-dock'?'widget-enabled':'panel-dock',first!=='panel-dock'),sound=h.ipc('panel-click-sound',false);
+    const other=h.ipc(first==='panel-dock'?'widget-enabled':'panel-dock',first!=='panel-dock'),sound=h.ipc('panel-click-sound',false),volume=h.ipc('panel-sound-volume',25);
     await h.ipc('panel-language','en-US');
     h.ipc('open-settings');h.ipc('panel-resize',{type:'begin'});h.ipc('panel-resize',{type:'update',width:620,height:700});h.ipc('panel-resize',{type:'end'});
     h.run('globalThis.releaseFirst();');
-    for(const result of await Promise.all([pending,other,sound]))assert.equal(result.ok,true);
-    const expected={width:620,height:700,language:'en-US',dockBottomRight:true,widgetEnabled:false,clickSoundEnabled:false};
+    for(const result of await Promise.all([pending,other,sound,volume]))assert.equal(result.ok,true);
+    const expected={width:620,height:700,language:'en-US',dockBottomRight:true,widgetEnabled:false,clickSoundEnabled:false,clickSoundVolume:25};
     assert.deepEqual(JSON.parse(JSON.stringify(await h.ipc('panel-preferences-read'))),expected);
     assert.deepEqual(JSON.parse(h.writes.filter(w=>w.file==='panel-preferences.json').at(-1).value),expected);
   }

@@ -16,10 +16,10 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 - **Time-based token charts:** 24 hourly bars, 7 daily bars, or 30 daily bars, with the selected total and exact values. The current hour/day is still in progress.
 - **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
 - **Two click dialogues:** the first click shows reset information; clicking again while the bubble is open shows the second dialogue. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
-- **Click sound:** a short, soft chime when you click the character. Toggle it under **Codi Settings → Character → Click sound**; your choice is saved. The sound is generated locally and needs no download.
+- **Click sound:** use the built-in chime or upload your own sound under **Codi Settings → Character → Click sound**. Preview it and adjust volume from 0–100%. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
 - **Character controls:** size and width sit together, each with a slider and numeric input. Framing uses a 0.5–4× multiplier with −/+ adjustment. The progress bar stays below the character.
 - **Window following:** pinned bottom-right by default, with proportional shrinking in smaller Codex windows. Turn off pinning to drag the character and save its position.
-- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it.
+- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
 - **One-click updates:** Codi checks for new versions every 6 hours. When an update is available, click **Update now** in Codi Settings to download, install, and restart Codi while keeping your characters and settings.
 - **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.

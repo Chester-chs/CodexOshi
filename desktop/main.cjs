@@ -1,6 +1,7 @@
 const {app,BrowserWindow,ipcMain,screen,protocol,Notification,shell} = require('electron');
 const {installNews}=require('./news.cjs');
 const {installUpdates}=require('./updates.cjs');
+const {installSounds}=require('./sounds.cjs');
 const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
@@ -16,7 +17,7 @@ const panelModel=require('./ui/panel-model.js');
 const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs');
 const dialogueModel=require('./ui/dialogue-model.js');
 const {DialoguePreferencesStore}=require('../runtime/dialogue-preferences.cjs');
-protocol.registerSchemesAsPrivileged([{scheme:'character',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}}]);
+protocol.registerSchemesAsPrivileged(['character','sound'].map(scheme=>({scheme,privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}})));
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
 app.setPath('userData',path.join(data,'chromium'));
@@ -103,6 +104,7 @@ app.whenReady().then(async()=>{
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
   const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
+  await installSounds(win,data);
   panelPreferences=await panelStore.read();
   dialoguePreferences=await dialogueStore.read();
   news=installNews({win,data,ipcMain,Notification,shell,isActive:()=>!quitting&&widgetEnabled()&&!dragging&&!panelResizing&&host.visible!==false&&host.attached===true,language:()=>panelPreferences.language});
@@ -147,6 +149,17 @@ app.whenReady().then(async()=>{
       try{await panelStore.save({...panelPreferences});return {ok:true};}catch{
         panelPreferences={...panelPreferences};if(previous===undefined)delete panelPreferences.clickSoundEnabled;else panelPreferences.clickSoundEnabled=previous;notifyLayout();
         return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};
+      }
+    });
+  });
+  ipcMain.handle('panel-sound-volume',async(event,value)=>{
+    if(event.sender!==win.webContents||!Number.isInteger(value)||value<0||value>100)return {ok:false};
+    return queueBooleanPreference(async()=>{
+      const previous=panelPreferences.clickSoundVolume;
+      panelPreferences={...panelPreferences,clickSoundVolume:value};notifyLayout();
+      try{await panelStore.save({...panelPreferences});return {ok:true};}catch{
+        panelPreferences={...panelPreferences};if(previous===undefined)delete panelPreferences.clickSoundVolume;else panelPreferences.clickSoundVolume=previous;notifyLayout();
+        return {ok:false,error:'音效设置未能保存，请重试。'};
       }
     });
   });

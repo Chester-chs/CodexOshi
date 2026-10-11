@@ -1,13 +1,15 @@
 // Hidden Electron integration: real renderer/Web Audio; quota/token/image-worker fixtures.
 // Catches missing click playback, accidental drag/control playback, and lost mute state.
-const {app,BrowserWindow}=require('electron');
+const {app,BrowserWindow,dialog}=require('electron');
 const fs=require('node:fs'),path=require('node:path'),net=require('node:net');
 const Module=require('node:module'),assert=require('node:assert/strict');
 const {EventEmitter}=require('node:events');
 const outputArg=process.argv.indexOf('--output');
 assert.ok(outputArg>=0&&process.argv[outputArg+1],'--output is required');
-const output=path.resolve(process.argv[outputArg+1]),data=path.join(output,'data');
+const output=path.resolve(process.argv[outputArg+1]),customMode=process.argv.includes('--custom'),data=path.join(output,customMode?'custom-data':'data');
 const restart=process.argv.includes('--restart'),role=path.join(data,'characters','音效测试角色');
+let selectedSound=path.join(output,'喜欢的音效.wav');
+if(customMode){dialog.showOpenDialog=async()=>selectedSound?{canceled:false,filePaths:[selectedSound]}:{canceled:true,filePaths:[]};}
 fs.mkdirSync(role,{recursive:true});
 if(!restart){
   fs.copyFileSync(path.join(__dirname,'fixtures/portrait-white.png'),path.join(role,'tired.png'));
@@ -16,6 +18,8 @@ if(!restart){
   for(const file of ['panel-preferences.json','dialogue-preferences.json']){
     try{fs.unlinkSync(path.join(data,file));}catch(error){if(error.code!=='ENOENT')throw error;}
   }
+  fs.mkdirSync(path.join(data,'sounds'),{recursive:true});fs.writeFileSync(path.join(data,'sounds','active.json'),'null');
+  if(customMode){fs.writeFileSync(selectedSound,require('./audio-fixture.cjs').wav());fs.writeFileSync(path.join(output,'too-long.wav'),require('./audio-fixture.cjs').wav(31));}
 }
 const quota={resetCredits:{availableCount:2,observedAt:Date.now(),stale:false},windows:[{remainingPercent:55,label:'每周限额',resetAt:Math.floor(Date.now()/1000)+3600}],planType:'plus',source:'http',observedAt:Date.now()};
 const tokens=require('./token-fixture.cjs')();
@@ -63,11 +67,12 @@ function installAudioProbe(){
       nativeConnect.call(sink,this.destination);sinks.set(this,sink);
       const createSource=this.createBufferSource.bind(this);
       this.createBufferSource=()=>{
-        const source=createSource(),nativeStart=source.start.bind(source);
+        const source=createSource(),nativeStart=source.start.bind(source),nativeSourceConnect=source.connect.bind(source);let gain;
+        source.connect=(target,...args)=>{gain=target.gain;return nativeSourceConnect(target,...args);};
         source.start=(...startArgs)=>{
           const samples=source.buffer?.getChannelData(0)||[];let peak=0,energy=0;
           for(const sample of samples){peak=Math.max(peak,Math.abs(sample));energy+=sample*sample;}
-          probe.buffers.push({frames:samples.length,peak,rms:Math.sqrt(energy/(samples.length||1))});
+          probe.buffers.push({frames:samples.length,peak,rms:Math.sqrt(energy/(samples.length||1)),volume:gain?.value});
           const result=nativeStart(...startArgs);probe.starts++;return result;
         };
         return source;
@@ -139,7 +144,41 @@ let socket,heartbeat;
   }
   async function assertClean(){const result=await probe();assert.deepEqual(result.errors,[],'Renderer errors');assert.deepEqual(result.rejections,[],'Unhandled renderer rejections');return result;}
   await ready();
+  await click(await center('#settings-open'));
+  await js(`document.querySelector('#appearance-tab').click()`);
+  send();await delay(100);
+  assert.equal(await js(`document.querySelector('#appearance-tab').getAttribute('aria-selected')`),'true','A refresh must keep the chosen tab while settings stay open');
+  await click(await center('#close'));await click(await center('#settings-open'));
+  assert.equal(await js(`document.querySelector('#quota-tab').getAttribute('aria-selected')`),'true','Reopening settings must always return to quota');
+  await js(`document.querySelector('#character-tab').click()`);send({outsideClick:true});await delay(100);
+  await click(await center('#settings-open'));
+  assert.equal(await js(`document.querySelector('#quota-tab').getAttribute('aria-selected')`),'true','Outside dismissal must also reset the next opening');
+  await click(await center('#close'));
   assert.equal((await probe()).contexts,0,'No AudioContext before a confirmed click');
+  if(customMode){
+    const soundState=()=>JSON.parse(fs.readFileSync(path.join(data,'sounds','active.json'),'utf8'));
+    async function volume(value){await js(`(()=>{const input=document.querySelector('#sound-volume-value');input.value=${JSON.stringify(String(value))};input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));})()`);await waitFor(`(async()=> (await window.widget.panelPreferencesRead()).clickSoundVolume===${value})()`);await delay(60);assert.equal(saved().clickSoundVolume,value);}
+    async function upload(){await js(`document.querySelector('#sound-upload').scrollIntoView({block:'center'})`);await click(await center('#sound-upload'));await waitFor(`!document.querySelector('#sound-upload').disabled`);}
+    async function customClick(){const before=(await probe()).starts;await click(await center('#character-canvas'));await waitFor(`window.__clickSoundProbe.starts>${before}`);const result=await assertClean(),note=result.buffers.at(-1);assert.ok(note,'Custom clip scheduled: '+JSON.stringify(result));assert.ok(note.peak>.35&&note.peak<.45);assert.equal(note.frames,5760);assert.equal(note.volume,.25);return result;}
+    if(restart){
+      assert.ok(soundState()?.id,'Custom choice survives process restart');assert.equal(saved().clickSoundVolume,25);
+      const audio=await customClick();assert.equal(audio.starts,1);
+      fs.writeFileSync(path.join(output,'custom-restart.json'),JSON.stringify({passed:true,customAndVolumePersistAcrossRestart:true,audio},null,2));return;
+    }
+    await openSoundSettings();await volume(25);assert.equal((await probe()).contexts,0,'Changing volume remains lazy');
+    await upload();const firstId=soundState().id;assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'喜欢的音效.wav');
+    await js(`document.querySelector('#sound-preview').scrollIntoView({block:'center'})`);await click(await center('#sound-preview'));
+    let audio=await assertClean();assert.equal(audio.starts,1);assert.equal(audio.buffers.at(-1).volume,.25);assert.ok(audio.buffers.at(-1).peak>.35);
+    selectedSound=path.join(output,'too-long.wav');await upload();assert.equal(soundState().id,firstId,'A rejected long clip must keep the previous sound');assert.match(await js(`document.querySelector('#sound-message').textContent`),/30/);
+    selectedSound=null;await upload();assert.equal(soundState().id,firstId,'Cancelling the picker keeps the sound');
+    await volume(0);const starts=(await probe()).starts;await click(await center('#close'));await click(await center('#character-canvas'));assert.equal((await probe()).starts,starts,'Zero volume is silent');assert.equal(state().speechVisible,true);
+    await openSoundSettings();await volume(25);await js(`document.querySelector('#sound-reset').click()`);await waitFor(`document.querySelector('#sound-reset').hidden`);assert.equal(soundState(),null);
+    await click(await center('#close'));await click(await center('#character-canvas'));audio=await assertClean();assert.ok(audio.buffers.at(-1).peak<.2,'Reset restores the built-in chime');assert.equal(audio.buffers.at(-1).volume,.25);
+    await openSoundSettings();selectedSound=path.join(output,'喜欢的音效.wav');await upload();fs.unlinkSync(selectedSound);
+    send({outsideClick:true});await delay(100);const finished=new Promise(resolve=>win.webContents.once('did-finish-load',resolve));win.webContents.reload();await finished;await ready();
+    audio=await customClick();assert.equal(audio.starts,1,'Reload plays the retained local clip');
+    fs.writeFileSync(path.join(output,'custom-sound-ui.json'),JSON.stringify({passed:true,settingsAlwaysReopenQuota:true,upload:true,preview:true,volume25:true,zeroVolumeSilent:true,longClipRejected:true,canceledUploadPreserved:true,builtInReset:true,customAndVolumePersistAcrossReload:true,originalFileRemoved:true,hardwareOutputMuted:true,audio},null,2));return;
+  }
   assert.equal((await js('window.widget.panelPreferencesRead()')).clickSoundEnabled!==false,!restart);
   if(restart){
     assert.equal(saved().clickSoundEnabled,false,'Mute must survive a full application restart');
@@ -212,7 +251,7 @@ let socket,heartbeat;
   assert.equal(state().speechVisible,true);assert.equal(state().speechIndex,0);
   await click(await center('#character-canvas'));assert.equal(state().speechIndex,1);
   const reloaded=await assertClean();assert.equal(reloaded.contexts,0);assert.equal(reloaded.starts,0);
-  const result={passed:true,hidden:true,hardwareOutputMuted:true,imageWorkerBoundary:'local fixture bitmap',firstAndSecondClick:true,pointerdownLazy:true,nonClickGesturesSilent:['drag','pointercancel','background','settings'],muteSaved:true,mutedDialogueAlternates:true,reloadPreservesMute:true,audio,offline:rendered,reloaded};
+  const result={passed:true,settingsAlwaysReopenQuota:true,hidden:true,hardwareOutputMuted:true,imageWorkerBoundary:'local fixture bitmap',firstAndSecondClick:true,pointerdownLazy:true,nonClickGesturesSilent:['drag','pointercancel','background','settings'],muteSaved:true,mutedDialogueAlternates:true,reloadPreservesMute:true,audio,offline:rendered,reloaded};
   fs.writeFileSync(path.join(output,'click-sound-ui.json'),JSON.stringify(result,null,2));
 })().then(()=>{clearInterval(heartbeat);socket?.destroy();app.quit();}).catch(error=>{
   clearInterval(heartbeat);socket?.destroy();process.stderr.write(error.stack+'\n');app.exit(1);

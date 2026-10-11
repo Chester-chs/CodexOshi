@@ -25,7 +25,8 @@ async function mainHarness(source,options={}){
     if(name==='../runtime/panel-preferences.cjs')return {PanelPreferencesStore:class{async read(){return options.savedPanel||{width:480,height:560,language:'zh-CN'};}async save(value){writes.push({at:now,file:'panel-preferences.json',value:JSON.stringify(value)});return value;}}};
     if(name==='../runtime/dialogue-preferences.cjs')return {DialoguePreferencesStore:class{async read(){return localRequire('../desktop/ui/dialogue-model.js').defaults();}async save(value){return localRequire('../desktop/ui/dialogue-model.js').validate(value);}}};
     if(name==='../runtime/characters.cjs')return {CharacterStore:class{async init(){}}};
-    if(name==='./characters.cjs')return {installCharacters(){}};return localRequire(name);
+    if(name==='./characters.cjs')return {installCharacters(){}};
+    if(name==='./sounds.cjs')return {async installSounds(){}};return localRequire(name);
   }});
   vm.runInContext(source||fs.readFileSync(filename,'utf8'),context,{filename});await start();
   if(options.prepare!==false)vm.runInContext('panelPreferences={...panelPreferences,dockBottomRight:false};ready=true;host={attached:true,bounds:{width:800,height:600}};dip={width:800,height:600};widget={x:300,y:200};if(typeof defaultPlacement!=="undefined")defaultPlacement=false;characterSize={width:199,height:280};updateShape();',context);

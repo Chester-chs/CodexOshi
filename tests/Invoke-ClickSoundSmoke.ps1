@@ -1,12 +1,12 @@
-param([switch]$Restart)
+param([switch]$Restart,[switch]$Custom)
 . (Join-Path $PSScriptRoot '../scripts/common.ps1')
 $output=Join-Path $DataRoot 'click-sound-ui'
 [IO.Directory]::CreateDirectory($output)|Out-Null
-$result=Join-Path $output $(if($Restart){'restart.json'}else{'click-sound-ui.json'})
+$result=Join-Path $output $(if($Custom){if($Restart){'custom-restart.json'}else{'custom-sound-ui.json'}}elseif($Restart){'restart.json'}else{'click-sound-ui.json'})
 if(Test-Path -LiteralPath $result){Remove-Item -LiteralPath $result}
 $start=New-Object Diagnostics.ProcessStartInfo
 $start.FileName=Join-Path $DataRoot 'desktop-runtime/node_modules/electron/dist/electron.exe'
-$start.Arguments='"'+(Join-Path $SourceRoot 'tests/click-sound-ui-smoke.cjs')+'" --output "'+$output+'"'+$(if($Restart){' --restart'}else{''})
+$start.Arguments='"'+(Join-Path $SourceRoot 'tests/click-sound-ui-smoke.cjs')+'" --output "'+$output+'"'+$(if($Restart){' --restart'}else{''})+$(if($Custom){' --custom'}else{''})
 $start.UseShellExecute=$false
 $start.CreateNoWindow=$true
 $start.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden

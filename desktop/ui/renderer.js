@@ -3,6 +3,7 @@ let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false,residentDocked=false;
 let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
 const clickSound=window.codiSound.createPlayer();
+window.clickSoundPlayer=clickSound;
 window.addEventListener('pagehide',()=>clickSound.dispose());
 let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
@@ -41,6 +42,7 @@ window.widget.layout(value=>{
   resident.style.width=base.width+'px';resident.style.height=base.height+'px';resident.style.transform=`scale(${scale})`;residentDocked=Boolean(value.docked);button.style.cursor=residentDocked?'pointer':'grab';
   layoutDragging=Boolean(value.dragging);
   window.resizeCharacter?.(base.width,base.height);
+  if(value.expanded&&details.hidden)selectTab('quota');
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}
   if(!layoutDragging&&!value.resizing){render();reportScroll();}
