@@ -9,6 +9,7 @@ fs.copyFileSync(path.join(__dirname,'../docs/images/demo-chibi.png'),path.join(r
 fs.writeFileSync(path.join(role,'settings.json'),JSON.stringify({portrait,targetHeight:300,targetWidth:300,background:false}));
 fs.writeFileSync(path.join(data,'characters','active.json'),JSON.stringify({name:'星簿'}));
 fs.writeFileSync(path.join(data,'appearance.json'),JSON.stringify({palette:'midnight'}));
+fs.writeFileSync(path.join(data,'panel-preferences.json'),JSON.stringify({width:480,height:560,language:'en-US'}));
 const quota={windows:[{remainingPercent:78,label:'5 小时限额'},{remainingPercent:56,label:'每周限额'}],planType:'plus',source:'http',observedAt:Date.now()};
 const tokens=require('./token-fixture.cjs')();
 process.argv.push('--data',data);
@@ -32,6 +33,7 @@ const state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'
   const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,bounds:{width:1280,height:800}}})+'\n');
   send();const heartbeat=setInterval(send,300);
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code);
+  if(await js(`document.documentElement.lang`)!=='en-US')throw Error('Documentation screenshots must use English');
   for(let n=0;n<200;n++){if(await js(`document.querySelector('#character-canvas').dataset.source?.includes('portrait-0000')`))break;await delay(30);}
   await delay(200);
   async function capture(region,name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(80);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(region,{stayHidden:true,stayAwake:true})).toPNG());}

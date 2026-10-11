@@ -16,5 +16,7 @@ try{
     foreach($image in @('companion.png','quota.png','token-30-days.png','appearance.png')){
         Copy-Item -LiteralPath (Join-Path $output $image) -Destination (Join-Path $SourceRoot ('docs\images\codi-'+$image))
     }
+    & (Join-Path $PSScriptRoot 'Invoke-NewsSmoke.ps1') | Out-Null
+    Copy-Item -LiteralPath (Join-Path $DataRoot 'news-ui\update-available-en.png') -Destination (Join-Path $SourceRoot 'docs\images\one-click-update.png')
     Write-Output 'Documentation screenshots refreshed.'
 }finally{$process.Dispose()}
