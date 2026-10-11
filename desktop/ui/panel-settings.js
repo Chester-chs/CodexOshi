@@ -5,6 +5,9 @@
   function showLanguage(language){window.uiText.setLanguage(language);select.value=language;for(const button of select.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.language===language));}
   function showError(text){error.dataset.i18n=text;error.textContent=window.uiText.t(text);}
   const dock=document.getElementById('resident-dock');
+  let dockReady=false,dockSaved=true,dockSaving=false,dockBlocked=false,dockRevision=0;
+  dock.disabled=true;
+  const updateDockDisabled=()=>{dock.disabled=!dockReady||dockSaving||dockBlocked;};
   const clickSound=document.getElementById('click-sound-enabled');
   let soundEnabled=true,soundSaving=false,soundRevision=0;
   clickSound.addEventListener('change',async()=>{
@@ -14,11 +17,20 @@
     finally{soundSaving=false;clickSound.disabled=false;}
   });
   window.widget.layout(value=>{soundRevision++;if(!soundSaving){soundEnabled=value.panelPreferences?.clickSoundEnabled!==false;clickSound.checked=soundEnabled;}});
-  dock.addEventListener('change',async()=>{const value=dock.checked;try{const result=await window.widget.panelDock(value);if(!result.ok){dock.checked=!value;showError(result.error||'卡片设置未能保存，请检查本机文件权限。');}}catch{dock.checked=!value;showError('卡片设置未能保存，请检查本机文件权限。');}});
-  window.widget.layout(value=>{dock.checked=value.panelPreferences?.dockBottomRight!==false;dock.disabled=Boolean(value.dragging||value.resizing);});
+  dock.addEventListener('change',async()=>{
+    if(!dockReady||dockSaving||dockBlocked){dock.checked=dockSaved;return;}
+    const value=dock.checked;dockSaving=true;updateDockDisabled();
+    try{
+      const result=await window.widget.panelDock(value);
+      if(!result.ok)throw Error(result.error||'卡片设置未能保存，请检查本机文件权限。');
+      dockSaved=value;showError('');
+    }catch(error){dock.checked=dockSaved;showError(error.message||'卡片设置未能保存，请检查本机文件权限。');}
+    finally{dockSaving=false;updateDockDisabled();}
+  });
+  window.widget.layout(value=>{dockRevision++;dockBlocked=Boolean(value.dragging||value.resizing);dockReady=true;if(!dockSaving){dockSaved=value.panelPreferences?.dockBottomRight!==false;dock.checked=dockSaved;}updateDockDisabled();});
   window.widget.panelError(showError);
   window.widget.layout(value=>{if(value.panelPreferences)showLanguage(value.panelPreferences.language);if(value.expanded){const r=value.regions[1];size.textContent=r.width+' × '+r.height;if(!start){directions={x:r.x<value.widget.x?-1:1,y:r.y<value.widget.y?-1:1};const d=document.getElementById('details');d.dataset.resizeX=directions.x<0?'left':'right';d.dataset.resizeY=directions.y<0?'top':'bottom';}}});
-  window.widget.panelPreferencesRead().then(value=>{if(revision===0&&value)showLanguage(value.language);if(soundRevision===0&&value){soundEnabled=value.clickSoundEnabled!==false;clickSound.checked=soundEnabled;}}).catch(()=>{});
+  window.widget.panelPreferencesRead().then(value=>{if(revision===0&&value)showLanguage(value.language);if(soundRevision===0&&value){soundEnabled=value.clickSoundEnabled!==false;clickSound.checked=soundEnabled;}if(dockRevision===0&&value){dockReady=true;dockSaved=value.dockBottomRight!==false;if(!dockSaving)dock.checked=dockSaved;updateDockDisabled();}}).catch(()=>{});
   for(const button of select.querySelectorAll('button'))button.addEventListener('click',async()=>{revision++;showLanguage(button.dataset.language);try{const q=await window.widget.panelLanguage(button.dataset.language);showError(q.ok?'':q.error||'卡片设置未能保存，请检查本机文件权限。');}catch{showError('卡片设置未能保存，请检查本机文件权限。');}});
   function send(){frame=null;if(pending){window.widget.panelResize({type:'update',...pending});pending=null;}}
   handle.onpointerdown=event=>{if(event.button!==0)return;event.preventDefault();handle.setPointerCapture(event.pointerId);const r=document.getElementById('details').getBoundingClientRect();start={x:event.clientX,y:event.clientY,width:r.width,height:r.height,directions:{...directions}};pending=null;window.widget.panelResize({type:'begin'});};

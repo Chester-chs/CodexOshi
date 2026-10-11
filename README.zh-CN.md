@@ -149,7 +149,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify.ps1 -Nati
 
 挂件只为可见区域设置窗口形状，形状外输入交给 Codex。普通点击延后恢复宿主焦点，编辑输入框时临时保留焦点。自由拖动的事件处理不写盘：松手保存，拖动超过三秒后通过计时器保存检查点。设置卡片和自由位置避让窗口外侧滚动条；固定的人物可贴住窗口右侧。不自动定位各内部栏的滚动条。
 
-详细记录：[默认音效与尺寸修复](docs/default-sound-and-dimensions-verification.md)、[右下角固定与尺寸控件](docs/resident-docking-width-verification.md)、[可见开关](docs/codi-switch-verification.md)、[拖动性能](docs/drag-performance-verification.md)、[界面与 token 图表](docs/ui-redesign-verification.md)、[图片格式](docs/character-formats-verification.md)。较早的阶段记录描述的是当时实现。
+详细记录：[固定开关状态](docs/pin-switch-verification.md)、[默认音效与尺寸修复](docs/default-sound-and-dimensions-verification.md)、[右下角固定与尺寸控件](docs/resident-docking-width-verification.md)、[可见开关](docs/codi-switch-verification.md)、[拖动性能](docs/drag-performance-verification.md)、[界面与 token 图表](docs/ui-redesign-verification.md)、[图片格式](docs/character-formats-verification.md)。较早的阶段记录描述的是当时实现。
 
 安装与数据目录请使用上面列出的路径。`v1.0` 标签是早期回退快照，不是插件清单中的版本号。
 

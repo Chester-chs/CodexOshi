@@ -113,3 +113,24 @@ test('click sound control loads saved state, sends changes and recovers after sa
   for(const fn of layouts)fn({panelPreferences:{width:480,height:560,language:'zh-CN'}});
   assert.equal(sound.checked,true,'an older preference format defaults to enabled');
 });
+
+test('pin switch loads the saved choice and keeps a pending click through older layouts',async()=>{
+  const elements=new Map(),layouts=[],calls=[];let finishSave,finishRead;
+  const get=id=>{if(!elements.has(id))elements.set(id,{checked:true,disabled:false,dataset:{},listeners:{},addEventListener(name,fn){this.listeners[name]=fn;},querySelectorAll(){return [];},setAttribute(){}});return elements.get(id);};
+  const window={panelModel:model,uiText:{setLanguage(){},t:v=>v,apply(){}},widget:{layout:fn=>layouts.push(fn),panelError(){},panelPreferencesRead:()=>new Promise(resolve=>finishRead=resolve),panelDock:value=>{calls.push(value);return new Promise(resolve=>finishSave=resolve);}}};
+  vm.runInNewContext(await fs.readFile(path.join(__dirname,'../desktop/ui/panel-settings.js'),'utf8'),{window,document:{getElementById:get}});
+  const dock=get('resident-dock');
+  assert.equal(dock.disabled,true,'a switch without a loaded saved value must not accept a click');
+  finishRead({width:400,height:592,language:'zh-CN',dockBottomRight:false});await Promise.resolve();
+  assert.equal(dock.checked,false);assert.equal(dock.disabled,false);
+  dock.checked=true;const save=dock.listeners.change();assert.deepEqual(calls,[true]);assert.equal(dock.disabled,true);
+  for(const fn of layouts)fn({panelPreferences:{dockBottomRight:false},dragging:false,resizing:false});
+  assert.equal(dock.checked,true,'an older layout must not visually undo a pending pin');
+  finishSave({ok:true});await save;
+  for(const fn of layouts)fn({panelPreferences:{dockBottomRight:true},dragging:false,resizing:false});
+  assert.equal(dock.checked,true);assert.equal(dock.disabled,false);
+  dock.checked=false;const failingSave=dock.listeners.change();assert.deepEqual(calls,[true,false]);
+  for(const fn of layouts)fn({panelPreferences:{dockBottomRight:true},dragging:false,resizing:false});
+  finishSave({ok:false,error:'cannot save'});await failingSave;
+  assert.equal(dock.checked,true);assert.equal(dock.disabled,false);assert.equal(get('panel-error').textContent,'cannot save');
+});

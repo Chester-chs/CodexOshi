@@ -47,8 +47,13 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   }
   for(const width of [126,672,240]){await js(`document.querySelector('#character-width').value=${width};document.querySelector('#character-width').dispatchEvent(new Event('input'))`);await delay(220);assert.deepEqual(state().region[1],panelBefore);assert.equal(Number(await js(`document.querySelector('#character-width').value`)),width);}
   await js(`document.querySelector('#character-size').value=300;document.querySelector('#character-size').dispatchEvent(new Event('input'))`);await delay(220);assert.deepEqual(state().region[1],panelBefore);
-  await js(`document.querySelector('#resident-dock').checked=false;document.querySelector('#resident-dock').dispatchEvent(new Event('change'))`);await delay(250);assert.deepEqual(state().widget,{x:90,y:100});
-  await js(`document.querySelector('#resident-dock').checked=true;document.querySelector('#resident-dock').dispatchEvent(new Event('change'))`);await delay(250);assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,true);await checkPlacement();
+  async function clickDock(){
+    await js(`document.querySelector('#resident-dock').scrollIntoView({block:'center'})`);
+    const point=await js(`(()=>{const r=document.querySelector('#resident-dock').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+    for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...point,button:'left',clickCount:1});await delay(250);
+  }
+  await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,false);assert.deepEqual(state().widget,{x:90,y:100});
+  await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,true);await checkPlacement();
   const enabledRegion={...state().region[0]};
   await js(`document.querySelector('#codi-power').click()`);await delay(200);
   assert.equal(state().widgetEnabled,false);assert.equal(state().expanded,false);assert.equal(state().speechVisible,false);assert.deepEqual(state().region,[{x:1456,y:934,width:120,height:42}]);

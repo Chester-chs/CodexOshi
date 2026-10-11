@@ -149,7 +149,7 @@ Automated checks cover geometry limits, invalid-shape 1×1 fallback, persistence
 
 The overlay is shaped around visible regions; outside regions pass input to Codex. Ordinary clicks use delayed host-focus restoration; editing fields temporarily retain focus. Free dragging does not write files in the event handler: position saves on release, with timer checkpoints after a drag exceeds three seconds. Settings cards and free placement reserve the outer scrollbar edge; the pinned character can reach the right edge. Individual internal pane scrollbars are not automatically located.
 
-Detailed records: [default sound and dimension fixes](docs/default-sound-and-dimensions-verification.md), [window docking and dimension controls](docs/resident-docking-width-verification.md), [visible switch](docs/codi-switch-verification.md), [drag performance](docs/drag-performance-verification.md), [UI and token charts](docs/ui-redesign-verification.md), and [character formats](docs/character-formats-verification.md). Older stage records document earlier behavior.
+Detailed records: [pin switch state](docs/pin-switch-verification.md), [default sound and dimension fixes](docs/default-sound-and-dimensions-verification.md), [window docking and dimension controls](docs/resident-docking-width-verification.md), [visible switch](docs/codi-switch-verification.md), [drag performance](docs/drag-performance-verification.md), [UI and token charts](docs/ui-redesign-verification.md), and [character formats](docs/character-formats-verification.md). Older stage records document earlier behavior.
 
 Use the installation and data paths listed above. The `v1.0` tag preserves an earlier rollback snapshot; it is not the plugin manifest version.
 
