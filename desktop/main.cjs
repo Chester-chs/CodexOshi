@@ -6,7 +6,7 @@ const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
 const crypto=require('node:crypto');
-const {shape,viewport,layout,snap,COMPACT}=require('./geometry.cjs');
+const {shape,viewport,layout,snap,residentSize,COMPACT}=require('./geometry.cjs');
 const {portraitSize}=require('./ui/portrait-size.js');
 const {QuotaReader}=require('../runtime/quota.cjs');
 const {Worker}=require('node:worker_threads');
@@ -79,11 +79,10 @@ function updateShape(){
     region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);win.setShape(region);notifyLayout();return;
   }
   const previous=widget;
-  const scale=docked()?Math.min(1,dip.width*.25/characterSize.width,dip.height*.30/characterSize.height):1;
-  const resident={width:Math.max(1,Math.round(characterSize.width*scale)),height:Math.max(1,Math.round(characterSize.height*scale))};
-  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
+  const resident=residentSize(characterSize,dip.width,dip.height,docked());
+  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible,docked());widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
-  region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
+  region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes,docked());
   win.setShape(region);
   notifyLayout();
 }
@@ -211,9 +210,8 @@ app.whenReady().then(async()=>{
       // Keep the controls under the pointer while character dimensions change.
       // The existing layout/position clamp still bounds the settings region.
       if(panel){
-        const scale=docked()?Math.min(1,dip.width*.25/next.width,dip.height*.30/next.height):1;
-        const resident={width:Math.max(1,Math.round(next.width*scale)),height:Math.max(1,Math.round(next.height*scale))};
-        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences).widget;
+        const resident=residentSize(next,dip.width,dip.height,docked());
+        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences,null,false,docked()).widget;
         panelOffset={x:panel.x-point.x,y:panel.y-point.y};
       }
       updateShape();diagnostic();

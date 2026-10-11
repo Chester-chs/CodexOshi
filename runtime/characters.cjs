@@ -59,7 +59,12 @@ class CharacterStore{
   async select(name){await this.checked(name);await this.write(path.join(this.root,'active.json'),{name});this.active=name;}
   async rename(name,next){const old=await this.checked(name),target=this.directory(next);if(next===name)return;if((await this.names()).some(n=>n.toLowerCase()===next.toLowerCase()))throw Error('该角色名已存在。');await fs.rename(old,target);if(this.active===name)await this.select(next);}
   async remove(name){const dir=await this.checked(name);const realRoot=path.resolve(await fs.realpath(this.root));if(path.dirname(path.resolve(await fs.realpath(dir)))!==realRoot)throw Error('删除目标不在角色目录内。');await fs.rm(dir,{recursive:true,force:false});if(this.active===name){const names=await this.names();this.active=names[0]||null;await this.write(path.join(this.root,'active.json'),{name:this.active});}}
-  async settings(name,patch){const dir=await this.checked(name),q=await this.metadata(name);Object.assign(q,this.validSettings(patch));await this.write(path.join(dir,'settings.json'),q);}
+  async settings(name,patch){
+    const dir=await this.checked(name),q=await this.metadata(name),resetWidth=patch.targetWidth===null,settingsPatch={...patch};
+    if(resetWidth)delete settingsPatch.targetWidth;
+    Object.assign(q,this.validSettings(settingsPatch));if(resetWidth)delete q.targetWidth;
+    await this.write(path.join(dir,'settings.json'),q);
+  }
   async importFile(name,state,source){
     if(!STATES.includes(state))throw Error('角色状态无效。');const dir=await this.checked(name),{buffer,info}=await readSource(source);
     const filename=state+'.'+info.ext,destination=path.join(dir,filename);

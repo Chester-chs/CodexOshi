@@ -1,4 +1,14 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.imageProcessing=api;})(globalThis,()=>{
+  function horizontalRows(image,r){
+    const rows=new Uint16Array(r.height*2);
+    for(let y=0;y<r.height;y++){
+      const offset=((r.y+y)*image.width+r.x)*4;let left=0,right=r.width;
+      while(left<r.width&&!image.data[offset+left*4+3])left++;
+      while(right>left&&!image.data[offset+(right-1)*4+3])right--;
+      rows[y*2]=left;rows[y*2+1]=right;
+    }
+    return rows;
+  }
   function bounds(data,width,height){let left=width,top=height,right=-1,bottom=-1;for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(data[(y*width+x)*4+3]){left=Math.min(left,x);top=Math.min(top,y);right=Math.max(right,x);bottom=Math.max(bottom,y);}return right<0?{x:0,y:0,width,height}:{x:left,y:top,width:right-left+1,height:bottom-top+1};}
   function marginBounds(data,width,height){
     const blank=i=>data[i*4+3]<=8||(data[i*4]>=240&&data[i*4+1]>=240&&data[i*4+2]>=240);
@@ -32,5 +42,5 @@
     if(!remove&&(cropped.width<width||cropped.height<height))reason+=' · 白色/透明边距已裁剪';
     return {data,bounds:cropped,backgroundRemoved,reason};
   }
-  return {prepareImage};
+  return {prepareImage,horizontalRows};
 });

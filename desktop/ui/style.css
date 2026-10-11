@@ -116,12 +116,6 @@ article{padding:18px;margin-bottom:14px}.card-row{margin:12px 0 14px;align-items
 .settings-group{padding:0 0 24px;margin-bottom:24px;border-bottom:1px solid var(--separator)}
 .sound-settings{border:0;border-bottom:1px solid var(--separator);min-width:0;margin-left:0;margin-right:0}
 .sound-settings legend{padding:0;font-size:17px;font-weight:500}
-.sound-presets{display:grid;gap:6px;margin-top:12px}
-.sound-preset-row{display:flex;align-items:center;gap:6px;min-width:0}
-#character-panel .sound-preset-choice{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:1;min-width:0;text-align:left;padding:6px 12px}
-#character-panel .sound-preset-choice[aria-pressed="true"]{background:var(--accent);color:var(--accent-contrast);border-color:var(--accent);font-weight:500}
-.sound-preset-check{visibility:hidden}.sound-preset-choice[aria-pressed="true"] .sound-preset-check{visibility:visible}
-#character-panel .sound-preset-preview{flex:none;padding:6px 12px;color:var(--accent-ink)}
 .sound-file-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-control)}
 #sound-filename{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
 .sound-file-row button{flex:none}.sound-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}

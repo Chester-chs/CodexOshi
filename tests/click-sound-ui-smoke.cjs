@@ -6,7 +6,7 @@ const Module=require('node:module'),assert=require('node:assert/strict');
 const {EventEmitter}=require('node:events');
 const outputArg=process.argv.indexOf('--output');
 assert.ok(outputArg>=0&&process.argv[outputArg+1],'--output is required');
-const output=path.resolve(process.argv[outputArg+1]),presetMode=process.argv.includes('--presets'),customMode=process.argv.includes('--custom')||presetMode,data=path.join(output,presetMode?'preset-data':customMode?'custom-data':'data');
+const output=path.resolve(process.argv[outputArg+1]),builtinMode=process.argv.includes('--builtin'),customMode=process.argv.includes('--custom')||builtinMode,data=path.join(output,builtinMode?'builtin-data':customMode?'custom-data':'data');
 const restart=process.argv.includes('--restart'),role=path.join(data,'characters','音效测试角色');
 let selectedSound=path.join(data,'喜欢的音效.wav');
 if(customMode){dialog.showOpenDialog=async()=>selectedSound?{canceled:false,filePaths:[selectedSound]}:{canceled:true,filePaths:[]};}
@@ -18,7 +18,7 @@ if(!restart){
   for(const file of ['panel-preferences.json','dialogue-preferences.json']){
     try{fs.unlinkSync(path.join(data,file));}catch(error){if(error.code!=='ENOENT')throw error;}
   }
-  fs.mkdirSync(path.join(data,'sounds'),{recursive:true});fs.writeFileSync(path.join(data,'sounds','active.json'),'null');
+  fs.mkdirSync(path.join(data,'sounds'),{recursive:true});fs.writeFileSync(path.join(data,'sounds','active.json'),builtinMode?JSON.stringify({preset:'bell',source:'preset'}):'null');
   if(customMode){fs.writeFileSync(selectedSound,require('./audio-fixture.cjs').wav());fs.writeFileSync(path.join(data,'too-long.wav'),require('./audio-fixture.cjs').wav(31));}
 }
 const quota={resetCredits:{availableCount:2,observedAt:Date.now(),stale:false},windows:[{remainingPercent:55,label:'每周限额',resetAt:Math.floor(Date.now()/1000)+3600}],planType:'plus',source:'http',observedAt:Date.now()};
@@ -166,24 +166,23 @@ let socket,heartbeat;
   assert.equal(await js(`document.querySelector('#quota-tab').getAttribute('aria-selected')`),'true','Outside dismissal must also reset the next opening');
   await click(await center('#close'));
   assert.equal((await probe()).contexts,0,'No AudioContext before a confirmed click');
-  if(presetMode){
-    const presetIds=['wood','bubble','bell','sparkle','tap'],soundFile=path.join(data,'sounds','active.json');
-    const soundState=()=>JSON.parse(fs.readFileSync(soundFile,'utf8'));
-    const selected=()=>js(`Array.from(document.querySelectorAll('.sound-preset-choice[aria-pressed="true"]'),button=>button.id.replace('sound-preset-',''))`);
+  if(builtinMode){
+    const soundFile=path.join(data,'sounds','active.json'),soundState=()=>JSON.parse(fs.readFileSync(soundFile,'utf8'));
     async function activate(selector){await js(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center'})`);await click(await center(selector));}
-    async function selectPreset(id){
-      const starts=(await probe()).starts;
-      await activate('#sound-preset-'+id);
-      await waitFor(`document.querySelector('#sound-preset-${id}').getAttribute('aria-pressed')==='true'&&!document.querySelector('#sound-preset-${id}').disabled`);
-      assert.equal(soundState()?.preset||'wood',id);assert.deepEqual(await selected(),[id]);
-      assert.equal((await probe()).starts,starts,'Selecting a preset must not auto-play');
+    function assertSparkle(note){assert.ok(note.frames>=13440&&note.frames<=13441,'The sole built-in sound is the 280 ms starlight duo');assert.ok(note.peak>.09&&note.peak<.10);assert.equal(note.volume,.25);}
+    async function useBuiltin(){
+      const starts=(await probe()).starts,retained=soundState()?.id;
+      await activate('#sound-builtin-select');
+      await waitFor(`document.querySelector('#sound-builtin-select').hidden&&!document.querySelector('#sound-upload').disabled`);
+      assert.equal(soundState().source,'preset');assert.equal(soundState().preset,'sparkle');assert.equal(soundState().id,retained);
+      assert.equal((await probe()).starts,starts,'Choosing the default must not auto-play');
+      assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'星光双音');
     }
-    async function previewPreset(id){
-      const before=fs.readFileSync(soundFile,'utf8'),active=await selected(),starts=(await probe()).starts;
-      await activate('#sound-preview-'+id);await waitFor(`window.__clickSoundProbe.starts===${starts+1}`);
-      assert.equal(fs.readFileSync(soundFile,'utf8'),before,'Preview must not persist another sound');
-      assert.deepEqual(await selected(),active,'Preview must not switch the selected sound');
-      const note=(await assertClean()).buffers.at(-1);assert.equal(note.volume,.25);assert.ok(note.peak>.02&&note.peak<.2);return note;
+    async function previewCurrent(){
+      const before=fs.readFileSync(soundFile,'utf8'),starts=(await probe()).starts;
+      await activate('#sound-preview');await waitFor(`window.__clickSoundProbe.starts===${starts+1}`);
+      assert.equal(fs.readFileSync(soundFile,'utf8'),before,'Preview must not save or change the selected sound');
+      return (await assertClean()).buffers.at(-1);
     }
     async function setVolume(value){
       await js(`(()=>{const input=document.querySelector('#sound-volume-value');input.value='${value}';input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));})()`);
@@ -192,43 +191,44 @@ let socket,heartbeat;
     }
     async function assertRestored(){
       assert.equal(soundState().preset,'sparkle');assert.equal(soundState().source,'preset');assert.ok(soundState().id,'Uploaded clip remains retained');assert.equal(saved().clickSoundVolume,25);
-      await openSoundSettings();assert.deepEqual(await selected(),['sparkle']);assert.equal(await js(`document.querySelector('#sound-custom-select').hidden`),false);
+      await openSoundSettings();assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'星光双音');assert.equal(await js(`document.querySelector('#sound-custom-select').hidden`),false);assert.equal(await js(`document.querySelector('#sound-builtin-select').hidden`),true);
       await click(await center('#close'));const starts=(await probe()).starts;await click(await center('#character-canvas'));await waitFor(`window.__clickSoundProbe.starts===${starts+1}`);
-      const note=(await assertClean()).buffers.at(-1);assert.ok(note.frames>=13440&&note.frames<=13441,'Portrait click uses the saved 280 ms sparkle preset');assert.equal(note.volume,.25);
+      assertSparkle((await assertClean()).buffers.at(-1));
     }
     if(restart){
-      await assertRestored();fs.writeFileSync(path.join(output,'preset-restart.json'),JSON.stringify({passed:true,presetCustomAndVolumePersistAcrossProcessRestart:true,hardwareOutputMuted:true,audio:await assertClean()},null,2));return;
+      await assertRestored();fs.writeFileSync(path.join(output,'builtin-restart.json'),JSON.stringify({passed:true,builtinCustomAndVolumePersistAcrossProcessRestart:true,hardwareOutputMuted:true,audio:await assertClean()},null,2));return;
     }
     await openSoundSettings();await setVolume(25);
-    for(const id of presetIds)await selectPreset(id);
-    assert.equal((await probe()).contexts,0,'Changing presets/volume is lazy and silent');
-    const notes={};for(const id of presetIds)notes[id]=await previewPreset(id);
-    assert.equal(new Set(Object.values(notes).map(note=>note.frames)).size,5,'All presets schedule distinct audio buffers');
+    assert.equal((await probe()).contexts,0,'Loading the default and changing volume is lazy and silent');
+    assert.equal(await js(`document.querySelectorAll('#sound-presets,.sound-presets,.sound-preset-choice,.sound-preset-preview').length`),0,'Removed sound preset UI must not reappear');
+    assert.equal(await js(`typeof window.widget.soundPreset`),'undefined','Removed preset selection IPC must not be exposed');
+    assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'星光双音');
+    const migrated=await js(`window.widget.soundRead()`);assert.equal(migrated.preset,'sparkle');assert.equal(migrated.source,'preset');assert.equal(migrated.custom,null);
+    const builtinNote=await previewCurrent();assertSparkle(builtinNote);
     const starts=(await probe()).starts;
     await activate('#sound-upload');await waitFor(`!document.querySelector('#sound-upload').disabled&&document.querySelector('#sound-filename').textContent==='喜欢的音效.wav'`);
-    const uploaded=soundState().id;assert.ok(uploaded);assert.equal(soundState().source,'custom');assert.deepEqual(await selected(),[]);assert.equal((await probe()).starts,starts,'Upload must not auto-play');
-    await previewPreset('bell');assert.equal(soundState().source,'custom','Preview preserves selected custom clip');
-    await selectPreset('sparkle');assert.equal(soundState().id,uploaded,'Switching presets retains uploaded sound');
-    await activate('#sound-custom-select');await waitFor(`document.querySelector('#sound-custom-select').getAttribute('aria-pressed')==='true'&&!document.querySelector('#sound-upload').disabled`);
-    assert.equal(soundState().id,uploaded);assert.equal(soundState().source,'custom');assert.deepEqual(await selected(),[]);
-    await activate('#sound-preview');let note=(await assertClean()).buffers.at(-1);assert.equal(note.frames,5760);assert.ok(note.peak>.35);assert.equal(note.volume,.25);
-    await selectPreset('sparkle');
-    await setVolume(0);assert.equal(await js(`['sound-preview',...window.codiSound.PRESETS.map(item=>'sound-preview-'+item.id)].every(id=>document.getElementById(id).disabled)`),true);
-    await expectNoPlayback(()=>js(`document.querySelector('#sound-preview-bell').click()`),'Zero-volume preview');
+    const uploaded=soundState().id;assert.ok(uploaded);assert.equal(soundState().source,'custom');assert.equal((await probe()).starts,starts,'Upload must not auto-play');
+    assert.equal(await js(`document.querySelector('#sound-builtin-select').hidden`),false);assert.equal(await js(`document.querySelector('#sound-custom-select').hidden`),true);
+    await useBuiltin();assert.equal(soundState().id,uploaded,'Using the default retains the uploaded sound');
+    assertSparkle(await previewCurrent());
+    await activate('#sound-custom-select');await waitFor(`document.querySelector('#sound-custom-select').hidden&&!document.querySelector('#sound-upload').disabled`);
+    assert.equal(soundState().id,uploaded);assert.equal(soundState().source,'custom');
+    const customNote=await previewCurrent();assert.equal(customNote.frames,5760);assert.ok(customNote.peak>.35);assert.equal(customNote.volume,.25);
+    await activate('#sound-reset');await waitFor(`document.querySelector('#sound-reset').hidden&&!document.querySelector('#sound-upload').disabled`);assert.equal(soundState(),null);assertSparkle(await previewCurrent());
+    assert.equal(await js(`document.querySelector('#sound-custom-select').hidden&&document.querySelector('#sound-builtin-select').hidden`),true,'Removing the uploaded sound leaves just the default');
+    await activate('#sound-upload');await waitFor(`!document.querySelector('#sound-upload').disabled&&document.querySelector('#sound-filename').textContent==='喜欢的音效.wav'`);await useBuiltin();
+    await setVolume(0);assert.equal(await js(`document.querySelector('#sound-preview').disabled`),true);
+    await expectNoPlayback(()=>js(`document.querySelector('#sound-preview').click()`),'Zero-volume preview');
     await setVolume(25);await activate('#click-sound-enabled');await waitFor(`document.querySelector('#click-sound-enabled').checked===false&&!document.querySelector('#click-sound-enabled').disabled`);
-    assert.equal(await js(`window.codiSound.PRESETS.every(item=>document.getElementById('sound-preview-'+item.id).disabled)`),true);
-    await expectNoPlayback(()=>js(`document.querySelector('#sound-preview-bell').click()`),'Muted preview');
+    assert.equal(await js(`document.querySelector('#sound-preview').disabled`),true);
+    await expectNoPlayback(()=>js(`document.querySelector('#sound-preview').click()`),'Muted preview');
     await activate('#click-sound-enabled');await waitFor(`document.querySelector('#click-sound-enabled').checked===true&&!document.querySelector('#click-sound-enabled').disabled`);
     await js(`window.widget.panelLanguage('en-US')`);await waitFor(`window.uiText.language==='en-US'`);
-    const english=await js(`window.codiSound.PRESETS.map(item=>({text:document.getElementById('sound-preset-'+item.id).textContent.trim(),aria:document.getElementById('sound-preview-'+item.id).getAttribute('aria-label')}))`);
-    assert.deepEqual(english.map(item=>item.text.replace(/\s*✓$/,'')),['Wooden note','Bubble pop','Clear bell','Starlight duo','Soft tap']);assert.ok(english.every(item=>item.aria.startsWith('Preview ')));
     assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'Starlight duo');
     await js(`window.widget.panelLanguage('zh-CN')`);await waitFor(`window.uiText.language==='zh-CN'`);assert.equal(await js(`document.querySelector('#sound-filename').textContent`),'星光双音');
-    await activate('#sound-preset-sparkle');const activeStyle=await js(`(()=>{const active=getComputedStyle(document.querySelector('#sound-preset-sparkle')),idle=getComputedStyle(document.querySelector('#sound-preset-wood'));return {active:active.backgroundColor,idle:idle.backgroundColor,color:active.color,check:getComputedStyle(document.querySelector('#sound-preset-sparkle .sound-preset-check')).visibility}})()`);
-    assert.notEqual(activeStyle.active,activeStyle.idle);assert.notEqual(activeStyle.active,activeStyle.color);assert.equal(activeStyle.check,'visible');
     fs.unlinkSync(selectedSound);send({outsideClick:true});await delay(100);const finished=new Promise(resolve=>win.webContents.once('did-finish-load',resolve));win.webContents.reload();await finished;await ready();
     await assertRestored();
-    fs.writeFileSync(path.join(output,'sound-preset-ui.json'),JSON.stringify({passed:true,settingsAlwaysReopenQuota:true,fiveDistinctPreviews:notes,previewDoesNotSaveOrSwitch:true,eachPresetAutoSavesWithoutAutoplay:true,uploadedSoundRetainedAndReselectable:true,volume25:true,zeroVolumeAndMuteDisablePreview:true,englishAndChinese:true,visibleSelectedStyle:activeStyle,reloadPreservesPresetCustomAndVolume:true,hardwareOutputMuted:true,audio:await assertClean()},null,2));return;
+    fs.writeFileSync(path.join(output,'builtin-sound-ui.json'),JSON.stringify({passed:true,settingsAlwaysReopenQuota:true,onlyStarlightDuo:builtinNote,legacyPresetMigratesToStarlight:true,presetUiAndIpcRemoved:true,previewDoesNotSaveOrSwitch:true,choiceSavesWithoutAutoplay:true,uploadedSoundRetainedAndReselectable:true,removeRestoresDefault:true,volume25:true,zeroVolumeAndMuteDisablePreview:true,englishAndChinese:true,reloadPreservesBuiltinCustomAndVolume:true,hardwareOutputMuted:true,audio:await assertClean()},null,2));return;
   }
   if(customMode){
     const soundState=()=>JSON.parse(fs.readFileSync(path.join(data,'sounds','active.json'),'utf8'));
@@ -310,7 +310,7 @@ let socket,heartbeat;
   assert.equal((await probe()).starts,3,'Muted clicks must keep dialogue without audio');
 
   const audio=await assertClean();
-  for(const buffer of audio.buffers){assert.ok(buffer.frames>0);assert.ok(buffer.peak>.02&&buffer.peak<.2);assert.ok(buffer.rms>.005);}
+  for(const buffer of audio.buffers){assert.ok(buffer.frames>=13440&&buffer.frames<=13441,'Portrait clicks use the default starlight duo');assert.ok(buffer.peak>.09&&buffer.peak<.10);assert.ok(buffer.rms>.005);}
   const rendered=await js(`(async()=>{
     const samples=window.codiSound.renderChime(48000),context=new OfflineAudioContext(1,samples.length,48000);
     const buffer=context.createBuffer(1,samples.length,48000);buffer.copyToChannel(samples,0);
@@ -319,7 +319,7 @@ let socket,heartbeat;
     for(const sample of data){peak=Math.max(peak,Math.abs(sample));energy+=sample*sample;}
     return {frames:data.length,duration:data.length/48000,peak,rms:Math.sqrt(energy/data.length)};
   })()`);
-  assert.ok(rendered.duration>=.1&&rendered.duration<=.3);
+  assert.ok(rendered.duration>=.28&&rendered.duration<.281);
   assert.ok(rendered.peak>.02&&rendered.peak<.2);assert.ok(rendered.rms>.005,'Actual offline Web Audio output must be nonzero');
 
   send({outsideClick:true});await delay(150);

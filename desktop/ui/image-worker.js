@@ -18,7 +18,8 @@ self.onmessage=async event=>{
         // Growing animation bounds preserve motion across frames and loops.
         if(frames>1){if(union){const x=Math.min(union.x,r.x),y=Math.min(union.y,r.y);r={x,y,width:Math.max(union.x+union.width,r.x+r.width)-x,height:Math.max(union.y+union.height,r.y+r.height)-y};}union=r;}
         const cropped=new OffscreenCanvas(r.width,r.height);cropped.getContext('2d').drawImage(canvas,r.x,r.y,r.width,r.height,0,0,r.width,r.height);const bitmap=cropped.transferToImageBitmap();
-        self.postMessage({bitmap,contentWidth:r.width,contentHeight:r.height,reason:prepared.reason,backgroundRemoved:prepared.backgroundRemoved,frameIndex,frames},[bitmap]);
+        const rows=imageProcessing.horizontalRows({data:prepared.data,width:w,height:h},r);
+        self.postMessage({bitmap,rows,contentWidth:r.width,contentHeight:r.height,reason:prepared.reason,backgroundRemoved:prepared.backgroundRemoved,frameIndex,frames},[bitmap,rows.buffer]);
         frameIndex++;if(frameIndex>=frames){frameIndex=0;loops++;if(Number.isFinite(track.repetitionCount)&&loops>track.repetitionCount)return;}
         if(frames>1&&run===generation)timer=setTimeout(next,duration);
       }catch(error){if(run===generation)self.postMessage({error:'图片解码失败，请重新选择有效图片。'});}

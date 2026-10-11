@@ -43,8 +43,10 @@ window.widget.layout(value=>{
   const base=value.residentSize||value.regions[0],scale=Math.min(value.regions[0].width/base.width,value.regions[0].height/base.height);
   width=base.width;
   resident.style.width=base.width+'px';resident.style.height=base.height+'px';resident.style.transform=`scale(${scale})`;residentDocked=Boolean(value.docked);button.style.cursor=residentDocked?'pointer':'grab';
+  resident.style.left=(residentDocked?value.regions[0].width-base.width*scale:0)+'px';
+  document.getElementById('character-canvas').style.transformOrigin=residentDocked?'100% 60%':'50% 60%';
   layoutDragging=Boolean(value.dragging);
-  window.resizeCharacter?.(base.width,base.height);
+  window.resizeCharacter?.(base.width,base.height,residentDocked);
   if(value.expanded&&details.hidden)selectTab('quota');
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}

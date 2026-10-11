@@ -3,6 +3,41 @@ const {prepareImage}=require('../desktop/ui/image-processing.js');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {CharacterStore}=require('../runtime/characters.cjs');
 
+test('right docking trims only transparent columns in a close-up and keeps every visible pixel',()=>{
+  const {horizontalRows}=require('../desktop/ui/image-processing.js'),{portraitFrame}=require('../desktop/ui/portrait-size.js');
+  const width=12,height=16,data=new Uint8ClampedArray(width*height*4);
+  for(let y=0;y<height;y++)for(let x=y<8?3:0;x<(y<8?9:12);x++)data[(y*width+x)*4+3]=255;
+  const rows=horizontalRows({data,width,height},{x:0,y:0,width,height});
+  const close=portraitFrame(200,200,12,16,{zoom:2,x:-1},true,rows);
+  assert.deepEqual(close,{x:104,y:36,width:96,height:128,source:{x:3,y:0,width:6,height:8}});
+  const full=portraitFrame(200,200,12,16,{zoom:1},true,rows);assert.equal(full.source.width,12);assert.equal(full.source.x,0);assert.equal(full.x+full.width,200);
+  const free=portraitFrame(200,200,12,16,{zoom:2,x:-1},false,rows);assert.equal(free.width,192);assert.equal(free.source.width,12);
+});
+
+test('docked artwork and footer align to the actual right edge without stretching or cropping sides',()=>{
+  const {portraitFrame,portraitFooter}=require('../desktop/ui/portrait-size.js');
+  for(const zoom of [.5,1,2,4])for(const x of [-1,0,1])for(const width of [126,400,672]){
+    const frame=portraitFrame(width,228,627,882,{zoom,x},true);
+    assert.ok(Math.abs(frame.x+frame.width-width)<1e-8,'The artwork, not its transparent canvas, must touch the right edge');
+    const footer=portraitFooter(frame,width,width,true);assert.ok(Math.abs(footer.x+footer.width-width)<1e-8);
+    assert.ok(frame.x>=0);assert.ok(Math.abs(frame.width/frame.height-627/(882/Math.max(1,zoom)))<1e-8);
+  }
+  assert.deepEqual(portraitFooter({x:390,width:10},400,400,true),{x:282,width:118});
+});
+
+test('restoring geometry defaults removes explicit width while retaining artwork and background',async()=>{
+  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'codi-reset-'));
+  try{
+    const store=new CharacterStore(dir);await store.init();await store.create('A');await store.create('B');await store.select('A');
+    await store.settings('A',{zoom:4,x:1,y:-1,targetHeight:420,targetWidth:672,background:false});await store.importPortrait('A',path.join(__dirname,'fixtures/portrait-white.png'));
+    const before=await store.metadata('A'),other=await store.metadata('B');
+    await store.settings('A',{zoom:1,x:0,y:0,targetHeight:280,targetWidth:null});
+    const restart=new CharacterStore(dir);await restart.init();const restored=await restart.read('A'),raw=await restart.metadata('A');
+    assert.equal(restored.targetHeight,280);assert.equal(restored.zoom,1);assert.equal(restored.x,0);assert.equal(restored.y,0);assert.equal(Object.hasOwn(raw,'targetWidth'),false);
+    assert.equal(restored.background,false);assert.equal(restored.portrait,before.portrait);assert.deepEqual(await restart.metadata('B'),other);assert.equal(restart.active,'A');
+  }finally{await fs.rm(dir,{recursive:true,force:true});}
+});
+
 test('footer follows the rendered artwork instead of the unused canvas width at high DPI',()=>{
   const {portraitFooter}=require('../desktop/ui/portrait-size.js');
   assert.equal(typeof portraitFooter,'function');

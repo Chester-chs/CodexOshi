@@ -4,6 +4,18 @@ const { shape, viewport, position } = require('../desktop/geometry.cjs');
 const { visibility } = require('../desktop/visibility.cjs');
 const {layout}=require('../desktop/geometry.cjs');
 const tiny = [{x:0,y:0,width:1,height:1}];
+
+test('right-docked resident reaches the host edge while panels keep the scrollbar margin',()=>{
+  const view=layout(null,800,600,true,0,{width:200,height:180},undefined,null,false,true);
+  assert.equal(view.regions[0].x+view.regions[0].width,800);assert.equal(view.regions[0].y+view.regions[0].height,576);
+  assert.ok(view.regions[1].x+view.regions[1].width<=776);
+  assert.deepEqual(shape(view.regions,800,600,view.sizes,true),view.regions);
+  assert.deepEqual(shape(view.regions,800,600,view.sizes),tiny,'Free mode must still reserve the scrollbar');
+  const panelAtEdge=view.regions.map(r=>({...r}));panelAtEdge[1].x=800-panelAtEdge[1].width;
+  assert.deepEqual(shape(panelAtEdge,800,600,view.sizes,true),tiny,'Docking must not extend the panel hitbox over the scrollbar');
+  const outside=view.regions.map(r=>({...r}));outside[0].x++;
+  assert.deepEqual(shape(outside,800,600,view.sizes,true),tiny);
+});
 test('unsafe shapes fail closed, never restore the full host window', () => {
   for (const input of [[], null, {}, [{x:NaN,y:0,width:4,height:4}], [{x:0,y:0,width:-1,height:4}],
     [{x:0,y:0,width:40000,height:4}], Array(65).fill({x:2,y:2,width:4,height:4}),

@@ -12,6 +12,14 @@ function audioFixture(state='running',options={}){
 test('local chime is short, quiet and fades to silence at both boundaries',()=>{
   for(const rate of [44100,48000]){const data=sound().renderChime(rate);assert.ok(data.length/rate>=.1&&data.length/rate<=.3);let peak=0,sum=0;for(const value of data){assert.ok(Number.isFinite(value));peak=Math.max(peak,Math.abs(value));sum+=value*value;}assert.ok(peak>.02&&peak<.2);assert.ok(Math.sqrt(sum/data.length)>.005);assert.equal(data[0],0);assert.ok(Math.abs(data.at(-1))<.00001);}
 });
+test('the default click plays the retained starlight duo waveform',async()=>{
+  const f=audioFixture();assert.equal(await f.player.play(),true);
+  const buffer=f.voices.at(-1).buffer,data=buffer.getChannelData(0);
+  assert.equal(buffer.length,13441);
+  const energy=frequency=>{let real=0,imaginary=0;for(let i=0;i<data.length;i++){const phase=2*Math.PI*frequency*i/48000;real+=data[i]*Math.cos(phase);imaginary+=data[i]*Math.sin(phase);}return real*real+imaginary*imaginary;};
+  assert.ok(energy(1174.66)>energy(587.33)*100,'The first starlight note replaces the former wooden note');
+  assert.ok(energy(1567.98)>energy(587.33)*100,'The second starlight note remains audible');
+});
 test('context stays lazy; mute suppresses playback and stops an existing note',async()=>{
   const f=audioFixture();assert.equal(f.contexts.length,0);f.player.setEnabled(false);assert.equal(await f.player.play(),false);assert.equal(f.contexts.length,0);
   f.player.setEnabled(true);assert.equal(await f.player.play(),true);assert.equal(f.voices.length,1);f.player.setEnabled(false);assert.ok(f.voices[0].stopped);assert.equal(await f.player.play(),false);
@@ -49,67 +57,26 @@ test('custom sound decoding is cached; source changes cancel pending playback an
   await assert.rejects(player.prepare('sound://local/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'),/30/);
   await assert.rejects(player.prepare('https://example.com/sound.mp3'));
 });
-test('built-in preset choices are immutable and reject unrecognized ids',()=>{
-  const api=sound();assert.ok(Array.isArray(api.PRESETS));assert.equal(api.DEFAULT_PRESET,'wood');
-  assert.deepEqual(api.PRESETS.map(preset=>preset.id),['wood','bubble','bell','sparkle','tap']);
-  assert.ok(Object.isFrozen(api.PRESETS));
-  for(const preset of api.PRESETS){assert.ok(Object.isFrozen(preset));assert.ok(preset.label);assert.equal(api.isPreset(preset.id),true);}
-  for(const id of ['',null,undefined,'toString','unknown',{},1])assert.equal(api.isPreset(id),false);
-});
-test('every built-in preset is a distinct quiet waveform with clean fade boundaries',()=>{
-  const api=sound();assert.ok(Array.isArray(api.PRESETS));
+test('starlight stays quiet with clean boundaries across supported sample rates',()=>{
   for(const rate of [8000,44100,48000,192000]){
-    const fingerprints=new Set();
-    for(const {id} of api.PRESETS){
-      const data=api.renderChime(rate,id);assert.ok(data.length/rate>=.12&&data.length/rate<=.301,id);
-      let peak=0,sum=0,maxStep=0;
-      for(let i=0;i<data.length;i++){const value=data[i];assert.ok(Number.isFinite(value),id);peak=Math.max(peak,Math.abs(value));sum+=value*value;if(i)maxStep=Math.max(maxStep,Math.abs(value-data[i-1]));}
-      assert.ok(peak>.02&&peak<.2,`${id} peak ${peak}`);assert.ok(Math.sqrt(sum/data.length)>.005,id);
-      assert.equal(data[0],0,id);assert.ok(Math.abs(data.at(-1))<.00001,id);assert.ok(maxStep<.15,id);
-      fingerprints.add(Buffer.from(data.buffer).toString('base64'));
-    }
-    assert.equal(fingerprints.size,5);assert.deepEqual(api.renderChime(rate),api.renderChime(rate,'wood'));
+    const data=sound().renderChime(rate);assert.ok(Math.abs(data.length/rate-.28)<1/rate);
+    let peak=0,sum=0,maxStep=0;
+    for(let i=0;i<data.length;i++){const value=data[i];assert.ok(Number.isFinite(value));peak=Math.max(peak,Math.abs(value));sum+=value*value;if(i)maxStep=Math.max(maxStep,Math.abs(value-data[i-1]));}
+    assert.ok(peak>.02&&peak<.2);assert.ok(Math.sqrt(sum/data.length)>.005);
+    assert.equal(data[0],0);assert.ok(Math.abs(data.at(-1))<.00001);assert.ok(maxStep<.15);
   }
-  assert.throws(()=>api.renderChime(48000,'unknown'),/preset/i);
+  for(const rate of [0,7999,192001,NaN,Infinity])assert.throws(()=>sound().renderChime(rate),/sample rate/i);
 });
-test('preset selection stays lazy and determines the next built-in note',async()=>{
-  const f=audioFixture();assert.equal(typeof f.player.setPreset,'function');
-  assert.equal(f.player.setPreset('bubble'),true);assert.equal(f.player.setPreset('unknown'),false);assert.equal(f.contexts.length,0);
-  assert.equal(await f.player.play(),true);assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'bubble'));
-  assert.equal(f.player.setPreset('bell'),true);assert.ok(f.voices[0].stopped);
-  assert.equal(await f.player.play(),true);assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'bell'));
-});
-test('preview uses a temporary built-in choice and leaves the selected preset intact',async()=>{
-  const f=audioFixture();assert.equal(typeof f.player.previewPreset,'function');
-  f.player.setPreset('tap');assert.equal(await f.player.previewPreset('sparkle'),true);
-  assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'sparkle'));
-  f.context.currentTime+=.1;assert.equal(await f.player.play(),true);assert.ok(f.voices[0].stopped);
-  assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'tap'));
-  assert.equal(await f.player.previewPreset('invalid'),false);assert.equal(f.voices.length,2);
-});
-test('preview does not fetch a custom source and preserves it for normal playback',async()=>{
+test('returning from custom sound to default plays starlight without fetching again',async()=>{
   let fetches=0;const f=audioFixture('running',{fetch:async()=>{fetches++;return {ok:true,arrayBuffer:async()=>new ArrayBuffer(44)};}});
-  assert.equal(typeof f.player.previewPreset,'function');
   const decoded={duration:.12,length:5760,numberOfChannels:1};f.context.decodeAudioData=async()=>decoded;
-  f.player.setSource('sound://local/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');f.player.setPreset('bell');
-  assert.equal(await f.player.previewPreset('bubble'),true);assert.equal(fetches,0);
-  assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'bubble'));
-  f.context.currentTime+=.1;assert.equal(await f.player.play(),true);assert.equal(fetches,1);assert.equal(f.voices.at(-1).buffer,decoded);
-  f.player.setSource(null);assert.equal(await f.player.play(),true);assert.deepEqual(f.voices.at(-1).buffer.getChannelData(0),sound().renderChime(48000,'bell'));
+  f.player.setSource('sound://local/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+  assert.equal(await f.player.play(),true);assert.equal(fetches,1);assert.equal(f.voices.at(-1).buffer,decoded);
+  f.player.setSource(null);assert.equal(await f.player.play(),true);assert.equal(fetches,1);assert.equal(f.voices.at(-1).buffer.length,13441);
+  assert.ok(f.voices[0].stopped);
 });
-test('rapid previews share voice cancellation with clicks and obey volume and mute',async()=>{
-  const f=audioFixture();assert.equal(typeof f.player.previewPreset,'function');
-  f.player.setEnabled(false);assert.equal(await f.player.previewPreset('bell'),false);assert.equal(f.contexts.length,0);
-  f.player.setEnabled(true);f.player.setVolume(0);assert.equal(await f.player.previewPreset('bell'),false);assert.equal(f.contexts.length,0);
-  f.player.setVolume(25);assert.equal(await f.player.previewPreset('bell'),true);assert.equal(f.gains.at(-1).gain.value,.25);
-  assert.equal(await f.player.previewPreset('tap'),false);assert.equal(f.voices.length,1);
-  f.context.currentTime+=.1;assert.equal(await f.player.play(),true);assert.ok(f.voices[0].stopped);
-  f.context.currentTime+=.1;assert.equal(await f.player.previewPreset('tap'),true);assert.ok(f.voices[1].stopped);
-  f.player.setEnabled(false);assert.ok(f.voices[2].stopped);assert.equal(await f.player.previewPreset('bell'),false);
-});
-test('preview pending audio resume is cancelled by selection, mute, and disposal',async()=>{
-  for(const cancel of [player=>player.setPreset('bubble'),player=>player.setEnabled(false),player=>player.setVolume(0),player=>player.dispose()]){
-    const f=audioFixture('suspended');assert.equal(typeof f.player.previewPreset,'function');
-    const preview=f.player.previewPreset('sparkle');cancel(f.player);f.resume();assert.equal(await preview,false);assert.equal(f.voices.length,0);
+test('pending audio resume is cancelled by source switch, mute, zero volume, and disposal',async()=>{
+  for(const cancel of [player=>player.setSource('sound://local/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),player=>player.setEnabled(false),player=>player.setVolume(0),player=>player.dispose()]){
+    const f=audioFixture('suspended'),playing=f.player.play();cancel(f.player);f.resume();assert.equal(await playing,false);assert.equal(f.voices.length,0);
   }
 });

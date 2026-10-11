@@ -1,13 +1,13 @@
 (()=>{
   const $=id=>document.getElementById(id);
-  let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='',reportedWidth=199;
+  let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='',reportedWidth=199,dockRight=false;
   const pendingSettings=new Map();
   const active=()=>snapshot.characters.find(c=>c.name===snapshot.active),error=text=>{$('character-error').dataset.i18n=text;$('character-error').textContent=window.uiText.t(text);};
   function displayNumber(id,value){if(document.activeElement!==$(id))$(id).value=value;}
   function reportSize(view){
     const dimensions=content?.key===view.url+'|'+view.settings.background?content:{contentWidth:199,contentHeight:280};
     const framing=window.portraitGeometry.portraitContentSize(dimensions.contentWidth,dimensions.contentHeight,view.settings.zoom);
-    const value={contentWidth:framing.width,contentHeight:framing.height,targetHeight:view.settings.targetHeight??280,zoom:view.settings.zoom??1,...(view.settings.targetWidth===undefined?{}:{targetWidth:view.settings.targetWidth})},key=JSON.stringify(value);
+    const value={contentWidth:framing.width,contentHeight:framing.height,targetHeight:view.settings.targetHeight??280,zoom:view.settings.zoom??1,...(view.settings.targetWidth==null?{}:{targetWidth:view.settings.targetWidth})},key=JSON.stringify(value);
     reportedWidth=value.targetWidth??window.portraitGeometry.portraitSize(value.contentWidth,value.contentHeight,value.targetHeight,value.zoom>1).width;
     $('character-width').value=reportedWidth;displayNumber('character-width-value',reportedWidth);
     if(key!==lastSize){lastSize=key;window.widget.characterSize(value);}
@@ -15,11 +15,11 @@
   function sizeFooter(frame){
     const canvas=$('character-canvas'),footer=document.querySelector('.compact-line');
     if(!footer||!canvas.clientWidth)return;
-    const bounds=window.portraitGeometry.portraitFooter(frame,canvas.width,canvas.clientWidth);
+    const bounds=window.portraitGeometry.portraitFooter(frame,canvas.width,canvas.clientWidth,dockRight);
     Object.assign(footer.style,{left:bounds.x+'px',right:'auto',width:bounds.width+'px'});
   }
   const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));},sizeFooter),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').dataset.i18n=text;$('character-processing').textContent=window.uiText.t(text);if(bad)error(text);});
-  window.resizeCharacter=(width,height)=>{const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)));};
+  window.resizeCharacter=(width,height,right=false)=>{dockRight=right;const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)),dockRight);};
   async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');return q;}catch{error('角色操作失败，请重试。');return {ok:false};}}
   window.renderCharacter=()=>{if(window.codiEnabled===false)return;const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
@@ -31,7 +31,7 @@
     $('character-background').checked=role?.settings.background??true;$('character-zoom').value=zoom;$('character-zoom-value').textContent=zoom.toFixed(2)+'×';$('character-size').value=role?.settings.targetHeight??280;displayNumber('character-size-value',role?.settings.targetHeight??280);renderPreview();window.renderCharacter();
   }
   function flush(){clearTimeout(timer);const role=active(),draft=role&&pendingSettings.get(role.name);if(draft)action({action:'settings',name:role.name,patch:{...draft}}).then(result=>{if(result.ok&&pendingSettings.get(role.name)===draft)pendingSettings.delete(role.name);});}
-  function changed(patch){const role=active();if(!role)return;if(patch.zoom!==undefined&&role.settings.targetWidth===undefined)patch.targetWidth=reportedWidth;Object.assign(role.settings,patch);pendingSettings.set(role.name,{...role.settings});$('character-zoom').value=role.settings.zoom;$('character-zoom-value').textContent=role.settings.zoom.toFixed(2)+'×';$('character-size').value=role.settings.targetHeight??280;displayNumber('character-size-value',role.settings.targetHeight??280);renderPreview();window.renderCharacter();clearTimeout(timer);timer=setTimeout(flush,150);}
+  function changed(patch){const role=active();if(!role)return;if(patch.zoom!==undefined&&!Object.hasOwn(patch,'targetWidth')&&role.settings.targetWidth==null)patch.targetWidth=reportedWidth;Object.assign(role.settings,patch);pendingSettings.set(role.name,{...role.settings});$('character-zoom').value=role.settings.zoom;$('character-zoom-value').textContent=role.settings.zoom.toFixed(2)+'×';$('character-size').value=role.settings.targetHeight??280;displayNumber('character-size-value',role.settings.targetHeight??280);renderPreview();window.renderCharacter();clearTimeout(timer);timer=setTimeout(flush,150);}
   window.widget.characters(value=>{for(const role of value.characters){const draft=pendingSettings.get(role.name);if(draft)Object.assign(role.settings,draft);}snapshot=value;render();});
   $('character-rename').onclick=()=>active()&&action({action:'rename',name:active().name});$('character-delete').onclick=()=>active()&&action({action:'delete',name:active().name});
   $('character-upload').onclick=()=>{flush();action({action:'import'});};
@@ -45,7 +45,7 @@
     field.onchange=()=>{field.value=current();flush();};
     field.onblur=()=>{field.value=current();};
   }
-  $('character-reset').onclick=()=>{changed({zoom:1,x:0,y:0});$('character-zoom').value=1;flush();};
+  $('character-reset').onclick=()=>{changed({zoom:1,x:0,y:0,targetHeight:280,targetWidth:null});$('character-zoom').value=1;flush();};
   const canvas=$('character-processed');canvas.onpointerdown=event=>{const role=active();if(!role||event.button!==0)return;event.preventDefault();canvas.setPointerCapture(event.pointerId);panStart={clientX:event.clientX,clientY:event.clientY,x:role.settings.x,y:role.settings.y};};
   canvas.onpointermove=event=>{if(!panStart)return;const r=canvas.getBoundingClientRect();changed({x:Math.max(-1,Math.min(1,panStart.x+2*(event.clientX-panStart.clientX)/r.width)),y:Math.max(-1,Math.min(1,panStart.y+2*(event.clientY-panStart.clientY)/r.height))});};
   canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=()=>{if(panStart){panStart=null;flush();}};
