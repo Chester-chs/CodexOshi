@@ -1,12 +1,13 @@
 (function(root,factory){const api=factory();if(typeof module==='object')module.exports=api;else root.codiSound=api;})(globalThis,()=>{
-  // A quiet, original chime synthesized locally: no media download or permissions.
+  // A soft wooden-mallet note, synthesized locally with a rounded attack.
   function renderChime(sampleRate){
     if(!Number.isFinite(sampleRate)||sampleRate<8000||sampleRate>192000)throw Error('Invalid sample rate');
-    const duration=.24,samples=new Float32Array(Math.ceil(sampleRate*duration));
+    const duration=.18,samples=new Float32Array(Math.ceil(sampleRate*duration));
     for(let i=0;i<samples.length;i++){
-      const t=i/sampleRate,phase=2*Math.PI*(880*t+140*(t-(1-Math.exp(-35*t))/35));
-      const envelope=Math.min(1,t/.008)*Math.exp(-16*t)*Math.pow(Math.max(0,1-t/duration),2);
-      samples[i]=.12*envelope*(Math.sin(phase)+.18*Math.sin(2*phase));
+      const t=i/sampleRate,phase=2*Math.PI*587.33*t;
+      const envelope=(1-Math.exp(-t/.0035))*Math.exp(-18*t)*Math.pow(Math.max(0,1-t/duration),2);
+      const tone=Math.sin(phase)+.16*Math.exp(-35*t)*Math.sin(2*phase)+.045*Math.exp(-60*t)*Math.sin(4*phase);
+      samples[i]=.14*envelope*tone;
     }
     return samples;
   }
