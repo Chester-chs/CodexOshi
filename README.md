@@ -8,7 +8,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 > Codi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
 
-**Character tip:** use a transparent PNG of a chibi character or a regular portrait. Leave a little transparent space around the hair and clothing so framing does not cut them off. A full-body chibi is particularly readable at widget size; you can also frame a portrait from the chest up. Only use artwork you have permission to use.
+**Character tip:** upload a favorite anime or game character as a transparent PNG chibi or regular portrait. Leave a little transparent space around the hair and clothing so framing does not cut them off. A full-body chibi is particularly readable at widget size; you can also frame a portrait from the chest up. Only use artwork you have permission to use.
 
 ## Features
 
