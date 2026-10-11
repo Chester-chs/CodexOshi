@@ -2,6 +2,8 @@ const button=document.getElementById('widget'),resident=document.getElementById(
 let widgetPosition={x:8,y:8},start=null,moved=false,quota={windows:[]},width=160,tokens=null;
 let wheelEvents=0,scrollReportPending=false,layoutDragging=false,residentDocked=false;
 let feedbackAnimation,speechIndex=0,dialoguePreferences=window.dialogueModel.defaults();
+const clickSound=window.codiSound.createPlayer();
+window.addEventListener('pagehide',()=>clickSound.dispose());
 let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
 const codiSwitch=document.getElementById('codi-power'),codiLauncher=document.getElementById('codi-launcher');
@@ -30,6 +32,7 @@ panelBody.addEventListener('scroll',reportScroll,{passive:true});
 function rectangle(element,r){for(const key of ['left','top','width','height'])element.style[key]=(r[key==='left'?'x':key==='top'?'y':key])+'px';}
 window.widget.layout(value=>{
   window.codiEnabled=value.widgetEnabled!==false;button.hidden=!window.codiEnabled;codiLauncher.hidden=window.codiEnabled;
+  clickSound.setEnabled(window.codiEnabled&&value.panelPreferences?.clickSoundEnabled!==false);
   codiSwitch.setAttribute('aria-checked',String(window.codiEnabled));codiLauncher.setAttribute('aria-checked',String(window.codiEnabled));
   if(!window.codiEnabled){feedbackAnimation?.cancel();details.hidden=true;speech.hidden=true;rectangle(codiLauncher,value.regions[0]);return;}
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
@@ -123,7 +126,7 @@ for(const period of document.querySelectorAll('[data-period]'))period.addEventLi
 button.addEventListener('pointerdown',event=>{
   if(event.button!==0)return;
   event.preventDefault();button.setPointerCapture(event.pointerId);
-  start={x:event.clientX,y:event.clientY,left:widgetPosition.x,top:widgetPosition.y};moved=false;
+  start={x:event.clientX,y:event.clientY,left:widgetPosition.x,top:widgetPosition.y,portrait:Boolean(event.target.closest('#character-stage'))};moved=false;
 });
 button.addEventListener('pointermove',event=>{
   if(!start)return;
@@ -131,6 +134,6 @@ button.addEventListener('pointermove',event=>{
   if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
   if(moved&&!residentDocked)window.widget.gesture({type:'drag',x:start.left+dx,y:start.top+dy});
 });
-function end(event){if(!start)return;if(!moved&&event.type==='pointerup'){clickFeedback();window.widget.gesture({type:'click'});}window.widget.gesture({type:'end'});start=null;}
+function end(event){if(!start)return;if(!moved&&event.type==='pointerup'){clickFeedback();if(start.portrait)void clickSound.play();window.widget.gesture({type:'click'});}window.widget.gesture({type:'end'});start=null;}
 button.addEventListener('pointerup',end);button.addEventListener('pointercancel',end);button.addEventListener('lostpointercapture',end);
 window.addEventListener('languagechange',()=>{render();renderTokens();});setInterval(render,1000);render();renderTokens();

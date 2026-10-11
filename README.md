@@ -16,6 +16,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 - **Time-based token charts:** 24 hourly bars, 7 daily bars, or 30 daily bars, with the selected total and exact values. The current hour/day is still in progress.
 - **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
 - **Two click dialogues:** the first click shows reset information; clicking again while the bubble is open shows the second dialogue. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
+- **Click sound:** a short, soft chime when you click the character. Toggle it under **Codi Settings → Character → Click sound**; your choice is saved. The sound is generated locally and needs no download.
 - **Character controls:** size and width sit together, each with a slider and numeric input. Framing uses a 0.5–4× multiplier with −/+ adjustment. The progress bar stays below the character.
 - **Window following:** pinned bottom-right by default, with proportional shrinking in smaller Codex windows. Turn off pinning to drag the character and save its position.
 - **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it.

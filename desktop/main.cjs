@@ -120,25 +120,44 @@ app.whenReady().then(async()=>{
   const dismiss=()=>{setTextEditing(false);if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
   ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging||!widgetEnabled())return;speechVisible=false;panelOffset=null;expanded=true;updateShape();diagnostic();});
   const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
+  let booleanPreferenceQueue=Promise.resolve();
+  const queueBooleanPreference=operation=>{const result=booleanPreferenceQueue.then(operation);booleanPreferenceQueue=result.catch(()=>{});return result;};
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
   ipcMain.handle('widget-enabled',async(event,value)=>{
     if(event.sender!==win.webContents||typeof value!=='boolean'||dragging||panelResizing)return {ok:false};
-    const next={...panelPreferences,widgetEnabled:value};
-    try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
-    panelPreferences=next;setTextEditing(false);expanded=false;speechVisible=false;panelOffset=null;
-    if(!value){const worker=tokenWorker;tokenWorker=null;worker?.terminate();}
-    updateShape();diagnostic();if(value){readTokens();refresh().catch(()=>{});}return {ok:true};
+    return queueBooleanPreference(async()=>{
+      if(dragging||panelResizing)return {ok:false};
+      const next={...panelPreferences,widgetEnabled:value};
+      try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+      panelPreferences={...panelPreferences,widgetEnabled:value};setTextEditing(false);expanded=false;speechVisible=false;panelOffset=null;
+      if(!value){const worker=tokenWorker;tokenWorker=null;worker?.terminate();}
+      updateShape();diagnostic();if(value){readTokens();refresh().catch(()=>{});}return {ok:true};
+    });
   });
   ipcMain.handle('panel-language',async(event,language)=>{
     if(event.sender!==win.webContents||!panelModel.LANGUAGES.includes(language))return {ok:false};
     panelPreferences={...panelPreferences,language};notifyLayout();
     try{await panelStore.save({...panelPreferences});return {ok:true};}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
   });
+  ipcMain.handle('panel-click-sound',async(event,value)=>{
+    if(event.sender!==win.webContents||typeof value!=='boolean')return {ok:false};
+    return queueBooleanPreference(async()=>{
+      const previous=panelPreferences.clickSoundEnabled;
+      panelPreferences={...panelPreferences,clickSoundEnabled:value};notifyLayout();
+      try{await panelStore.save({...panelPreferences});return {ok:true};}catch{
+        panelPreferences={...panelPreferences};if(previous===undefined)delete panelPreferences.clickSoundEnabled;else panelPreferences.clickSoundEnabled=previous;notifyLayout();
+        return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};
+      }
+    });
+  });
   ipcMain.handle('panel-dock',async(event,value)=>{
     if(event.sender!==win.webContents||typeof value!=='boolean'||dragging||panelResizing)return {ok:false};
-    const next={...panelPreferences,dockBottomRight:value};
-    try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
-    panelPreferences=next;if(!value){widget=freePosition;defaultPlacement=widget===null;}updateShape();diagnostic();return {ok:true};
+    return queueBooleanPreference(async()=>{
+      if(dragging||panelResizing)return {ok:false};
+      const next={...panelPreferences,dockBottomRight:value};
+      try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+      panelPreferences={...panelPreferences,dockBottomRight:value};if(!value){widget=freePosition;defaultPlacement=widget===null;}updateShape();diagnostic();return {ok:true};
+    });
   });
   ipcMain.on('panel-resize',(event,value)=>{
     if(event.sender!==win.webContents||!value||!expanded||dragging)return;

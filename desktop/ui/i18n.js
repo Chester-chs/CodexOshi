@@ -20,6 +20,7 @@
     '预设已填入，可以继续编辑；保存后生效。':'Preset filled in. You can edit it; save to apply.',
     '预设可编辑，保存生效；{重置时间}如 3天21小时。':'Edit presets, then save. {重置时间} is a duration, e.g. 3d 21h.',
     '保存对话':'Save dialogue','取消编辑':'Cancel edits',
+    '点击音效':'Click sound','点击立绘时播放轻柔音效':'Play a gentle sound when you click the portrait',
     '向外拖动调整大小':'Drag outward to enlarge',
     '立绘设置':'Portrait','上传一张图片，调整角色的大小与取景':'Upload one image, then adjust size and framing.',
     '关闭气泡后重新从第一段开始。点击编辑对话修改称呼和两段文本。':'Closing the bubble restarts the first dialogue. Click Edit dialogue to change the address and two messages.',
