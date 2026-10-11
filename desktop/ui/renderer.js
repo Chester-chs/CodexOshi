@@ -7,6 +7,9 @@ window.clickSoundPlayer=clickSound;
 window.addEventListener('pagehide',()=>clickSound.dispose());
 let tokenPeriod='hours24';
 const speech=document.getElementById("speech");
+function nextSpeech(){if(!speech.hidden)window.widget.gesture({type:'speech-next'});}
+speech.addEventListener('click',nextSpeech);
+speech.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.repeat){event.preventDefault();nextSpeech();}});
 const codiSwitch=document.getElementById('codi-power'),codiLauncher=document.getElementById('codi-launcher');
 window.codiEnabled=true;
 async function switchCodi(enabled){

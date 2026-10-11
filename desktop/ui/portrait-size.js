@@ -20,6 +20,13 @@
     if(zoom<=1)return {x,y,width:w,height:h};
     return {x,y,width:w,height:h,source:{x:0,y:0,width:bw,height:content.height}};
   }
+  function portraitFooter(frame,canvasWidth,layoutWidth){
+    const inset=Math.min(4,layoutWidth/4),available=layoutWidth-inset*2;
+    if(!frame)return {x:inset,width:available};
+    const scale=layoutWidth/canvasWidth,width=Math.min(layoutWidth,Math.max(Math.min(118,available),frame.width*scale));
+    const center=(frame.x+frame.width/2)*scale;
+    return {x:Math.max(0,Math.min(layoutWidth-width,center-width/2)),width};
+  }
   const stageHeight=height=>Math.max(1,height-52);
-  return {portraitSize,portraitFrame,portraitContentSize,stageHeight,LIMIT,DEFAULT};
+  return {portraitSize,portraitFrame,portraitFooter,portraitContentSize,stageHeight,LIMIT,DEFAULT};
 });

@@ -2,6 +2,22 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const {prepareImage}=require('../desktop/ui/image-processing.js');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {CharacterStore}=require('../runtime/characters.cjs');
+
+test('footer follows the rendered artwork instead of the unused canvas width at high DPI',()=>{
+  const {portraitFooter}=require('../desktop/ui/portrait-size.js');
+  assert.equal(typeof portraitFooter,'function');
+  assert.deepEqual(portraitFooter({x:120,width:360},900,600),{x:80,width:240});
+  assert.deepEqual(portraitFooter({x:360,width:720},1200,600),{x:180,width:360});
+});
+
+test('footer keeps narrow artwork controls readable and restores bounds without a bitmap',()=>{
+  const {portraitFooter}=require('../desktop/ui/portrait-size.js');
+  assert.equal(typeof portraitFooter,'function');
+  assert.deepEqual(portraitFooter({x:195,width:10},400,400),{x:141,width:118});
+  assert.deepEqual(portraitFooter({x:4,width:10},400,400),{x:0,width:118});
+  assert.deepEqual(portraitFooter({x:76,width:10},90,90),{x:8,width:82});
+  assert.deepEqual(portraitFooter(null,600,400),{x:4,width:392});
+});
 test('full portrait at fit scale keeps every edge and panning stays within unused space',()=>{
   const {portraitFrame}=require('../desktop/ui/portrait-size.js');
   for(const [width,height] of [[90,128],[199,228],[300,368],[672,1]])for(const [bw,bh] of [[627,882],[100,1],[1,100]])for(const settings of [{zoom:1,x:-.025,y:.756},{zoom:1,x:1,y:-1},{zoom:.5,x:-1,y:1}]){

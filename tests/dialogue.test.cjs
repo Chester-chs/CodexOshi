@@ -9,26 +9,31 @@ test('minimize placeholder bounds never clamp or persist the remembered position
   send({attached:true,visible:true,hostAlive:true,dpi:96,bounds:{width:800,height:600}});
   assert.equal(h.run('widget.x'),300);assert.equal(h.run('widget.y'),200);
 });
-test('portrait alternates two speeches; only gear opens settings and outside click dismisses',async()=>{
+test('portrait always opens first speech; only bubble clicks cycle and gear opens settings',async()=>{
   const h=await mainHarness();
   h.gesture({type:'click'});assert.equal(h.run('expanded'),false);assert.equal(h.run('speechIndex'),0);
   const g=require('../desktop/geometry.cjs');let v=h.run('viewLayout');assert.deepEqual(JSON.parse(JSON.stringify(g.shape(v.regions,800,600,v.sizes))),JSON.parse(JSON.stringify(v.regions)));
-  h.gesture({type:'click'});assert.equal(h.run('speechIndex'),1);
+  h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);
+  h.gesture({type:'speech-next'});assert.equal(h.run('speechIndex'),1);
+  h.gesture({type:'speech-next'});assert.equal(h.run('speechIndex'),0);
+  h.gesture({type:'speech-next'});assert.equal(h.run('speechIndex'),1);
   h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);assert.equal(h.run('clicks'),3);
   h.ipc('open-settings');assert.equal(h.run('expanded'),true);assert.equal(h.run('speechVisible'),false);
+  h.gesture({type:'speech-next'});assert.equal(h.run('expanded'),true);assert.equal(h.run('speechVisible'),false);
   const socket=h.socket();socket.emit('data',JSON.stringify({token:h.bridgeInfo.token,state:{attached:true,visible:true,hostAlive:true,dpi:96,bounds:{width:800,height:600},outsideClick:true}})+'\n');
   assert.equal(h.run('expanded'),false);
 });
-for(const previousClicks of [1,2])test(`outside dismissal after ${previousClicks} portrait clicks starts again with reset information`,async()=>{
+for(const previousClicks of [1,2])test(`outside dismissal of speech ${previousClicks} starts again with reset information`,async()=>{
   const h=await mainHarness(),socket=h.socket();
-  for(let n=0;n<previousClicks;n++)h.gesture({type:'click'});
+  h.gesture({type:'click'});if(previousClicks===2)h.gesture({type:'speech-next'});
   socket.emit('data',JSON.stringify({token:h.bridgeInfo.token,state:{attached:true,visible:true,hostAlive:true,dpi:96,bounds:{width:800,height:600},outsideClick:true}})+'\n');
   assert.equal(h.run('speechVisible'),false);
+  h.gesture({type:'speech-next'});assert.equal(h.run('speechVisible'),false,'A hidden bubble cannot reopen itself');
   h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0,'A closed bubble must begin a fresh dialogue');
-  h.gesture({type:'click'});assert.equal(h.run('speechIndex'),1,'Only a visible first bubble advances to the reminder');
+  h.gesture({type:'speech-next'});assert.equal(h.run('speechIndex'),1,'A bubble click advances to the reminder');
   h.ipc('collapse');h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);
   h.ipc('open-settings');h.ipc('collapse');h.gesture({type:'click'});assert.equal(h.run('speechIndex'),0);
-  assert.equal(h.run('clicks'),previousClicks+4);
+  assert.equal(h.run('clicks'),4,'Only portrait gestures count as portrait clicks');
 });
 test('dialogues have exactly two bounded plain-text templates and safe substitutions',()=>{
   const m=require('../desktop/ui/dialogue-model.js');const d=m.defaults();assert.equal(d.lines.length,2);

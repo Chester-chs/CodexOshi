@@ -237,7 +237,8 @@ app.whenReady().then(async()=>{
       savePosition();notifyLayout();
       if(pendingQuota){saveSnapshot('quota-state.json',pendingQuota);pendingQuota=null;}
       if(pendingTokens){saveSnapshot('tokens-state.json',pendingTokens);pendingTokens=null;}
-    } else if(value.type==='click'){setTextEditing(false);if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=speechVisible?(speechIndex+1)%2:0;expanded=false;speechVisible=true;updateShape();}
+    } else if(value.type==='click'){setTextEditing(false);if(panelResizing){panelResizing=false;savePanel();}clicks++;speechIndex=0;expanded=false;speechVisible=true;updateShape();}
+    else if(value.type==='speech-next'){if(!speechVisible||expanded)return;speechIndex=(speechIndex+1)%2;notifyLayout();}
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=freePosition=saved;defaultPlacement=false;}}catch{}

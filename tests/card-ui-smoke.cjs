@@ -18,12 +18,16 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   const portrait=state().region[0];
   async function clickAt(x,y){win.webContents.sendInputEvent({type:'mouseMove',x,y});win.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});await delay(30);win.webContents.sendInputEvent({type:'mouseUp',x,y,button:'left',clickCount:1});await delay(150);}
   await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);
+  // Hidden Chromium can defer first input delivery beyond a fixed sleep. Wait
+  // for the actual renderer response, rather than racing the state-file read.
+  await waitFor(`!document.querySelector('#speech').hidden`);
   assert.equal(state().expanded,false);assert.equal(state().speechVisible,true);assert.equal(state().speechIndex,0);assert.equal(state().region[1].width,280);
   assert.ok((await js(`document.querySelector('#speech-text').textContent`)).includes(restart?'测试称呼':'主人'));assert.match(await js(`document.querySelector('#speech-credits').textContent`),/2/);
   const r=state().region[1];
   async function captureSpeech(name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(80);const full=await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true}),[w,h]=win.getContentSize();fs.writeFileSync(path.join(output,name),full.resize({width:w*2,height:h*2}).crop({x:r.x*2,y:r.y*2,width:r.width*2,height:r.height*2}).toPNG());}
   await captureSpeech('speech.png');
-  await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,1);assert.match(await js(`document.querySelector('#speech-text').textContent`),/每一步都算数/);
+  await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);
+  await clickAt(r.x+140,r.y+66);assert.equal(state().speechIndex,1);assert.match(await js(`document.querySelector('#speech-text').textContent`),/每一步都算数/);
   assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'none','Second dialogue must not show countdown or reset cards');
   await captureSpeech('speech-second.png');
   const typography=await js(`(()=>{const s=getComputedStyle(document.querySelector('#speech-text'));return {family:s.fontFamily,weight:s.fontWeight,size:s.fontSize}})()`);
@@ -35,10 +39,10 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex','First dialogue must restore reset details');
   async function dismissSpeech(){socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,bounds:dimensions,outsideClick:true}})+'\n');await delay(150);assert.equal(state().speechVisible,false);}
   await dismissSpeech();await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex');
-  await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,1);
+  await clickAt(r.x+140,r.y+66);assert.equal(state().speechIndex,1);
   await dismissSpeech();await clickAt(portrait.x+Math.round(portrait.width/2),portrait.y+80);assert.equal(state().speechIndex,0);assert.equal(await js(`getComputedStyle(document.querySelector('.speech-data')).display`),'flex');
   const gear=await js(`(()=>{const r=document.querySelector('#settings-open').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);await clickAt(gear.x,gear.y);
-  assert.equal(state().expanded,true);assert.equal(state().speechVisible,false);assert.equal(state().clicks,6);
+  assert.equal(state().expanded,true);assert.equal(state().speechVisible,false);assert.equal(state().clicks,5);
   socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,dpi:96,bounds:dimensions,outsideClick:true}})+'\n');await delay(150);assert.equal(state().expanded,false);await clickAt(gear.x,gear.y);
   await js(`window.widget.gesture({type:'drag',x:950,y:80});window.widget.gesture({type:'end'})`);await waitFor(`!document.querySelector('#details').hidden`);await delay(100);
   async function capture(name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(80);const r=state().region[1];fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(r,{stayHidden:true,stayAwake:true})).toPNG());}

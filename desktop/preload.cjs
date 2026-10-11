@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('widget',{
   soundRead:()=>ipcRenderer.invoke('sound-read'),
   soundImport:language=>ipcRenderer.invoke('sound-import',language),
   soundSelect:id=>ipcRenderer.invoke('sound-select',id),
+  soundPreset:id=>ipcRenderer.invoke('sound-preset',id),
   soundDiscard:id=>ipcRenderer.invoke('sound-discard',id),
   soundState:callback=>ipcRenderer.on('sound-state',(_event,value)=>callback(value)),
   panelResize:value=>ipcRenderer.send('panel-resize',value),

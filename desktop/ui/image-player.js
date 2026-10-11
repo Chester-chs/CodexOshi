@@ -1,5 +1,5 @@
 class LocalImagePlayer{
-  constructor(canvas,onStatus=()=>{},onFrame=()=>{}){this.canvas=canvas;this.onStatus=onStatus;this.onFrame=onFrame;this.settings={zoom:1,x:0,y:0};this.frames=0;}
+  constructor(canvas,onStatus=()=>{},onFrame=()=>{},onDraw=()=>{}){this.canvas=canvas;this.onStatus=onStatus;this.onFrame=onFrame;this.onDraw=onDraw;this.settings={zoom:1,x:0,y:0};this.frames=0;}
   load(url,background=true){
     const key=url+'|'+background;if(key===this.key)return;this.key=key;this.worker?.terminate();this.bitmap?.close();this.bitmap=null;
     this.worker=new Worker('image-worker.js');this.worker.onmessage=event=>{
@@ -9,6 +9,6 @@ class LocalImagePlayer{
   }
   frame(settings){this.settings=settings;this.draw();}
   resize(width,height){if(this.canvas.width!==width||this.canvas.height!==height){this.canvas.width=width;this.canvas.height=height;this.draw();}}
-  draw(){const c=this.canvas,ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(!this.bitmap)return;const b=this.bitmap,r=window.portraitGeometry.portraitFrame(c.width,c.height,b.width,b.height,this.settings);if(r.source){const s=r.source;ctx.drawImage(b,s.x,s.y,s.width,s.height,r.x,r.y,r.width,r.height);}else ctx.drawImage(b,r.x,r.y,r.width,r.height);}
+  draw(){const c=this.canvas,ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);if(!this.bitmap){this.onDraw(null);return;}const b=this.bitmap,r=window.portraitGeometry.portraitFrame(c.width,c.height,b.width,b.height,this.settings);if(r.source){const s=r.source;ctx.drawImage(b,s.x,s.y,s.width,s.height,r.x,r.y,r.width,r.height);}else ctx.drawImage(b,r.x,r.y,r.width,r.height);this.onDraw(r);}
 }
 window.LocalImagePlayer=LocalImagePlayer;
