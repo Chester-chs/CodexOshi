@@ -24,3 +24,6 @@ test('English quota and token labels keep the original numbers and thresholds',(
 test('unknown translated labels remain literal, including names inherited by ordinary objects',()=>{
   const {t}=require('../desktop/ui/i18n.js');for(const value of ['Custom window','constructor','toString','__proto__'])assert.equal(t(value,{},'en-US'),value);assert.equal(t(undefined,{},'en-US'),'');
 });
+test('the portrait height label has an English translation',()=>{
+  const {t}=require('../desktop/ui/i18n.js');assert.equal(t('高度',{},'en-US'),'Height');
+});

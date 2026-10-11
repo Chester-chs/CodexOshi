@@ -1,6 +1,6 @@
 (()=>{
   const fields=['dialogue-first','dialogue-second'].map(id=>document.getElementById(id)),[first,second]=fields;
-  const editableFields=[...fields,...['custom-base-hex','custom-accent-hex','character-zoom','character-width-value','character-size-value','sound-volume-value'].map(id=>document.getElementById(id))];
+  const editableFields=[...fields,...['custom-base-hex','custom-accent-hex','character-width-value','character-size-value','sound-volume-value'].map(id=>document.getElementById(id))];
   const message=document.getElementById('dialogue-message'),save=document.getElementById('dialogue-save');
   let saved=null,editing=false;
   const editableLine=line=>line.replace(/\{称呼\}/g,()=>saved?.address||'主人');

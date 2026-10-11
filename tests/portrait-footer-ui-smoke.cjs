@@ -32,16 +32,19 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
   const cases=[];
   await js(`window.widget.openSettings()`);await waitFor(`!document.querySelector('#details').hidden`);await js(`document.querySelector('#character-tab').click()`);await waitFor(`!document.querySelector('#character-panel').hidden`);
   async function field(id,value){await js(`(()=>{const field=document.querySelector('#${id}');field.value=${JSON.stringify(String(value))};field.dispatchEvent(new Event('input',{bubbles:true}));field.dispatchEvent(new Event('change',{bubbles:true}));})()`);await delay(180);}
-  await field('character-width',672);await field('character-size',420);await field('character-zoom',4);
+  assert.equal(await js(`document.querySelector('#character-zoom')===null&&document.querySelector('.framing-adjust')===null`),true);
+  assert.equal(await js(`document.querySelector('#character-size-value').getAttribute('aria-label')`),'高度');
+  await field('character-width',672);await field('character-size',420);
+  assert.equal((await js(`window.widget.characterAction({action:'settings',name:'几何角色',patch:{zoom:4}})`)).ok,true);await delay(180);
   await js(`document.querySelector('#character-size-value').focus();document.querySelector('#character-reset').scrollIntoView({block:'center'});for(const animation of document.querySelector('#details').getAnimations())animation.finish()`);
   const resetPoint=await js(`(()=>{const r=document.querySelector('#character-reset').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
   for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...resetPoint,button:'left',clickCount:1});await delay(220);
   const resetSettings=JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'));
   assert.equal(resetSettings.targetHeight,280,'Restore defaults must reset size');assert.equal(resetSettings.zoom,1);assert.equal(resetSettings.x,0);assert.equal(resetSettings.y,0);assert.equal(Object.hasOwn(resetSettings,'targetWidth'),false,'Restore defaults must return width to automatic');
-  assert.equal(Number(await js(`document.querySelector('#character-size-value').value`)),280);assert.equal(Number(await js(`document.querySelector('#character-width-value').value`))<672,true);assert.equal(Number(await js(`document.querySelector('#character-zoom').value`)),1);
+  assert.equal(Number(await js(`document.querySelector('#character-size-value').value`)),280);assert.equal(Number(await js(`document.querySelector('#character-width-value').value`))<672,true);
   await js(`window.widget.characterAction({action:'select',name:'几何角色'})`);await js(`document.querySelector('#character-reset').click()`);await delay(180);
   assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')),'targetWidth'),false,'Restoring again must keep automatic width');
-  await js(`(()=>{for(const [id,value]of [['character-width',620],['character-size',380],['character-zoom',3]]){const field=document.querySelector('#'+id);field.value=value;field.dispatchEvent(new Event('input'));field.dispatchEvent(new Event('change'));}document.querySelector('#character-reset').click();const field=document.querySelector('#character-width-value');field.value=240;field.dispatchEvent(new Event('input'));field.dispatchEvent(new Event('change'));})()`);await delay(280);
+  await js(`(()=>{for(const [id,value]of [['character-width',620],['character-size',380]]){const field=document.querySelector('#'+id);field.value=value;field.dispatchEvent(new Event('input'));field.dispatchEvent(new Event('change'));}document.querySelector('#character-reset').click();const field=document.querySelector('#character-width-value');field.value=240;field.dispatchEvent(new Event('input'));field.dispatchEvent(new Event('change'));})()`);await delay(280);
   const afterRapidReset=JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'));assert.equal(afterRapidReset.targetWidth,240);assert.equal(afterRapidReset.targetHeight,280);assert.equal(afterRapidReset.zoom,1);assert.equal(Number(await js(`document.querySelector('#character-width-value').value`)),240);
   await field('character-width',126);await js(`document.querySelector('#character-width').focus()`);
   win.webContents.sendInputEvent({type:'keyDown',keyCode:'End'});win.webContents.sendInputEvent({type:'keyUp',keyCode:'End'});await waitFor(`document.querySelector('#character-width').value==='672'`);await delay(180);assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')).targetWidth,672);
@@ -49,7 +52,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
   for(const size of [{width:1600,height:1000},{width:800,height:600}]){
     dimensions=size;send();await delay(200);
     const panel=await js(`(()=>{const r=document.querySelector('#details').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`);
-    await field('character-size',280);await field('character-zoom',1);let previous=null;
+    await field('character-size',280);let previous=null;
     for(const width of [126,240,400,540,672]){
       await field('character-width',width);const m=await check(),artWidth=m.draw.width*m.canvas.width/m.draw.canvasWidth;
       if(previous!==null)assert.ok(artWidth>previous+1,'Increasing width must visibly widen the actual portrait');previous=artWidth;monotonic.push({viewport:dimensions,width,artWidth,barWidth:m.bar.width});

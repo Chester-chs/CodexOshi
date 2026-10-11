@@ -17,7 +17,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 - **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
 - **Two click dialogues:** clicking the character always shows the first dialogue with reset information. Click the bubble to cycle between the two lines. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
 - **Click sound:** Starlight duo is the default sound. Under **Codi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
-- **Character controls:** size and width sit together, each with a slider and numeric input. Framing uses a 0.5–4× multiplier with −/+ adjustment. Restore defaults returns to size 280, automatic width, centered framing and 1× zoom. The progress bar stays below the character.
+- **Character controls:** height and width sit together, each with a slider and numeric input. Restore defaults returns to height 280, automatic width, and centered framing. The progress bar stays below the character.
 - **Window following:** pinning moves the character to the lower-right corner with a 24 px right margin and scales it down in smaller windows. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
 - **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
@@ -29,7 +29,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 Screenshots use geometric placeholder artwork and synthetic usage data, not user character images.
 
-![Character size, width, and framing controls](docs/images/resident-framing-width.png)
+![Character height and width controls](docs/images/resident-framing-width.png)
 
 ![30-day token chart](docs/images/ui-redesign-token-30-days.png)
 
@@ -119,8 +119,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugin
 
 1. Open Codex. Codi follows its client area and hides when the host is unavailable or minimized.
 2. Click the character for a dialogue bubble. Click the gear to open settings.
-3. In **Character**, click **Upload portrait**. No separate create action is needed. Size and width can be entered directly; invalid values do not replace the last valid setting.
-4. Adjust the framing multiplier and drag the processed preview to pan. Zooming changes the visible portion; width is controlled independently. Changing character dimensions keeps the open settings card stable.
+3. In **Character**, click **Upload portrait**. No separate create action is needed. Height and width can be entered directly; invalid values do not replace the last valid setting.
+4. Drag the processed preview to reposition the visible portion. Changing character dimensions keeps the open settings card stable.
 5. Edit the two dialogue lines in the same page. `{重置时间}` inserts a duration such as `3d 21h`; write the surrounding sentence yourself. Presets remain editable and take effect after saving.
 6. In **Appearance**, select a theme or customize its background and accent. Text and selected controls use adjusted contrast colors for readability.
 

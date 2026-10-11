@@ -3,6 +3,7 @@ const {app,BrowserWindow,dialog}=require('electron'),fs=require('node:fs'),path=
 const output=process.argv[process.argv.indexOf('--output')+1],data=path.join(output,'data'),role=path.join(data,'characters','白裙几何');fs.mkdirSync(role,{recursive:true});
 const fixture=path.resolve(__dirname,'fixtures/portrait-white.png');fs.copyFileSync(fixture,path.join(role,'tired.png'));
 fs.writeFileSync(path.join(role,'settings.json'),JSON.stringify({background:true,zoom:1,x:0,y:0,targetHeight:280,images:{tired:'tired.png'},notes:'preserve legacy'}));fs.writeFileSync(path.join(data,'characters','active.json'),'{"name":"白裙几何"}');
+fs.writeFileSync(path.join(data,'panel-preferences.json'),JSON.stringify({width:480,height:560,language:'zh-CN',widgetEnabled:true,dockBottomRight:false}));
 // Start every run with the tired-only legacy fixture, not a previously uploaded portrait.
 process.argv.push('--data',data);const originalLoad=Module._load;
 Module._load=function(name,parent,...args){if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[{remainingPercent:80,label:'每周限额'}]};}async refresh(){return this.snapshot;}}};if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};return originalLoad.call(this,name,parent,...args);};
@@ -11,7 +12,7 @@ const filename=path.resolve(__dirname,'../desktop/main.cjs'),main=new Module(fil
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));
 (async()=>{
   await app.whenReady();let bridge;const deadline=Date.now()+8000;while(!bridge){try{const q=JSON.parse(fs.readFileSync(path.join(data,'bridge.json'),'utf8'));if(q.pid===process.pid)bridge=q;}catch{}if(Date.now()>deadline)throw Error('No new bridge');await delay(20);}
-  const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});
+  const socket=net.connect('\\\\.\\pipe\\'+bridge.pipe);await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('error',reject);});socket.on('error',()=>{});
   const send=()=>socket.write(JSON.stringify({token:bridge.token,state:{hostAlive:true,attached:true,visible:true,modal:false,dpi:96,bounds:{width:900,height:700}}})+'\n');send();let heartbeat=setInterval(send,150);
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code);
   async function capture(name){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(60);fs.writeFileSync(path.join(output,name),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());}
@@ -31,19 +32,20 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await capture('resident-before.png');clearInterval(heartbeat);heartbeat=null;
   const before=state(),r=before.region[0];win.webContents.sendInputEvent({type:'mouseDown',x:r.x+r.width/2,y:r.y+r.height/2,button:'left',clickCount:1});win.webContents.sendInputEvent({type:'mouseUp',x:r.x+r.width/2,y:r.y+r.height/2,button:'left',clickCount:1});
   await delay(40);const animation=await js(`(()=>{const c=document.querySelector('#character-canvas'),a=c.getAnimations()[0];return {present:!!a,duration:a?.effect.getTiming().duration,keyframes:a?.effect.getKeyframes(),transform:getComputedStyle(c).transform}})()`);assert.equal(animation.present,true);assert.equal(animation.duration,220);
-  const during=state(),shapeStart=shapes.length;assert.equal(during.clicks,before.clicks+1);assert.equal(during.expanded,!before.expanded);await capture('resident-feedback.png');
+  const during=state(),shapeStart=shapes.length;assert.equal(during.clicks,before.clicks+1);assert.equal(during.speechVisible,true);await capture('resident-feedback.png');
   for(let i=0;i<4;i++){await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(60);}
   const after=state(),restored=await js(`({transform:getComputedStyle(document.querySelector('#character-canvas')).transform,running:document.querySelector('#character-canvas').getAnimations().length})`),shapeCallsDuringAnimation=shapes.length-shapeStart;assert.equal(restored.transform,'none');assert.equal(restored.running,0);assert.deepEqual(after.region,during.region);assert.equal(shapeCallsDuringAnimation,0,'animation itself must not call setShape');
   send();heartbeat=setInterval(send,150);
   // Keep all existing settings; exercise the actual single upload button/dialog/IPC.
-  dialog.showOpenDialog=async()=>({canceled:false,filePaths:[fixture]});await js(`document.querySelector('#character-tab').click();document.querySelector('.upload-character').click();`);await delay(400);
-  const settings=[];for(const h of [180,280,420]){await js(`(()=>{const s=document.querySelector('#character-size');s.value='${h}';s.dispatchEvent(new Event('input',{bubbles:true}));})()`);await delay(500);assert.equal(state().region[0].height,h);assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')).targetHeight,h);settings.push(h);}
+  dialog.showOpenDialog=async()=>({canceled:false,filePaths:[fixture]});await js(`window.widget.openSettings()`);await delay(150);await js(`document.querySelector('#character-tab').click();document.querySelector('.upload-character').click();`);await delay(400);
+  const selectedName=JSON.parse(fs.readFileSync(path.join(data,'characters','active.json'),'utf8')).name,selectedRole=path.join(data,'characters',selectedName);assert.notEqual(selectedName,'白裙几何');
+  const settings=[];for(const h of [180,280,420]){await js(`(()=>{const s=document.querySelector('#character-size');s.value='${h}';s.dispatchEvent(new Event('input',{bubbles:true}));})()`);await delay(500);assert.equal(state().region[0].height,h);assert.equal(JSON.parse(fs.readFileSync(path.join(selectedRole,'settings.json'),'utf8')).targetHeight,h);settings.push(h);}
   await js(`(()=>{const b=document.querySelector('#character-background');b.checked=false;b.dispatchEvent(new Event('change'));})()`);await delay(500);
-  await js(`(()=>{const z=document.querySelector('#character-zoom');z.value='1.3';z.dispatchEvent(new Event('input',{bubbles:true}));})()`);await delay(500);
-  const metadata=JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'));assert.equal(metadata.background,false);assert.equal(metadata.zoom,1.3);assert.equal(metadata.targetHeight,420);assert.equal(metadata.images.tired,'tired.png');assert.equal(metadata.notes,'preserve legacy');assert.ok(metadata.portrait);assert.deepEqual(fs.readFileSync(path.join(role,'tired.png')),fs.readFileSync(fixture));
+  assert.equal(await js(`document.querySelector('#character-zoom')`),null);
+  const metadata=JSON.parse(fs.readFileSync(path.join(selectedRole,'settings.json'),'utf8')),legacy=JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'));assert.equal(metadata.background,false);assert.equal(metadata.zoom,1);assert.equal(metadata.targetHeight,420);assert.ok(metadata.portrait);assert.equal(legacy.images.tired,'tired.png');assert.equal(legacy.notes,'preserve legacy');assert.deepEqual(fs.readFileSync(path.join(role,'tired.png')),fs.readFileSync(fixture));
   const previewPoint=await js(`(()=>{const c=document.querySelector('#character-processed');c.scrollIntoView({block:'center'});const r=c.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});
   win.webContents.sendInputEvent({type:'mouseDown',...previewPoint,button:'left',clickCount:1});win.webContents.sendInputEvent({type:'mouseMove',x:previewPoint.x+20,y:previewPoint.y+10,button:'left'});win.webContents.sendInputEvent({type:'mouseUp',x:previewPoint.x+20,y:previewPoint.y+10,button:'left',clickCount:1});await delay(500);
-  const pan=JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'));assert.ok(pan.x>0&&pan.y>0,'real preview drag must persist framing');
+  const pan=JSON.parse(fs.readFileSync(path.join(selectedRole,'settings.json'),'utf8'));assert.ok(pan.x>0&&pan.y>0,'real preview drag must persist framing');
   await js(`document.querySelector('#character-reset').click()`);await delay(500);
   await js(`(()=>{const s=document.querySelector('#character-size');s.value='280';s.dispatchEvent(new Event('input',{bubbles:true}));})()`);await delay(500);assert.equal(state().region[0].height,280);
   await js(`(()=>{const b=document.querySelector('#character-background');b.checked=true;b.dispatchEvent(new Event('change'));})()`);await delay(500);
