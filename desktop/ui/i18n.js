@@ -24,6 +24,7 @@
     '播放点击音效':'Play click sound','内置音效':'Built-in sound','试听':'Preview','上传音效':'Upload sound','恢复内置':'Use built-in sound','音量':'Volume',
     '预设音效':'Sound presets','木琴轻点':'Wooden note','水滴啵啵':'Bubble pop','清透铃音':'Clear bell','星光双音':'Starlight duo','柔和轻敲':'Soft tap',
     '点击切换对话':'Click to switch dialogue',
+    '恢复默认':'Restore defaults','回到默认位置':'Back to default position',
     '试听木琴轻点':'Preview wooden note','试听水滴啵啵':'Preview bubble pop','试听清透铃音':'Preview clear bell','试听星光双音':'Preview starlight duo','试听柔和轻敲':'Preview soft tap',
     '点选保存，试听不切换。':'Select to save. Preview keeps your current choice.','使用已上传音效':'Use uploaded sound','移除上传音效':'Remove uploaded sound',
     'WAV / MP3 / OGG / M4A / FLAC，30 秒以内。仅保存在本机。':'WAV / MP3 / OGG / M4A / FLAC, up to 30 seconds. Stored locally.',
