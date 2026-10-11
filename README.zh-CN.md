@@ -4,9 +4,11 @@
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
 </p>
 
-你的 Codex 桌面小伙伴：查看额度、统计本机 token 用量、自定义角色与对话。项目原名 **codex-quota-widget（Codex 额度挂件）**。
+你的 Codex 桌面小伙伴：查看额度、统计本机 token 用量、自定义角色与对话。
 
 > 当前支持 **Windows x64 与 Codex 桌面应用**。Codi 只读取额度和本机用量，不生成模型回复。角色图片始终留在本机。
+
+**形象建议**：推荐使用透明背景、全身完整的 **Q 版角色**。比例紧凑，在小挂件中更容易看清。普通立绘也可以使用。
 
 ## 功能
 
@@ -39,9 +41,22 @@
 
 ## 安装
 
-当前安装脚本要求源码位于 **`%USERPROFILE%\plugins\codex-quota-widget`**。GitHub 仓库已叫 Codi，但本机目录请保留这个名称，因为安装脚本会校验路径。
+### 方法一：让 Codex 帮你安装
 
-在 PowerShell 中运行：
+在 Codex 桌面版新建一个本机聊天，把下面这段话发给它：
+
+```text
+请帮我在这台 Windows 电脑上安装 Codi：https://github.com/Chester-chs/Codi。
+先检查 Codex、Git 和 Node.js 24+，缺少依赖请协助安装。
+把项目放在 %USERPROFILE%\plugins\codex-quota-widget。若目录已存在，先检查，保留我的本地修改、角色和设置。
+在项目目录运行：powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1。
+安装后确认 Codi 能在 Codex 中显示，并告诉我如何使用可见开关。如果需要重启 Codex，请提醒我自行重启。
+```
+
+### 方法二：自己安装
+
+1. 安装并登录 Codex 桌面版。没有 **Node.js 24+** 和 **Git** 的话，先安装这两个工具。
+2. 打开 Windows 开始菜单，搜索 **PowerShell** 并打开，复制运行下面几行：
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\plugins" | Out-Null
@@ -50,11 +65,11 @@ Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-若目录已有安装，请更新已有仓库，不要覆盖克隆。仓库保持私有时，克隆需要对应 GitHub 访问权限。
+3. 等安装完成后，完全退出并重新打开 Codex，再新建一个聊天。Codi 应出现在右下角。
 
-安装程序下载锁定的 Electron 运行时，将 Codi 加入 Codex 个人插件市场，并启动挂件。默认注册当前用户的 Windows 登录任务 **`Codex Quota Widget`**，无需管理员权限。加 `-NoStartup` 可跳过创建登录任务，加 `-NoStart` 可跳过立即启动。
+请使用上面的安装目录，脚本会检查路径。已经安装过的话，用方法一让 Codex 帮你更新，不要重复克隆。仓库保持私有时，你的 GitHub 账号需要有下载权限。
 
-首次安装或更新 MCP 服务后，请完全退出并重开 Codex，再新建聊天以加载更新后的服务。
+安装后默认随 Windows 登录启动。不需要自启，可在安装命令末尾加 `-NoStartup`；加 `-NoStart` 则不立即启动。之后更新 MCP 服务，也需要重新打开 Codex 并新建聊天。
 
 ## 在 Codex 中开启与关闭
 
@@ -117,7 +132,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify.ps1 -Nati
 
 详细记录：[右下角固定与尺寸控件](docs/resident-docking-width-verification.md)、[可见开关](docs/codi-switch-verification.md)、[拖动性能](docs/drag-performance-verification.md)、[界面与 token 图表](docs/ui-redesign-verification.md)、[图片格式](docs/character-formats-verification.md)。较早的阶段记录描述的是当时实现。
 
-为了兼容已有安装，插件 ID、数据目录和登录任务仍保留原标识；仓库及插件显示名称为 **Codi**。`v1.0` 标签是早期回退快照，不是插件清单中的版本号。
+安装与数据目录请使用上面列出的路径。`v1.0` 标签是早期回退快照，不是插件清单中的版本号。
 
 ## 许可证
 

@@ -1,6 +1,7 @@
 (()=>{
   const $=id=>document.getElementById(id);
   let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='',reportedWidth=199;
+  const pendingSettings=new Map();
   const active=()=>snapshot.characters.find(c=>c.name===snapshot.active),error=text=>{$('character-error').dataset.i18n=text;$('character-error').textContent=window.uiText.t(text);};
   function displayNumber(id,value){if(document.activeElement!==$(id))$(id).value=value;}
   function reportSize(view){
@@ -13,7 +14,7 @@
   }
   const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));}),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').dataset.i18n=text;$('character-processing').textContent=window.uiText.t(text);if(bad)error(text);});
   window.resizeCharacter=(width,height)=>{const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)));};
-  async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');}catch{error('角色操作失败，请重试。');}}
+  async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');return q;}catch{error('角色操作失败，请重试。');return {ok:false};}}
   window.renderCharacter=()=>{if(window.codiEnabled===false)return;const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
@@ -23,9 +24,9 @@
     const zoom=role?.settings.zoom||1;
     $('character-background').checked=role?.settings.background??true;$('character-zoom').value=zoom;$('character-zoom-value').textContent=zoom.toFixed(2)+'×';$('character-size').value=role?.settings.targetHeight??280;displayNumber('character-size-value',role?.settings.targetHeight??280);renderPreview();window.renderCharacter();
   }
-  function flush(){clearTimeout(timer);const role=active();if(role)action({action:'settings',name:role.name,patch:role.settings});}
-  function changed(patch){const role=active();if(!role)return;if(patch.zoom!==undefined&&role.settings.targetWidth===undefined)patch.targetWidth=reportedWidth;Object.assign(role.settings,patch);$('character-zoom').value=role.settings.zoom;$('character-zoom-value').textContent=role.settings.zoom.toFixed(2)+'×';$('character-size').value=role.settings.targetHeight??280;displayNumber('character-size-value',role.settings.targetHeight??280);renderPreview();window.renderCharacter();clearTimeout(timer);timer=setTimeout(flush,150);}
-  window.widget.characters(value=>{snapshot=value;render();});
+  function flush(){clearTimeout(timer);const role=active(),draft=role&&pendingSettings.get(role.name);if(draft)action({action:'settings',name:role.name,patch:{...draft}}).then(result=>{if(result.ok&&pendingSettings.get(role.name)===draft)pendingSettings.delete(role.name);});}
+  function changed(patch){const role=active();if(!role)return;if(patch.zoom!==undefined&&role.settings.targetWidth===undefined)patch.targetWidth=reportedWidth;Object.assign(role.settings,patch);pendingSettings.set(role.name,{...role.settings});$('character-zoom').value=role.settings.zoom;$('character-zoom-value').textContent=role.settings.zoom.toFixed(2)+'×';$('character-size').value=role.settings.targetHeight??280;displayNumber('character-size-value',role.settings.targetHeight??280);renderPreview();window.renderCharacter();clearTimeout(timer);timer=setTimeout(flush,150);}
+  window.widget.characters(value=>{for(const role of value.characters){const draft=pendingSettings.get(role.name);if(draft)Object.assign(role.settings,draft);}snapshot=value;render();});
   $('character-rename').onclick=()=>active()&&action({action:'rename',name:active().name});$('character-delete').onclick=()=>active()&&action({action:'delete',name:active().name});
   $('character-upload').onclick=()=>{flush();action({action:'import'});};
   $('character-background').onchange=()=>changed({background:$('character-background').checked});$('character-zoom').oninput=()=>{const zoom=Number($('character-zoom').value);if(Number.isFinite(zoom)&&zoom>=.5&&zoom<=4)changed({zoom});};$('character-zoom').onchange=()=>{$('character-zoom').value=active()?.settings.zoom||1;flush();};

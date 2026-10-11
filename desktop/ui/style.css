@@ -196,6 +196,7 @@ article{padding:18px;margin-bottom:14px}.card-row{margin:12px 0 14px;align-items
 
 #codi-power,#codi-launcher{display:flex;align-items:center;justify-content:center;gap:8px;min-height:36px;flex:none;padding:6px 10px;border:1px solid var(--border-subtle);border-radius:18px;background:var(--bg-elevated);color:var(--text-primary);font-size:13px}
 #codi-launcher{position:absolute;box-sizing:border-box;overflow:hidden;min-height:0;padding:4px 8px;border-radius:14px}
+.panel-heading{display:flex;align-items:center;gap:10px;min-width:0}
 .codi-switch-track{display:block;position:relative;flex:none;width:30px;height:18px;border-radius:9px;background:var(--text-secondary)}
 .codi-switch-track i{position:absolute;width:12px;height:12px;top:3px;left:3px;border-radius:50%;background:var(--bg-elevated)}
 [aria-checked="true"]>.codi-switch-track{background:var(--accent)}

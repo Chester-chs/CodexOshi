@@ -26,6 +26,8 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await js(`window.widget.openSettings();document.querySelector('#character-tab').click()`);await delay(120);assert.equal(await js(`document.querySelector('#character-zoom').type`),'number');
   const panelBefore=state().region[1];
   assert.equal(await js(`document.querySelector('#character-size').closest('label').nextElementSibling===document.querySelector('#character-width').closest('label')`),true);
+  assert.equal(await js(`document.querySelector('#character-width').closest('label').nextElementSibling===document.querySelector('.framing-adjust')`),true);
+  assert.equal(await js(`(()=>{const title=document.querySelector('.panel-title').getBoundingClientRect(),power=document.querySelector('#codi-power').getBoundingClientRect();return power.x-title.right>=8&&power.x-title.right<=12})()`),true);
   await js(`document.querySelector('#character-width').value=360;document.querySelector('#character-width').dispatchEvent(new Event('input'));`);await delay(300);assert.equal(state().region[0].width,360);assert.deepEqual(state().region[1],panelBefore);
   assert.equal(await js(`document.querySelectorAll('[data-framing],#character-framing').length`),0);
   await js(`document.querySelector('#character-zoom').value=3;document.querySelector('#character-zoom').dispatchEvent(new Event('input'))`);await delay(300);assert.equal(state().region[0].width,360);assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')).zoom,3);
@@ -36,14 +38,14 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
     assert.equal(await js(`document.querySelector('#${id}').type`),'number');
     await js(`document.querySelector('#${id}').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(60);assert.match(win.getTitle(),/Text editing/);
     await js(`document.querySelector('#${id}').select()`);await win.webContents.insertText(String(value));await delay(300);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'))[key],value);assert.deepEqual(state().region[1],panelBefore);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'))[key],value,await js(`JSON.stringify({active:document.activeElement.id,input:document.querySelector('#${id}').value,zoom:document.querySelector('#character-zoom').value,editing:document.title})`));assert.deepEqual(state().region[1],panelBefore);
     for(const invalid of ['',String(min-1),String(max+1),'200.5']){
       await js(`document.querySelector('#${id}').value=${JSON.stringify(invalid)};document.querySelector('#${id}').dispatchEvent(new Event('input'))`);await delay(180);
       assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'))[key],value);assert.deepEqual(state().region[1],panelBefore);
     }
     await js(`document.querySelector('#${id}').blur()`);assert.equal(await js(`document.querySelector('#${id}').value`),String(value));
   }
-  for(const width of [126,672,240]){await js(`document.querySelector('#character-width').value=${width};document.querySelector('#character-width').dispatchEvent(new Event('input'))`);await delay(220);assert.deepEqual(state().region[1],panelBefore);}
+  for(const width of [126,672,240]){await js(`document.querySelector('#character-width').value=${width};document.querySelector('#character-width').dispatchEvent(new Event('input'))`);await delay(220);assert.deepEqual(state().region[1],panelBefore);assert.equal(Number(await js(`document.querySelector('#character-width').value`)),width);}
   await js(`document.querySelector('#character-size').value=300;document.querySelector('#character-size').dispatchEvent(new Event('input'))`);await delay(220);assert.deepEqual(state().region[1],panelBefore);
   await js(`document.querySelector('#resident-dock').checked=false;document.querySelector('#resident-dock').dispatchEvent(new Event('change'))`);await delay(250);assert.deepEqual(state().widget,{x:90,y:100});
   await js(`document.querySelector('#resident-dock').checked=true;document.querySelector('#resident-dock').dispatchEvent(new Event('change'))`);await delay(250);assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,true);await checkPlacement();

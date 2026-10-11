@@ -4,9 +4,11 @@
   <a href="README.md">English</a> | <a href="README.zh-CN.md">中文</a>
 </p>
 
-Your Codex desktop companion: a character widget with quota monitoring, local token usage charts, and customizable dialogue. Previously named **codex-quota-widget**.
+Your Codex desktop companion: a character widget with quota monitoring, local token usage charts, and customizable dialogue.
 
 > Codi currently supports **Windows x64 and the Codex desktop app**. It reads quota and local usage data without generating model responses. Your character images stay on your computer.
+
+**Character tip:** use a chibi-style character with a transparent background and the full body inside the image. Its compact proportions are easier to see in a small widget. Regular character artwork works too.
 
 ## Features
 
@@ -39,9 +41,22 @@ MSVC, C++ native modules, and an additional C# SDK are not required. macOS and L
 
 ## Installation
 
-The current installer requires the source directory **`%USERPROFILE%\plugins\codex-quota-widget`**. The GitHub repository is named Codi; keep this local folder name because the installer checks it.
+### Option 1: ask Codex to install it
 
-Run in PowerShell:
+Open a local chat in the Codex desktop app and paste this prompt:
+
+```text
+Please install Codi on this Windows computer: https://github.com/Chester-chs/Codi.
+Check that Codex, Git, and Node.js 24+ are available, and help install missing dependencies.
+Place the project in %USERPROFILE%\plugins\codex-quota-widget. If it already exists, check it first and preserve my local changes, characters, and settings.
+From the project folder, run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1.
+Verify that Codi appears in Codex and explain how to use its visible switch. If Codex needs restarting, ask me to restart it myself.
+```
+
+### Option 2: install it yourself
+
+1. Install and sign in to Codex desktop. Install **Node.js 24+** and **Git** if needed.
+2. Open the Windows Start menu, search for **PowerShell**, and open it. Copy and run these lines:
 
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\plugins" | Out-Null
@@ -50,11 +65,11 @@ Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-If that directory already contains your installation, update it instead of cloning over it. While the repository is private, cloning requires GitHub access to it.
+3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. Codi should appear at the bottom-right.
 
-The installer downloads the pinned Electron runtime, adds Codi to the personal Codex plugin marketplace, and starts the widget. By default, it also registers the current user's Windows login task **`Codex Quota Widget`**, without administrator privileges. Use `-NoStartup` to skip creating that task or `-NoStart` to skip starting immediately.
+Use the folder shown above: the installer checks its location. If you already installed Codi, use Option 1 to update it instead of cloning again. While the repository is private, your GitHub account needs access to download it.
 
-After first installation or an MCP service update, fully quit and reopen Codex, then start a new chat to load the updated MCP service.
+Installation also enables Windows login startup by default. To skip that, add `-NoStartup` to the installation command; add `-NoStart` to skip starting immediately. After a later MCP service update, restart Codex and open a new chat again.
 
 ## On / off inside Codex
 
@@ -117,7 +132,7 @@ The overlay is shaped around visible regions; outside regions pass input to Code
 
 Detailed records: [window docking and dimension controls](docs/resident-docking-width-verification.md), [visible switch](docs/codi-switch-verification.md), [drag performance](docs/drag-performance-verification.md), [UI and token charts](docs/ui-redesign-verification.md), and [character formats](docs/character-formats-verification.md). Older stage records document earlier behavior.
 
-The plugin ID, runtime data directory, and login task retain their original identifiers for compatibility. The repository and plugin display name are **Codi**. The `v1.0` tag preserves an earlier rollback snapshot; it is not the plugin manifest version.
+Use the installation and data paths listed above. The `v1.0` tag preserves an earlier rollback snapshot; it is not the plugin manifest version.
 
 ## License
 
