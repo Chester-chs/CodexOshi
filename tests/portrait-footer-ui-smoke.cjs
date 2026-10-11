@@ -24,9 +24,10 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
     if(art.width>=minimum)assert.ok(Math.abs(m.bar.x-art.x)<1,'footer must align with the drawn portrait');
     assert.ok(m.bar.y>=m.stage.bottom,'footer must stay below the dress');assert.ok(m.bar.right<=m.widget.right+.5);assert.ok(m.bar.x>=m.widget.x-.5);
     assert.ok(m.gear.x>=m.bar.x&&m.gear.right<=m.bar.right+.5,'settings button must remain readable');
-    assert.ok(Math.abs(m.widget.right-dimensions.width)<1&&Math.abs(m.widget.bottom-(dimensions.height-24))<1,'bottom-right docking must stay fixed');
-    assert.ok(Math.abs(art.x+art.width-dimensions.width)<1,'Visible artwork must reach the host right edge');assert.ok(Math.abs(m.bar.right-dimensions.width)<1,'Footer must share the artwork right edge');
-    assert.ok(Math.abs(m.canvas.x+m.alphaRight*factor-dimensions.width)<1,'Nontransparent pixels must reach the host edge, including upper-body crops');return m;
+    const rightEdge=dimensions.width-24;
+    assert.ok(Math.abs(m.widget.right-rightEdge)<1&&Math.abs(m.widget.bottom-(dimensions.height-24))<1,'bottom-right docking must keep a 24px margin');
+    assert.ok(Math.abs(art.x+art.width-rightEdge)<1,'Visible artwork must align with the inset right edge');assert.ok(Math.abs(m.bar.right-rightEdge)<1,'Footer must share the inset artwork edge');
+    assert.ok(Math.abs(m.canvas.x+m.alphaRight*factor-rightEdge)<1,'Nontransparent pixels must align with the inset edge, including upper-body crops');return m;
   }
   const cases=[];
   await js(`window.widget.openSettings()`);await waitFor(`!document.querySelector('#details').hidden`);await js(`document.querySelector('#character-tab').click()`);await waitFor(`!document.querySelector('#character-panel').hidden`);
@@ -51,7 +52,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
     await field('character-size',280);await field('character-zoom',1);let previous=null;
     for(const width of [126,240,400,540,672]){
       await field('character-width',width);const m=await check(),artWidth=m.draw.width*m.canvas.width/m.draw.canvasWidth;
-      if(previous!==null)assert.ok(artWidth>=previous-.75,'Increasing width must not shrink the actual portrait');previous=artWidth;monotonic.push({viewport:dimensions,width,artWidth,barWidth:m.bar.width});
+      if(previous!==null)assert.ok(artWidth>previous+1,'Increasing width must visibly widen the actual portrait');previous=artWidth;monotonic.push({viewport:dimensions,width,artWidth,barWidth:m.bar.width});
       assert.deepEqual(await js(`(()=>{const r=document.querySelector('#details').getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}})()`),panel,'Settings must stay under the pointer while changing dimensions');
     }
     let heightBefore=null;await field('character-width-value',240);

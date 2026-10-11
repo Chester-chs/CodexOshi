@@ -46,7 +46,8 @@ window.widget.layout(value=>{
   resident.style.left=(residentDocked?value.regions[0].width-base.width*scale:0)+'px';
   document.getElementById('character-canvas').style.transformOrigin=residentDocked?'100% 60%':'50% 60%';
   layoutDragging=Boolean(value.dragging);
-  window.resizeCharacter?.(base.width,base.height,residentDocked);
+  document.getElementById('character-stage').style.transform=value.mirrored?'scaleX(-1)':'none';
+  window.resizeCharacter?.(base.width,base.height,residentDocked,Boolean(value.mirrored));
   if(value.expanded&&details.hidden)selectTab('quota');
   details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}

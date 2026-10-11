@@ -11,13 +11,13 @@ function residentSize(requested,width,height,docked=true){
   const scale=docked?Math.min(1,width/1280,height/1000):1;
   return {width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
 }
-function shape(value,width,height,sizes=[SIZE],dockRight=false) {
+function shape(value,width,height,sizes=[SIZE]) {
   if(!Array.isArray(sizes)||!sizes.length||sizes.length>2||!sizes.every((s,i)=>{const cap=i?PANEL_LIMIT:ROLE_LIMIT;return s&&Number.isInteger(s.width)&&Number.isInteger(s.height)&&s.width>0&&s.height>0&&s.width<=cap.width&&s.height<=cap.height;}))return tiny();
   if (!Number.isInteger(width) || !Number.isInteger(height) || width<1 || height<1 || width>32768 || height>32768 || !Array.isArray(value) || !value.length || value.length>64) return tiny();
   let area=0;
-  for (const [i,r] of value.entries()) {
+  for (const r of value) {
     if (!r || !['x','y','width','height'].every(k => Number.isInteger(r[k]) && Math.abs(r[k])<=32768) ||
-        r.x<0 || r.y<0 || r.width<=0 || r.height<=0 || r.x+r.width>width-(dockRight===true&&i===0?0:EDGE) || r.y+r.height>height-EDGE) return tiny();
+        r.x<0 || r.y<0 || r.width<=0 || r.height<=0 || r.x+r.width>width-EDGE || r.y+r.height>height-EDGE) return tiny();
     area += r.width*r.height;
   }
   // Both the actual layout budget and hard profile caps remain mandatory.
@@ -39,12 +39,11 @@ function snap(widget,width,height,size){
     const end=Math.max(8,total-side-EDGE);if(point[axis]-8<=12)point[axis]=8;else if(end-point[axis]<=12)point[axis]=end;
   }return point;
 }
-function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null,speech=false,dockRight=false){
+function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null,speech=false){
   if(!requested||!['width','height'].every(k=>Number.isInteger(requested[k])&&requested[k]>0&&requested[k]<=ROLE_LIMIT[k]))requested=COMPACT;
-  const rightInset=dockRight===true?0:EDGE;
-  const scale=Math.min(1,Math.max(1,width-rightInset-8)/requested.width,Math.max(1,height-EDGE-8)/requested.height);
+  const scale=Math.min(1,Math.max(1,width-EDGE-8)/requested.width,Math.max(1,height-EDGE-8)/requested.height);
   const compact={width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
-  const point=position(widget?.x??width-compact.width-rightInset,widget?.y??height-compact.height-EDGE,width,height,compact,rightInset);
+  const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-EDGE,width,height,compact);
   const regions=[{...point,...compact}],sizes=[compact];
   if(expanded){
     if(speech){requestedPanel={width:280,height:152};}else if(!validSize(requestedPanel))requestedPanel=PANEL;

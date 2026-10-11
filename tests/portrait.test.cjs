@@ -3,6 +3,20 @@ const {prepareImage}=require('../desktop/ui/image-processing.js');
 const fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 const {CharacterStore}=require('../runtime/characters.cjs');
 
+test('explicit width changes the visible portrait without stretching it',()=>{
+  const {portraitFrame}=require('../desktop/ui/portrait-size.js');
+  let previous=0;
+  for(const width of [126,240,400,540,672]){
+    const frame=portraitFrame(width,228,627,882,{targetWidth:width,zoom:1});
+    assert.ok(frame.width>previous+20,`width ${width} must visibly widen the art after ${previous}`);
+    assert.ok(frame.x>=0&&frame.x+frame.width<=width+.001);
+    assert.ok(frame.y>=0&&frame.y+frame.height<=228+.001);
+    const source=frame.source||{width:627,height:882};
+    assert.ok(Math.abs(frame.width/source.width-frame.height/source.height)<.00001,'width must keep a uniform image scale');
+    previous=frame.width;
+  }
+});
+
 test('right docking trims only transparent columns in a close-up and keeps every visible pixel',()=>{
   const {horizontalRows}=require('../desktop/ui/image-processing.js'),{portraitFrame}=require('../desktop/ui/portrait-size.js');
   const width=12,height=16,data=new Uint8ClampedArray(width*height*4);

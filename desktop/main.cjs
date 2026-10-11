@@ -57,7 +57,7 @@ function diagnostic(){
 const docked=()=>panelPreferences.dockBottomRight!==false;
 const widgetEnabled=()=>panelPreferences.widgetEnabled!==false;
 function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
-function sendLayout(){if(ready)win.webContents.send('layout',{...viewLayout,residentSize:characterSize,docked:docked(),widgetEnabled:widgetEnabled(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}
+function sendLayout(){if(ready){const portrait=viewLayout?.regions?.[0];win.webContents.send('layout',{...viewLayout,residentSize:characterSize,docked:docked(),mirrored:Boolean(!docked()&&portrait&&portrait.x+portrait.width/2<dip.width/2),widgetEnabled:widgetEnabled(),expanded,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}}
 function notifyLayout(){
   if(dragging||panelResizing){if(!layoutTimer)layoutTimer=setTimeout(()=>{layoutTimer=null;sendLayout();},16);return;}
   clearTimeout(layoutTimer);layoutTimer=null;sendLayout();
@@ -80,9 +80,9 @@ function updateShape(){
   }
   const previous=widget;
   const resident=residentSize(characterSize,dip.width,dip.height,docked());
-  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible,docked());widget=viewLayout.widget;
+  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
-  region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes,docked());
+  region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   win.setShape(region);
   notifyLayout();
 }
@@ -211,7 +211,7 @@ app.whenReady().then(async()=>{
       // The existing layout/position clamp still bounds the settings region.
       if(panel){
         const resident=residentSize(next,dip.width,dip.height,docked());
-        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences,null,false,docked()).widget;
+        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences).widget;
         panelOffset={x:panel.x-point.x,y:panel.y-point.y};
       }
       updateShape();diagnostic();
@@ -220,7 +220,13 @@ app.whenReady().then(async()=>{
   ipcMain.on('collapse',event=>{if(event.sender===win.webContents)dismiss();});
   ipcMain.on('reset-position',event=>{
     if(event.sender!==win.webContents||dragging)return;
-    defaultPlacement=true;widget=null;updateShape();diagnostic();
+    defaultPlacement=true;widget=null;updateShape();
+    if(docked()&&host.bounds&&host.visible!==false&&host.attached!==false&&dip.width>1&&dip.height>1){
+      const freeResident=residentSize(characterSize,dip.width,dip.height,false);
+      freePosition=layout(null,dip.width,dip.height,false,0,freeResident).widget;
+      fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(freePosition));
+    }
+    diagnostic();
   });
   ipcMain.on('gesture',(event,value)=>{
     if(event.sender!==win.webContents || !value || typeof value!=='object'||!widgetEnabled())return;

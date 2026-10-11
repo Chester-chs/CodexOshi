@@ -18,7 +18,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   }
   await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(250);
   async function metrics(){return js(`(()=>{const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom,right:r.right}};return {widget:rect('#widget'),bar:rect('.compact-line'),stage:rect('#character-stage'),gear:rect('#settings-open'),transform:getComputedStyle(document.querySelector('#resident-content')).transform,zoom:document.querySelector('#character-zoom').value,widthInput:document.querySelector('#character-width').value};})()`);}
-  async function checkPlacement(){const r=state().region[0],v=state().viewport,m=await metrics();assert.equal(r.x+r.width,v.width);assert.equal(r.y+r.height,v.height-24);assert.ok(m.bar.bottom<=r.y+r.height+.5);assert.ok(m.bar.y>=m.stage.bottom);assert.ok(Math.abs(m.widget.right-v.width)<.5);return {viewport:v,region:r,metrics:m};}
+  async function checkPlacement(){const r=state().region[0],v=state().viewport,m=await metrics();assert.equal(r.x+r.width,v.width-24);assert.equal(r.y+r.height,v.height-24);assert.ok(m.bar.bottom<=r.y+r.height+.5);assert.ok(m.bar.y>=m.stage.bottom);assert.ok(Math.abs(m.widget.right-(v.width-24))<.5);return {viewport:v,region:r,metrics:m};}
   async function resize(width,height){dimensions={width,height};send();await delay(250);return checkPlacement();}
   if(restart){const q=await checkPlacement();assert.equal(state().region[0].width,240);assert.equal((await js('window.widget.panelPreferencesRead()')).dockBottomRight,true);assert.equal((JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'))).targetWidth,240);fs.writeFileSync(path.join(output,'restart.json'),JSON.stringify({passed:true,restartedOff,restoredViaVisibleSwitch:true,...q},null,2));clearInterval(heartbeat);socket.destroy();app.quit();return;}
   const full=await checkPlacement(),small=await resize(800,600),restored=await resize(1600,1000);assert.ok(small.region.height<full.region.height*.7);assert.deepEqual(restored.region,full.region);assert.ok(Math.abs(small.metrics.bar.height/full.metrics.bar.height-small.region.height/full.region.height)<.02);
@@ -53,6 +53,15 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
     for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...point,button:'left',clickCount:1});await delay(250);
   }
   await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,false);assert.deepEqual(state().widget,{x:90,y:100});
+  assert.match(await js(`getComputedStyle(document.querySelector('#character-stage')).transform`),/^matrix\(-1, 0, 0, 1, 0, 0\)$/,'left-side artwork must be mirrored');
+  assert.equal(await js(`getComputedStyle(document.querySelector('.compact-line')).transform`),'none','quota text must not be mirrored');
+  await js(`window.widget.gesture({type:'drag',x:1100,y:100});window.widget.gesture({type:'end'})`);await delay(70);
+  assert.equal(await js(`getComputedStyle(document.querySelector('#character-stage')).transform`),'none','right-side artwork must face normally');
+  await js(`window.widget.gesture({type:'drag',x:50,y:100});window.widget.gesture({type:'end'})`);await delay(70);
+  assert.match(await js(`getComputedStyle(document.querySelector('#character-stage')).transform`),/^matrix\(-1, 0, 0, 1, 0, 0\)$/);
+  await js(`document.querySelector('#position-reset').click()`);await delay(140);
+  assert.equal(state().region[0].x+state().region[0].width,dimensions.width-24,'default position must leave a right margin');
+  assert.equal(await js(`getComputedStyle(document.querySelector('#character-stage')).transform`),'none');
   await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,true);await checkPlacement();
   const enabledRegion={...state().region[0]};
   await js(`document.querySelector('#codi-power').click()`);await delay(200);

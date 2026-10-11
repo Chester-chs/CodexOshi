@@ -14,6 +14,23 @@
   function portraitFrame(width,height,bw,bh,settings={},dockRight=false,rows=null){
     const inset=Math.min(4,width/4,height/4),availableW=width-inset*2,availableH=height-inset*2;
     const zoom=Number.isFinite(settings.zoom)?Math.max(.5,Math.min(4,settings.zoom)):1,content=portraitContentSize(bw,bh,zoom);
+    if(Number.isInteger(settings.targetWidth)&&settings.targetWidth>=126&&settings.targetWidth<=672){
+      // Width controls the painted portrait. Keep one scale for both axes;
+      // the chosen height becomes a top-anchored viewport when the art is tall.
+      const scale=availableW/bw*zoom,sourceW=Math.min(bw,availableW/scale),sourceH=Math.min(bh,availableH/scale);
+      const pan=k=>Number.isFinite(settings[k])?Math.max(-1,Math.min(1,settings[k])):0;
+      const sourceX=(bw-sourceW)*(pan('x')+1)/2,sourceY=Math.max(0,pan('y'))*(bh-sourceH);
+      const w=sourceW*scale,h=sourceH*scale,y=inset+(availableH-h)/2;
+      if(dockRight&&rows?.length>=bh*2){
+        let left=sourceX+sourceW,right=sourceX;
+        for(let row=Math.floor(sourceY);row<Math.min(bh,Math.ceil(sourceY+sourceH));row++){
+          const rowLeft=Math.max(sourceX,rows[row*2]),rowRight=Math.min(sourceX+sourceW,rows[row*2+1]);
+          if(rowRight>rowLeft){left=Math.min(left,rowLeft);right=Math.max(right,rowRight);}
+        }
+        if(right>left){const visibleW=(right-left)*scale;return {x:width-visibleW,y,width:visibleW,height:h,source:{x:left,y:sourceY,width:right-left,height:sourceH}};}
+      }
+      return {x:dockRight?width-w:inset+(availableW-w)/2,y,width:w,height:h,source:{x:sourceX,y:sourceY,width:sourceW,height:sourceH}};
+    }
     const ratio=Math.min(availableW/content.width,availableH/content.height)*Math.min(1,zoom),w=content.width*ratio,h=content.height*ratio;
     const pan=k=>Number.isFinite(settings[k])?Math.max(-1,Math.min(1,settings[k])):0;
     const x=dockRight?width-w:inset+(availableW-w)/2+pan('x')*Math.abs(availableW-w)/2,y=inset+(availableH-h)/2+pan('y')*Math.abs(availableH-h)/2;

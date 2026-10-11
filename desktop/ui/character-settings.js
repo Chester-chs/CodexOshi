@@ -1,6 +1,6 @@
 (()=>{
   const $=id=>document.getElementById(id);
-  let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='',reportedWidth=199,dockRight=false;
+  let snapshot={active:null,characters:[]},timer,panStart,content=null,lastSize='',reportedWidth=199,dockRight=false,mirrored=false;
   const pendingSettings=new Map();
   const active=()=>snapshot.characters.find(c=>c.name===snapshot.active),error=text=>{$('character-error').dataset.i18n=text;$('character-error').textContent=window.uiText.t(text);};
   function displayNumber(id,value){if(document.activeElement!==$(id))$(id).value=value;}
@@ -16,10 +16,11 @@
     const canvas=$('character-canvas'),footer=document.querySelector('.compact-line');
     if(!footer||!canvas.clientWidth)return;
     const bounds=window.portraitGeometry.portraitFooter(frame,canvas.width,canvas.clientWidth,dockRight);
+    if(mirrored&&!dockRight)bounds.x=canvas.clientWidth-bounds.x-bounds.width;
     Object.assign(footer.style,{left:bounds.x+'px',right:'auto',width:bounds.width+'px'});
   }
   const live=new LocalImagePlayer($('character-canvas'),()=>{},value=>{content=value;reportSize(characterView.characterView(active()));},sizeFooter),preview=new LocalImagePlayer($('character-processed'),(text,bad)=>{$('character-processing').dataset.i18n=text;$('character-processing').textContent=window.uiText.t(text);if(bad)error(text);});
-  window.resizeCharacter=(width,height,right=false)=>{dockRight=right;const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)),dockRight);};
+  window.resizeCharacter=(width,height,right=false,flip=false)=>{const changed=mirrored!==flip;dockRight=right;mirrored=flip;const scale=window.devicePixelRatio||1;live.resize(Math.max(1,Math.round(width*scale)),Math.max(1,Math.round(window.portraitGeometry.stageHeight(height)*scale)),dockRight);if(changed)live.draw();};
   async function action(value){try{const q=await window.widget.characterAction({...value,language:window.uiText.language});if(!q.ok)error(q.error);else error('');return q;}catch{error('角色操作失败，请重试。');return {ok:false};}}
   window.renderCharacter=()=>{if(window.codiEnabled===false)return;const view=characterView.characterView(active());live.frame(view.settings);live.load(view.url,view.settings.background);reportSize(view);};
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
