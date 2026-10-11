@@ -34,10 +34,13 @@
 
 - Windows x64，系统自带 Windows PowerShell 5.1 与 .NET Framework C# 编译器。
 - 已安装并登录 Codex 桌面应用，安装程序可找到其 CLI。
-- Node.js 24+；下方克隆步骤还需要 Git。
+- Node.js 24+：安装 Electron，并运行插件的本机状态接口。24+ 是当前支持并测试的版本范围，尚未验证更早版本。
+- Git：仅用于下方的源码下载和更新，挂件运行不需要 Git。
 - 安装下载与账户额度读取需要网络，无需另外填写 API Key。
 
 不需要 MSVC、C++ 原生模块或额外 C# SDK。当前实现不支持 macOS、Linux。
+
+如果通过 GitHub 的 **Code → Download ZIP** 下载源码并解压到指定安装目录，可以不安装 Git。当前提供源码安装，还没有免依赖的一键安装包。
 
 ## 安装
 

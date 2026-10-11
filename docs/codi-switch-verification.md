@@ -46,3 +46,7 @@ stop → 更新缓存 → start 完成。源码与缓存 **199/199** 文件 SHA2
 `scripts/verify.ps1 -Native`：**111/111** 通过，10 个异常 shape 输入仍回退 1×1 DIP；`Invoke-ResidentSmoke.ps1` 及 `-Restart` 再次通过，数字编辑、卡片稳定、关闭状态重启及小开关恢复正常。测试只使用本机占位数据，不操作用户鼠标。README 的语言互链、安装提示词和相对文件链接均已校验。
 
 本次部署：源码与缓存 **200/200** 文件 SHA256 一致，用户素材及偏好 **7/7** 文件保持一致。缓存进程 PID **6920**，visible=true、focused=false；CardSmoke 亦通过。文档补记后再次同步并核对全部文件。
+
+## GitHub 预览修正（2026-10-11）
+
+预览图在隐藏 Electron 的 panel-reveal 淡入动画早期捕获，旧 PNG alpha 最大值仅 21/255，GitHub 白底显示近乎透明。新增截图不透明像素占比 >95% 的断言，先复现失败，再在捕获前完成该卡片动画并确认 computed opacity=1；ResidentSmoke 通过。重新生成的 720×840 PNG 有 99.90% 完全不透明像素，已人工查看。产品动画和挂件行为不变。中英文 README 同步解释 Node.js 的安装／状态接口用途、24+ 的已测试基线，以及 Git 仅用于下载更新、ZIP 可替代。

@@ -34,10 +34,13 @@ Screenshots use geometric placeholder artwork and synthetic usage data, not user
 
 - Windows x64, Windows PowerShell 5.1, and the built-in .NET Framework C# compiler.
 - Codex desktop installed and signed in, with its CLI available to the installer.
-- Node.js 24+ and Git for the clone instructions below.
+- Node.js 24+: installs Electron and runs the local plugin status service. This is the currently supported and tested version range; earlier versions have not been verified.
+- Git: downloads and updates the source in the instructions below. The running widget does not need Git.
 - Network access for installation downloads and account quota reads. No separate API key is required.
 
 MSVC, C++ native modules, and an additional C# SDK are not required. macOS and Linux are not supported by this implementation.
+
+You can skip Git by downloading the source with GitHub’s **Code → Download ZIP** and extracting it to the installation folder below. Codi currently uses source installation; a standalone installer is not available yet.
 
 ## Installation
 
