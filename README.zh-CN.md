@@ -27,7 +27,7 @@
 
 ## 效果预览
 
-以下截图来自真实 Codi 界面，额度和 token 用量为合成示例；Q 版人物是原创演示图，不会作为默认角色安装。
+以下截图来自真实 Codi 界面，额度和 token 用量为合成示例；原创 Q 版人物**由 GPT 生成**，仅供 README 演示，不会作为默认角色安装。
 
 | 原创透明 Q 版示例 | 桌面挂件 |
 | --- | --- |
@@ -53,7 +53,7 @@
 ### 方法一：下载安装包（推荐）
 
 1. 安装并登录 Codex 桌面版。
-2. 到 [最新版本发布页](https://github.com/Chester-chs/Codi/releases/latest) 下载 **Codi-Setup-0.3.0-win-x64.exe**，双击运行。安装包目前没有代码签名，Windows 可能要求你确认信任下载文件；首次安装会下载 Electron，可能需要几分钟。
+2. 到 [最新版本发布页](https://github.com/Chester-chs/Codi/releases/latest) 下载 **Codi-Setup-*-win-x64.exe**，双击运行。安装包目前没有代码签名，Windows 可能要求你确认信任下载文件；首次安装会下载 Electron，可能需要几分钟。
 3. 完全退出并重新打开 Codex，再新建一个聊天。Codi 会显示在右下方，点进度条旁的齿轮即可设置。
 
 安装包会把自带的 Node.js 放在 Codi 数据目录，注册 Codex 插件、启动挂件，并默认设置为登录 Windows 后自动运行。如果已经装过 Codi，请在 **Codi 设置 → 额度管理 → 检查更新 → 一键更新**，安装包不会覆盖已有源码文件。
@@ -146,7 +146,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugin
 - **额度时效**：读取失败保留可用数据，并标出更新年龄或状态。重置时间到达不会自行伪造已恢复额度；重置卡数据不可用时保持未知。
 - **本机存储**：数据位于 `<CODEX_HOME>\codex-quota-widget`；未设置 `CODEX_HOME` 时为 `%USERPROFILE%\.codex\codex-quota-widget`。源码、插件缓存和用户数据分离；认证令牌不写入挂件诊断文件。
 
-请只上传你有权使用的素材。README 的[原创 Q 版示例图](docs/images/demo-chibi.png)仅供介绍，不会作为默认角色安装；仓库和安装包都不分发用户的立绘。
+请只上传你有权使用的素材。README 的[GPT 生成 Q 版示例图](docs/images/demo-chibi.png)仅供介绍，不会作为默认角色安装；仓库和安装包都不分发用户的立绘。
 
 ## 验证与技术说明
 
