@@ -15,6 +15,7 @@ public static class QuotaMouseProbe {
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
+    [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr hwnd);
     [DllImport("user32.dll")] static extern bool ShowWindowAsync(IntPtr hwnd,int command);
     [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hwnd,out uint pid);
     [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
@@ -28,7 +29,9 @@ public static class QuotaMouseProbe {
     [DllImport("user32.dll",SetLastError=true)] static extern uint SendInput(uint count,Input[] input,int size);
     [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr hwnd,uint msg,IntPtr w,IntPtr l,uint flags,uint timeout,out IntPtr result);
     public static long Foreground() { return GetForegroundWindow().ToInt64(); }
+    public static bool IsMaximized(long hwnd) { return IsZoomed(new IntPtr(hwnd)); }
     public static void SetMinimized(long hwnd,bool minimized) { ShowWindowAsync(new IntPtr(hwnd),minimized?6:9); }
+    public static void Restore(long hwnd,bool maximized) { ShowWindowAsync(new IntPtr(hwnd),maximized?3:9); }
     public static bool ActivateHost(long hwnd) {
         if(IsIconic(new IntPtr(hwnd))){ShowWindowAsync(new IntPtr(hwnd),9);Thread.Sleep(200);}
         if (Foreground()==hwnd) return true;

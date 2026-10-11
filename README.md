@@ -12,6 +12,7 @@ Your Codex desktop companion: a character widget with quota monitoring, local to
 
 ## Release history
 
+- **[0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2):** bar-only mode, visible stale-data status, and keyboard navigation in settings.
 - **[0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1):** a more balanced quota bar, vector settings icon, and refreshed documentation.
 - **[0.3.0](https://github.com/Chester-chs/Codi/releases/tag/v0.3.0):** the first Windows installer, with Codi's character, quota, chart, and customization features.
 
@@ -19,14 +20,15 @@ See the bilingual [changelog](CHANGELOG.md) for details.
 
 ## Features
 
-- **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. Codi displays reset credits; it does not spend them.
+- **Quota at a glance:** remaining percentage, progress bar, reset countdown, and available reset credits when returned by account data. The resident bar marks stale readings while retaining the last known percentage. Codi displays reset credits; it does not spend them.
 - **Time-based token charts:** 24 hourly bars, 7 daily bars, or 30 daily bars, with the selected total and exact values. The current hour/day is still in progress.
 - **One image per character:** upload directly, switch characters, remove simple backgrounds, and adjust framing in a local preview. Legacy multi-image characters continue to work.
 - **Two click dialogues:** clicking the character always shows the first dialogue with reset information. Click the bubble to cycle between the two lines. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
 - **Click sound:** Starlight duo is the default sound. Under **Codi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
 - **Character controls:** height and width sit together, each with a slider and numeric input. Restore defaults returns to height 280, automatic width, and centered framing. The progress bar stays below the character.
 - **Window following:** pinning moves the character to the lower-right corner with a 24 px right margin and scales it down in smaller windows. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
-- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota.
+- **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota. For keyboard navigation, click the keyboard icon in the card header, then use Tab, arrow keys on the tabs, and Escape to close.
+- **Bar-only mode:** under **Codi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
 - **One-click updates:** Codi checks for new versions every 6 hours. When an update is available, click **Update now** in Codi Settings to download, install, and restart Codi while keeping your characters and settings.
 - **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.

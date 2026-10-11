@@ -18,8 +18,36 @@ test('card preferences persist independently and reject malformed, oversized and
   const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-panel-prefs-'));
   try{const store=new PanelPreferencesStore(root);await fs.writeFile(path.join(root,'appearance.json'),'{"palette":"sage"}');await store.save({width:700,height:740,language:'en-US'});assert.deepEqual(await new PanelPreferencesStore(root).read(),{width:700,height:740,language:'en-US'});await assert.rejects(store.save({width:800,height:800,language:'en-US'}));assert.equal(await fs.readFile(path.join(root,'appearance.json'),'utf8'),'{"palette":"sage"}');await fs.writeFile(store.file,'x'.repeat(8192));assert.deepEqual(await store.read(),{width:480,height:560,language:'zh-CN'});await fs.unlink(store.file);await fs.mkdir(path.join(root,'target'));await fs.symlink(path.join(root,'target'),store.file,'junction');await assert.rejects(store.save({width:500,height:600,language:'zh-CN'}));}finally{await fs.rm(root,{recursive:true,force:true});}
 });
+test('bar-only preference persists and rejects invalid values',async()=>{
+  const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs'),root=await fs.mkdtemp(path.join(os.tmpdir(),'widget-bar-only-'));
+  try{const store=new PanelPreferencesStore(root);await store.save({width:480,height:560,language:'zh-CN',compactOnly:true});assert.equal((await new PanelPreferencesStore(root).read()).compactOnly,true);await assert.rejects(store.save({width:480,height:560,language:'zh-CN',compactOnly:'yes'}));}finally{await fs.rm(root,{recursive:true,force:true});}
+});
+test('bar-only mode keeps the footer at its free-position baseline and restores portrait height',async()=>{
+  const h=await mainHarness();h.run('updateShape()');const before=h.shapes.at(-1)[0];assert.equal(before.height,280);
+  assert.equal((await h.ipc('panel-compact-only',true)).ok,true);
+  const bar=h.shapes.at(-1)[0];assert.equal(bar.height,52);assert.equal(bar.width,199);assert.equal(bar.y+bar.height,before.y+before.height);
+  assert.equal(JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value).compactOnly,true);
+  assert.equal((await h.ipc('panel-compact-only',false)).ok,true);
+  const restored=h.shapes.at(-1)[0];assert.deepEqual(restored,before);
+});
+test('keyboard navigation holds focus only while the settings panel is open',async()=>{
+  const h=await mainHarness();h.ipc('open-settings');
+  assert.equal(h.ipc('panel-keyboard-mode',true).ok,true);
+  assert.equal(h.run('textEditing'),true);
+  h.ipc('collapse');assert.equal(h.run('textEditing'),false);
+  assert.equal(h.ipc('panel-keyboard-mode',true).ok,false);
+});
 test('English quota and token labels keep the original numbers and thresholds',()=>{
   const view=require('../desktop/ui/view-model.js');const q=view.present({windows:[{label:'每周限额',remainingPercent:10,resetAt:100000}]},200,0,'en-US');assert.equal(q.cards[0].label,'Weekly limit');assert.equal(q.cards[0].percentText,'10%');assert.equal(q.cards[0].tone,'red');assert.equal(q.cards[0].resetText,'Resets in 1d 3h');const tokens=view.presentTokens({values:{hours24:1000,days7:2000,days30:3000},coverage:'complete',filesIndexed:1,filesDiscovered:1},'en-US');assert.equal(tokens.rows[0].label,'Last 24 hours');assert.equal(tokens.rows[0].number,'1.0');assert.equal(tokens.coverageText,'Complete · 1/1 files');
+});
+test('compact quota marks failed or old reads visibly without changing the last percentage',()=>{
+  const view=require('../desktop/ui/view-model.js');
+  const base={windows:[{label:'5 小时限额',remainingPercent:18}],observedAt:100000};
+  assert.equal(view.present(base,260,160000,'zh-CN').compact.stale,false);
+  const failed=view.present({...base,stale:true},260,160000,'zh-CN').compact;
+  assert.equal(failed.text,'18%');assert.equal(failed.stale,true);assert.equal(failed.freshness,'旧数据');
+  const aged=view.present(base,260,221000,'en-US').compact;
+  assert.equal(aged.text,'18%');assert.equal(aged.stale,true);assert.equal(aged.freshness,'Stale');
 });
 test('unknown translated labels remain literal, including names inherited by ordinary objects',()=>{
   const {t}=require('../desktop/ui/i18n.js');for(const value of ['Custom window','constructor','toString','__proto__'])assert.equal(t(value,{},'en-US'),value);assert.equal(t(undefined,{},'en-US'),'');

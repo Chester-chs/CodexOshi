@@ -10,7 +10,7 @@ const speech=document.getElementById("speech");
 function nextSpeech(){if(!speech.hidden)window.widget.gesture({type:'speech-next'});}
 speech.addEventListener('click',nextSpeech);
 speech.addEventListener('keydown',event=>{if((event.key==='Enter'||event.key===' ')&&!event.repeat){event.preventDefault();nextSpeech();}});
-const codiSwitch=document.getElementById('codi-power'),codiLauncher=document.getElementById('codi-launcher');
+const codiSwitch=document.getElementById('codi-power'),codiLauncher=document.getElementById('codi-launcher'),keyboardButton=document.getElementById('keyboard-mode');
 window.codiEnabled=true;
 async function switchCodi(enabled){
   codiSwitch.disabled=codiLauncher.disabled=true;
@@ -38,8 +38,9 @@ window.widget.layout(value=>{
   window.codiEnabled=value.widgetEnabled!==false;button.hidden=!window.codiEnabled;codiLauncher.hidden=window.codiEnabled;
   clickSound.setEnabled(window.codiEnabled&&value.panelPreferences?.clickSoundEnabled!==false);
   codiSwitch.setAttribute('aria-checked',String(window.codiEnabled));codiLauncher.setAttribute('aria-checked',String(window.codiEnabled));
-  if(!window.codiEnabled){feedbackAnimation?.cancel();details.hidden=true;speech.hidden=true;rectangle(codiLauncher,value.regions[0]);return;}
+  if(!window.codiEnabled){feedbackAnimation?.cancel();details.hidden=true;speech.hidden=true;keyboardButton.setAttribute('aria-pressed','false');rectangle(codiLauncher,value.regions[0]);return;}
   widgetPosition=value.widget;width=value.regions[0].width;rectangle(button,value.regions[0]);
+  document.getElementById('character-stage').hidden=value.panelPreferences?.compactOnly===true;
   const base=value.residentSize||value.regions[0],scale=Math.min(value.regions[0].width/base.width,value.regions[0].height/base.height);
   width=base.width;
   resident.style.width=base.width+'px';resident.style.height=base.height+'px';resident.style.transform=`scale(${scale})`;residentDocked=Boolean(value.docked);button.style.cursor=residentDocked?'pointer':'grab';
@@ -49,7 +50,7 @@ window.widget.layout(value=>{
   document.getElementById('character-stage').style.transform=value.mirrored?'scaleX(-1)':'none';
   window.resizeCharacter?.(base.width,base.height,residentDocked,Boolean(value.mirrored));
   if(value.expanded&&details.hidden)selectTab('quota');
-  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);
+  details.hidden=!value.expanded;if(value.expanded)rectangle(details,value.regions[1]);else keyboardButton.setAttribute('aria-pressed','false');
   speech.hidden=!value.speechVisible;if(value.speechVisible){rectangle(speech,value.regions[1]);speechIndex=value.speechIndex;dialoguePreferences=value.dialoguePreferences||dialoguePreferences;renderSpeech();}
   if(!layoutDragging&&!value.resizing){render();reportScroll();}
 });
@@ -59,11 +60,25 @@ function selectTab(name){
   if(!['quota','token','character','appearance'].includes(name))return;
   for(const tab of ['quota','token','character','appearance']){
     document.getElementById(tab+'-panel').hidden=tab!==name;
-    document.getElementById(tab+'-tab').setAttribute('aria-selected',String(tab===name));
+    const button=document.getElementById(tab+'-tab');button.setAttribute('aria-selected',String(tab===name));button.tabIndex=tab===name?0:-1;
   }
   panelBody.scrollTop=0;reportScroll();if(name==='token')window.widget.readTokens();
 }
 for(const name of ['quota','token','character','appearance'])document.getElementById(name+'-tab').addEventListener('click',()=>selectTab(name));
+document.querySelector('nav[role="tablist"]').addEventListener('keydown',event=>{
+  const names=['quota','token','character','appearance'],current=names.indexOf(document.activeElement.id.replace('-tab',''));
+  if(current<0)return;
+  const next={ArrowRight:(current+1)%names.length,ArrowLeft:(current+names.length-1)%names.length,Home:0,End:names.length-1}[event.key];
+  if(next===undefined)return;event.preventDefault();selectTab(names[next]);document.getElementById(names[next]+'-tab').focus();
+});
+keyboardButton.addEventListener('click',async()=>{
+  if(keyboardButton.disabled)return;keyboardButton.disabled=true;
+  const enabled=keyboardButton.getAttribute('aria-pressed')!=='true';
+  try{const result=await window.widget.panelKeyboardMode(enabled);if(!result?.ok)return;keyboardButton.setAttribute('aria-pressed',String(enabled));if(enabled)document.querySelector('nav [aria-selected="true"]').focus();}
+  catch(error){document.getElementById('panel-error').textContent=error?.message||text('键盘操作不可用');}
+  finally{keyboardButton.disabled=false;}
+});
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!details.hidden&&keyboardButton.getAttribute('aria-pressed')==='true'){event.preventDefault();window.widget.collapse();}});
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 const gear=document.getElementById('settings-open');
 gear.addEventListener('pointerdown',event=>event.stopPropagation());
@@ -84,13 +99,14 @@ function bar(track,fill,remaining,tone){track.className='track '+tone;fill.style
 function render(){
   if(layoutDragging||!window.codiEnabled)return;renderSpeech();
   const view=window.quotaView.present(quota,width,Date.now(),window.uiText.language);
-  window.renderCharacter?.(quota);
+  if(!document.getElementById('character-stage').hidden)window.renderCharacter?.(quota);
   document.getElementById('window-label').textContent=view.compact.label;
-  button.setAttribute('aria-label',text('{label}，剩余 {value}，点击对话，拖动移动',{label:view.compact.label,value:view.compact.text}));
+  button.setAttribute('aria-label',text('{label}，剩余 {value}，点击对话，拖动移动',{label:view.compact.label,value:view.compact.text})+(view.compact.stale?' · '+text('数据待更新'):''));
   document.getElementById('status').textContent=view.compact.text;
+  const freshness=document.getElementById('freshness');freshness.hidden=!view.compact.stale;freshness.textContent=view.compact.freshness;
   document.getElementById('compact-track').hidden=!view.showCompactBar;
   bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);
-  button.title=view.compact.label+' · '+text(quota.stale?'数据待更新':'实时额度');
+  button.title=view.compact.label+' · '+text(view.compact.stale?'数据待更新':'实时额度');
   const cards=document.getElementById('cards');cards.replaceChildren();
   if(view.empty){const empty=document.createElement('p');empty.textContent=view.empty;cards.append(empty);}
   for(const card of view.cards){

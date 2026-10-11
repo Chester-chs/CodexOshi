@@ -57,6 +57,8 @@ while($true) {
     catch {if([DateTime]::UtcNow -ge $deadline){throw};Start-Sleep -Milliseconds 100}
 }
 $positionBefore=Get-Content -LiteralPath $positionPath -Raw | ConvertFrom-Json
+$panelPreferences=Get-Content -LiteralPath (Join-Path $data 'panel-preferences.json') -Raw | ConvertFrom-Json
+$pinned=$panelPreferences.dockBottomRight -ne $false
 if($ExpandDetails -and $before.expanded){
     $collapsePoint=Center $before;Prepare $before $collapsePoint
     [QuotaMouseProbe]::ClickAndSample() | Out-Null;Start-Sleep -Milliseconds 500;$before=Read-State
@@ -83,11 +85,11 @@ $dragged=Read-State
 $positionAfter=Get-Content -LiteralPath $positionPath -Raw | ConvertFrom-Json
 $activationResult=[QuotaMouseProbe]::MouseActivateResult([long]$dragged.hwnd,[long]$dragged.host.window)
 $clickPass=$clicked.clicks -eq $before.clicks+1
-$dragPass=($dragged.widget.x -ne $clicked.widget.x -or $dragged.widget.y -ne $clicked.widget.y) -and ($positionAfter.x -eq $dragged.widget.x -and $positionAfter.y -eq $dragged.widget.y) -and ($positionBefore.x -ne $positionAfter.x -or $positionBefore.y -ne $positionAfter.y)
+$dragPass=if($pinned){$dragged.widget.x -eq $clicked.widget.x -and $dragged.widget.y -eq $clicked.widget.y -and $positionAfter.x -eq $positionBefore.x -and $positionAfter.y -eq $positionBefore.y}else{($dragged.widget.x -ne $clicked.widget.x -or $dragged.widget.y -ne $clicked.widget.y) -and ($positionAfter.x -eq $dragged.widget.x -and $positionAfter.y -eq $dragged.widget.y) -and ($positionBefore.x -ne $positionAfter.x -or $positionBefore.y -ne $positionAfter.y)}
 $earlyHost=($clickObservation.transitions | Where-Object {$_.elapsedMs -le 300} | Select-Object -Last 1).hwnd -eq $clickForegroundBefore
 $focusPass=$clickForegroundBefore -eq [long]$before.host.window -and $earlyHost -and $clickObservation.samples[1].hwnd -eq $clickForegroundBefore -and $clickObservation.samples[2].hwnd -eq $clickForegroundBefore -and $clickForegroundAfter -eq $clickForegroundBefore -and $dragForegroundBefore -eq [long]$before.host.window -and $dragObservation.samples[1].hwnd -eq $dragForegroundBefore -and $dragObservation.samples[2].hwnd -eq $dragForegroundBefore -and [QuotaMouseProbe]::Foreground() -eq $dragForegroundBefore
 $outsidePass=$outside.Count -gt 0 -and @($outside | Where-Object {$_.root -ne [long]$before.host.window}).Count -eq 0
-$evidence=[ordered]@{label=$Label;host=$before.host.window;overlay=$before.hwnd;clicksBefore=$before.clicks;clicksAfter=$clicked.clicks;clickForegroundBefore=$clickForegroundBefore;clickObservation=$clickObservation;clickForegroundAfter=$clickForegroundAfter;dragForegroundBefore=$dragForegroundBefore;dragObservation=$dragObservation;dragForegroundAfter=[QuotaMouseProbe]::Foreground();widgetBefore=$clicked.widget;widgetAfter=$dragged.widget;positionBefore=$positionBefore;positionAfter=$positionAfter;mouseActivateResult=$activationResult;outsideHits=$outside;clickPass=$clickPass;dragPass=$dragPass;focusPass=$focusPass;outsidePass=$outsidePass;passed=($clickPass -and $dragPass -and $focusPass -and $outsidePass)}
+$evidence=[ordered]@{label=$Label;host=$before.host.window;overlay=$before.hwnd;pinned=$pinned;clicksBefore=$before.clicks;clicksAfter=$clicked.clicks;clickForegroundBefore=$clickForegroundBefore;clickObservation=$clickObservation;clickForegroundAfter=$clickForegroundAfter;dragForegroundBefore=$dragForegroundBefore;dragObservation=$dragObservation;dragForegroundAfter=[QuotaMouseProbe]::Foreground();widgetBefore=$clicked.widget;widgetAfter=$dragged.widget;positionBefore=$positionBefore;positionAfter=$positionAfter;mouseActivateResult=$activationResult;outsideHits=$outside;clickPass=$clickPass;dragPass=$dragPass;focusPass=$focusPass;outsidePass=$outsidePass;passed=($clickPass -and $dragPass -and $focusPass -and $outsidePass)}
 if($VerifySwitchAway) {
     # A test-owned window substitutes for another app; no third-party UI is driven.
     Add-Type -AssemblyName System.Windows.Forms

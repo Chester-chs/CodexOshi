@@ -9,6 +9,7 @@ function Click-Point($s,$x,$y){
   [QuotaMouseProbe]::ClickAndSample()
 }
 $before=State
+$wasMaximized=[QuotaMouseProbe]::IsMaximized([long]$before.host.window)
 $hostProcess=Get-Process -Id $before.host.hostPid
 if($hostProcess.Path -notmatch '\\WindowsApps\\OpenAI\.Codex_[^\\]+\\app\\(ChatGPT|Codex)\.exe$'){throw 'Unexpected host process.'}
 if((Get-Process -Id $before.pid).Path -ne (Join-Path $DataRoot 'desktop-runtime/node_modules/electron/dist/electron.exe').Replace('/','\')){throw 'Unexpected widget process.'}
@@ -25,14 +26,14 @@ foreach($fx in @(0.15,0.35,0.55)){foreach($fy in @(0.15,0.35,0.55)){
 if(-not $point){throw 'No host blank point outside the shape.'}
 $outsideObservation=Click-Point $opened $point.x $point.y;Start-Sleep -Milliseconds 250;$closed=State
 if($closed.expanded -or $closed.speechVisible){throw 'Outside click failed to dismiss.'}
-$expected=$closed.widget;$positionBefore=[IO.File]::ReadAllText((Join-Path $DataRoot 'position.json'));$cycles=@()
+$expected=$closed.widget;$positionBefore=[IO.File]::ReadAllText((Join-Path $DataRoot 'position.json'));$savedBefore=$positionBefore|ConvertFrom-Json;$cycles=@()
 try{for($n=0;$n -lt 3;$n++){
   [QuotaMouseProbe]::SetMinimized([long]$before.host.window,$true);Start-Sleep -Milliseconds 750;$hidden=State
-  [QuotaMouseProbe]::SetMinimized([long]$before.host.window,$false);Start-Sleep -Milliseconds 750;$restored=State
+  [QuotaMouseProbe]::Restore([long]$before.host.window,$wasMaximized);Start-Sleep -Milliseconds 750;$restored=State
   $saved=Get-Content -LiteralPath (Join-Path $DataRoot 'position.json') -Raw | ConvertFrom-Json
-  if($hidden.visible -or -not $restored.visible -or $restored.widget.x -ne $expected.x -or $restored.widget.y -ne $expected.y -or $saved.x -ne $expected.x -or $saved.y -ne $expected.y){throw 'Minimize/restore lost position.'}
+  if($hidden.visible -or -not $restored.visible -or $restored.widget.x -ne $expected.x -or $restored.widget.y -ne $expected.y -or $saved.x -ne $savedBefore.x -or $saved.y -ne $savedBefore.y){throw 'Minimize/restore lost position.'}
   $cycles+=@{hiddenBounds=$hidden.host.bounds;hiddenWidget=$hidden.widget;restoredWidget=$restored.widget;visible=$restored.visible}
-}}finally{[QuotaMouseProbe]::SetMinimized([long]$before.host.window,$false)}
+}}finally{[QuotaMouseProbe]::Restore([long]$before.host.window,$wasMaximized)}
 $result=@{passed=$true;gearObservation=$gearObservation;outsideObservation=$outsideObservation;outsideHostHit=[QuotaMouseProbe]::Hit($point.x,$point.y);minimizeCycles=$cycles;positionUnchanged=([IO.File]::ReadAllText((Join-Path $DataRoot 'position.json')) -eq $positionBefore);resetCredits=$closed.quota.resetCredits}
 [IO.File]::WriteAllText((Join-Path $DataRoot 'dialogue-native-probe.json'),($result|ConvertTo-Json -Depth 8),$Utf8)
 $result|ConvertTo-Json -Depth 8

@@ -11,8 +11,9 @@
     const text=value=>i18n.t(value,{},language),displayPercent=p=>p===null?text('未知'):percent(p);
     const windows=Array.isArray(quota?.windows)?quota.windows:[];
     const selected=windows.filter(w=>Number.isFinite(w.remainingPercent)).sort((a,b)=>a.remainingPercent-b.remainingPercent)[0] || windows[0];
+    const stale=Boolean(quota?.stale)||Number.isFinite(quota?.observedAt)&&now-quota.observedAt>120000;
     return {empty:windows.length?'':text('暂无可用额度数据'),showCompactBar:width>=120&&Number.isFinite(selected?.remainingPercent),
-      compact:{label:text(selected?.label || '暂无可用额度数据'),text:selected?displayPercent(selected.remainingPercent):text('暂无可用额度数据'),remainingPercent:selected?.remainingPercent??null,tone:tone(selected?.remainingPercent??null)},
+      compact:{label:text(selected?.label || '暂无可用额度数据'),text:selected?displayPercent(selected.remainingPercent):text('暂无可用额度数据'),remainingPercent:selected?.remainingPercent??null,tone:tone(selected?.remainingPercent??null),stale,freshness:stale?text('旧数据'):''},
       cards:windows.map(w=>({...w,label:text(w.label),percentText:displayPercent(w.remainingPercent),resetText:countdown(w.resetAt,now,language),tone:tone(w.remainingPercent)}))};
   }
   function presentTokens(tokens,language='zh-CN'){

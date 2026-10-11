@@ -13,6 +13,11 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code);
   async function waitFor(code){const deadline=Date.now()+5000;while(!(await js(code))){if(Date.now()>deadline)throw Error('UI condition timed out: '+code);await delay(25);}}
   await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(200);
+  win.webContents.send('quota',{...quota,stale:true,observedAt:Date.now()-300000});
+  await waitFor(`document.querySelector('#freshness')?.textContent==='${restart?'Stale':'旧数据'}'`);
+  assert.equal(await js(`document.querySelector('#status').textContent`),'55%');
+  win.webContents.send('quota',quota);
+  await waitFor(`document.querySelector('#freshness')?.hidden===true`);
   assert.equal((await js('window.widget.panelDock(false)')).ok,true);await delay(100);
   await js(`window.widget.gesture({type:'drag',x:950,y:500});window.widget.gesture({type:'end'})`);await delay(120);
   const portrait=state().region[0];
@@ -70,6 +75,24 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   await js(`document.querySelector('#appearance-tab').click()`);await capture('card-appearance-en.png');assert.equal(await js(`document.querySelector('.palette-choice strong').textContent`),'Klein Blue');
   await js(`document.querySelector('#panel-resize').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}))`);await delay(100);assert.deepEqual(saved(),{width:640,height:720,language:'en-US',dockBottomRight:false});
   dimensions={width:320,height:250};send();await delay(100);for(const r of state().region)assert.ok(r.x>=8&&r.y>=8&&r.x+r.width<=296&&r.y+r.height<=226);assert.deepEqual(saved(),{width:640,height:720,language:'en-US',dockBottomRight:false});dimensions={width:1200,height:1000};send();await delay(100);
+  await js(`document.querySelector('#character-tab').click()`);
+  const panelBeforeCompact=state().region[1];
+  await js(`document.querySelector('#compact-only').click()`);
+  await waitFor(`document.querySelector('#character-stage').hidden===true`);
+  assert.equal(state().region[0].height,52);assert.deepEqual(state().region[1],panelBeforeCompact);
+  await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true});await delay(160);
+  fs.writeFileSync(path.join(output,'bar-only.png'),(await win.webContents.capturePage(undefined,{stayHidden:true,stayAwake:true})).toPNG());
+  await js(`document.querySelector('#compact-only').click()`);
+  await waitFor(`document.querySelector('#character-stage').hidden===false`);
+  assert.equal(state().region[0].height,280);
+  await js(`document.querySelector('#keyboard-mode').click()`);
+  await waitFor(`document.activeElement?.id==='character-tab'`);
+  assert.equal(state().textEditing,true);
+  await js(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))`);
+  assert.equal(await js(`document.activeElement.id`),'appearance-tab');
+  assert.equal(await js(`document.querySelector('#appearance-tab').getAttribute('aria-selected')`),'true');
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+  await waitFor(`document.querySelector('#details').hidden`);assert.equal(state().textEditing,false);
   await js(`document.querySelector('#close').click()`);await waitFor(`document.querySelector('#details').hidden`);assert.equal(state().region.length,1);
   const result={passed:true,speech:{alternatesTwo:true,secondDialogueOnly:true,dismissalRestartsFirst:true,width:280,height:152,resetCredits:2,gearOnlySettings:true,outsideSignalDismisses:true},typography,close:initial.close,tabWidths:initial.tabs.map(t=>t.width),inlineEdit:{sameWindow:true,keyboardInput:true,saved:true,cancelRestores:true},presets:{first:3,second:4,draftOnly:true,customEditable:true,cancelRestores:true},resizeDirection:"outer-left drag left enlarges",pointerResize:{width:620,height:720},saved:saved(),languages:['zh-CN','en-US'],stickyClose:true,wheelScroll:true,smallViewportClamped:true,closeCollapses:true};fs.writeFileSync(path.join(output,'card-ui.json'),JSON.stringify(result,null,2));clearInterval(heartbeat);socket.destroy();app.quit();
 })().catch(e=>{process.stderr.write(e.stack+'\n');app.exit(1);});

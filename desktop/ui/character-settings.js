@@ -26,7 +26,7 @@
   function renderPreview(){const view=characterView.characterView(active());$('character-original').src=view.url;preview.frame(view.settings);preview.load(view.url,view.settings.background);}
   function render(){
     const role=active(),list=$('character-list');list.replaceChildren();if(!role){const hint=document.createElement('span');hint.textContent=window.uiText.t('上传立绘，即可添加角色');list.append(hint);}
-    for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.tabIndex=-1;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
+    for(const c of snapshot.characters){const button=document.createElement('button');button.textContent=c.name;button.setAttribute('aria-pressed',String(c.name===snapshot.active));button.onclick=()=>{flush();action({action:'select',name:c.name});};list.append(button);}
     for(const id of ['character-rename','character-delete','character-background','character-width','character-width-value','character-size','character-size-value','character-reset'])$(id).disabled=!role;
     $('character-background').checked=role?.settings.background??true;$('character-size').value=role?.settings.targetHeight??280;displayNumber('character-size-value',role?.settings.targetHeight??280);renderPreview();window.renderCharacter();
   }

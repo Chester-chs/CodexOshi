@@ -4,6 +4,20 @@ This page records published Codi versions. For downloads and installation, use t
 
 这里记录已正式发布的 Codi 版本；下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.2](https://github.com/Chester-chs/Codi/releases/tag/v0.3.2) — 2026-10-11
+
+- Added a saved **Show quota bar only** option for narrow Codex windows; the gear remains available and the portrait returns when switched off.
+- Marked stale quota readings directly on the resident bar while retaining the last known percentage.
+- Added an explicit keyboard mode in Codi Settings. Click the keyboard icon, use Tab and arrow keys to navigate, and press Escape to close the card.
+- Corrected the native focus, pinned-position, and minimize/restore probes so they evaluate the actual pinned behavior and preserve a maximized host window.
+
+**中文**
+
+- 新增可保存的「仅显示额度条」选项，缩窄 Codex 窗口时可暂时收起人物，齿轮仍可使用；关闭选项后恢复立绘。
+- 常驻额度条直接标出过期数据，同时保留最后一次读到的百分比。
+- Codi 设置新增键盘操作模式：点击键盘图标后可用 Tab、方向键操作，按 Esc 收起卡片。
+- 修正实机探针，使其按固定模式的实际行为检查拖动与位置，并在最小化复测后恢复原来的最大化状态。
+
 ## [0.3.1](https://github.com/Chester-chs/Codi/releases/tag/v0.3.1) — 2026-10-11
 
 - Refined the compact quota bar with softer rounded corners and spacing guided by the golden ratio.

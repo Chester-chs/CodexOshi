@@ -11,7 +11,7 @@ async function mainHarness(source,options={}){
   function advance(ms){const end=now+ms;while(true){const entry=[...timers].filter(([,t])=>t.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!entry)break;const[id,t]=entry;now=t.at;if(t.repeat)t.at+=t.repeat;else timers.delete(id);t.fn();}now=end;}
   class FakeWindow {
     constructor(){this.webContents={send:(name,value)=>{if(name==='layout')layouts.push({at:now,value});},on(){},setWindowOpenHandler(){},session:{setPermissionRequestHandler(){}}};}
-    setShape(value){shapes.push(value);}setIgnoreMouseEvents(){}getNativeWindowHandle(){const b=Buffer.alloc(8);b.writeBigUInt64LE(1n);return b;}
+    setShape(value){shapes.push(value);}setIgnoreMouseEvents(){}setTitle(){}focus(){}getNativeWindowHandle(){const b=Buffer.alloc(8);b.writeBigUInt64LE(1n);return b;}
     getSize(){return [800,600];}setSize(){}getBounds(){return {x:0,y:0};}isVisible(){return true;}isFocused(){return false;}isDestroyed(){return false;}showInactive(){}hide(){}async loadFile(){}
   }
   const electron={app:{setPath(){},disableHardwareAcceleration(){},commandLine:{appendSwitch(){}},whenReady(){return {then(fn){start=fn;}};},on:(name,fn)=>appHandlers.set(name,fn),quit(){}},BrowserWindow:FakeWindow,ipcMain:{on:(name,fn)=>handlers.set(name,fn),handle:(name,fn)=>handlers.set(name,fn)},screen:{getCursorScreenPoint:()=>({x:0,y:0})},protocol:{registerSchemesAsPrivileged(){}}};
