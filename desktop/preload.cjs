@@ -1,5 +1,10 @@
 const {contextBridge,ipcRenderer}=require('electron');
 contextBridge.exposeInMainWorld('widget',{
+  newsRead:()=>ipcRenderer.invoke('news-read'),
+  newsCheck:kind=>ipcRenderer.invoke('news-check',kind),
+  newsEnabled:value=>ipcRenderer.invoke('news-enabled',value),
+  newsOpen:kind=>ipcRenderer.invoke('news-open',kind),
+  newsState:callback=>ipcRenderer.on('news-state',(_event,value)=>callback(value)),
   openSettings:()=>ipcRenderer.send('open-settings'),
   setEnabled:value=>ipcRenderer.invoke('widget-enabled',value),
   dialogueRead:()=>ipcRenderer.invoke('dialogue-read'),

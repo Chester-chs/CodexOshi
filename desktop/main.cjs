@@ -1,4 +1,5 @@
-const {app,BrowserWindow,ipcMain,screen,protocol} = require('electron');
+const {app,BrowserWindow,ipcMain,screen,protocol,Notification,shell} = require('electron');
+const {installNews}=require('./news.cjs');
 const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
@@ -29,7 +30,7 @@ let characterSize={...COMPACT};
 let panelScroll=null;
 let defaultPlacement=true;
 let freePosition=null;
-let diagnosticTimer,layoutTimer,checkpointTimer;
+let diagnosticTimer,layoutTimer,checkpointTimer,news,newsTimer;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
 const panelStore=new PanelPreferencesStore(data);
@@ -103,6 +104,8 @@ app.whenReady().then(async()=>{
   const characters=new CharacterStore(path.join(data,'characters'));await characters.init();installCharacters(win,characters);
   panelPreferences=await panelStore.read();
   dialoguePreferences=await dialogueStore.read();
+  news=installNews({win,data,ipcMain,Notification,shell,isActive:()=>!quitting&&widgetEnabled()&&!dragging&&!panelResizing&&host.visible!==false&&host.attached===true,language:()=>panelPreferences.language});
+  newsTimer=setInterval(()=>news.poll().catch(()=>{}),60000);
   ipcMain.handle('dialogue-focus',(event,value)=>{
     if(event.sender!==win.webContents||typeof value!=='boolean'||value&&(!expanded||dragging))return {ok:false};
     setTextEditing(value);if(value)win.focus();return {ok:true};
@@ -268,4 +271,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{quitting=true;clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
+app.on('before-quit',()=>{quitting=true;clearInterval(newsTimer);news?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
