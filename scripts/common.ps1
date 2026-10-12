@@ -59,6 +59,9 @@ function Build-Launcher {
     }
     return $exe
 }
+function New-CodiTaskSettings {
+    return New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 20 -RestartInterval (New-TimeSpan -Minutes 1)
+}
 function Start-CodiMonitor {
     param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
     if (-not (Test-Path -LiteralPath (Join-Path $DataDirectory 'desktop-runtime\node_modules\electron\dist\electron.exe'))) { throw 'Install the plugin first.' }

@@ -1,6 +1,7 @@
 param([Parameter(Mandatory=$true)][string]$DataDir)
 $ErrorActionPreference = 'Stop'
 Add-Type -Path (Join-Path $PSScriptRoot 'WindowApi.cs')
+. (Join-Path $PSScriptRoot 'bridge-cleanup.ps1')
 [QuotaWindows]::DetachConsole()
 $utf8 = New-Object Text.UTF8Encoding($false)
 $process = $null
@@ -23,8 +24,8 @@ try {
         $hostState['nativeInput']=[QuotaWindows]::FollowMetrics()
         if ($process -and $process.HasExited) {
             [QuotaWindows]::StopFollowing()
-            if ($writer) { $writer.Dispose(); $writer=$null }
-            if ($pipe) { $pipe.Dispose(); $pipe=$null }
+            Close-CodiBridge -Writer $writer -Pipe $pipe
+            $writer=$null; $pipe=$null
             if ($errorTask.IsCompleted) { [IO.File]::WriteAllText((Join-Path $DataDir 'desktop-error.log'),$errorTask.Result,$utf8) }
             $process.Dispose(); $process=$null; $overlay=0L; $attached=''
         }
@@ -44,18 +45,27 @@ try {
         }
         if ($process -and -not $process.HasExited) {
             if (-not $enabled -or -not $hostState.hostAlive) {
-                if ($writer) { $writer.WriteLine((@{token=$bridge.token;state=@{stop=$true}} | ConvertTo-Json -Compress)) }
+                if ($writer -and -not (Send-CodiBridge -Writer $writer -Message (@{token=$bridge.token;state=@{stop=$true}} | ConvertTo-Json -Compress))) {
+                    [QuotaWindows]::StopFollowing()
+                    Close-CodiBridge -Writer $writer -Pipe $pipe
+                    $writer=$null; $pipe=$null; $overlay=0L; $attached=''
+                }
             } else {
-                if (-not $pipe -and (Test-Path -LiteralPath (Join-Path $DataDir 'bridge.json'))) {
-                    $candidate=Get-Content -LiteralPath (Join-Path $DataDir 'bridge.json') -Raw | ConvertFrom-Json
-                    if ($candidate.pid -eq $process.Id) {
+                if (-not $pipe) {
+                    $candidate=Read-CodiBridgeCandidate -Path (Join-Path $DataDir 'bridge.json')
+                    if ($candidate -and $candidate.pid -eq $process.Id) {
                         $bridge=$candidate
-                        $pipe=New-Object IO.Pipes.NamedPipeClientStream('.', $bridge.pipe, [IO.Pipes.PipeDirection]::Out)
-                        $pipe.Connect(1000)
-                        $writer=New-Object IO.StreamWriter($pipe,$utf8)
-                        $writer.AutoFlush=$true
-                        $overlay=[long]$bridge.hwnd
-                        [QuotaWindows]::ConfigureOverlay($overlay) | Out-Null
+                        try {
+                            $pipe=New-Object IO.Pipes.NamedPipeClientStream('.', $bridge.pipe, [IO.Pipes.PipeDirection]::Out)
+                            $pipe.Connect(1000)
+                            $writer=New-Object IO.StreamWriter($pipe,$utf8)
+                            $writer.AutoFlush=$true
+                            $overlay=[long]$bridge.hwnd
+                            [QuotaWindows]::ConfigureOverlay($overlay) | Out-Null
+                        } catch {
+                            Close-CodiBridge -Writer $writer -Pipe $pipe
+                            $writer=$null; $pipe=$null; $overlay=0L; $attached=''
+                        }
                     }
                 }
                 if ($overlay -and $hostState.window -ne '0' -and $attached -ne $hostState.window) {
@@ -65,13 +75,18 @@ try {
                 $hostState['revision']=[QuotaWindows]::VisibilityRevision()
                 $hostState['nativeWheel']=[QuotaWindows]::DrainWheels()
                 $hostState['outsideClick']=[QuotaWindows]::DrainOutsideClick()
-                $hostState.Remove('mouseButtons'); $hostState.Remove('mouseSampleAt')
+                $hostState.Remove('mouseButtons') | Out-Null; $hostState.Remove('mouseSampleAt') | Out-Null
                 # Ordinary location changes stay native; Chromium only needs dimensions / DPI.
                 $hostState.bounds = @{width=$hostState.bounds.width;height=$hostState.bounds.height}
                 $serialized=$hostState | ConvertTo-Json -Depth 6 -Compress
                 if ($writer -and ($serialized -ne $lastState -or ([DateTime]::UtcNow-$heartbeat).TotalSeconds -ge 1)) {
-                    $writer.WriteLine((@{token=$bridge.token;state=$hostState} | ConvertTo-Json -Depth 8 -Compress))
-                    $lastState=$serialized; $heartbeat=[DateTime]::UtcNow
+                    if (Send-CodiBridge -Writer $writer -Message (@{token=$bridge.token;state=$hostState} | ConvertTo-Json -Depth 8 -Compress)) {
+                        $lastState=$serialized; $heartbeat=[DateTime]::UtcNow
+                    } else {
+                        [QuotaWindows]::StopFollowing()
+                        Close-CodiBridge -Writer $writer -Pipe $pipe
+                        $writer=$null; $pipe=$null; $overlay=0L; $attached=''
+                    }
                 }
             }
         }
@@ -84,6 +99,5 @@ try {
         if (-not $process.WaitForExit(3000)) { $process.Kill() }
     }
     if ($process) { $process.Dispose() }
-    if ($writer) { $writer.Dispose() }
-    if ($pipe) { $pipe.Dispose() }
+    Close-CodiBridge -Writer $writer -Pipe $pipe
 }

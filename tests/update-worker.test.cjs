@@ -14,7 +14,7 @@ test('start resolution follows a valid installed release using the explicit data
 function transactionFixture(dir){
   const data=path.join(dir,'codex home','codex-quota-widget'),job=path.join(data,'updates','job-1'),app=path.join(job,'app'),cache=path.join(dir,'codex home','plugins','cache','personal','codex-quota-widget','0.1.0');
   const write=(p,s)=>{fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,s);};
-  for(const f of ['desktop/supervisor.ps1','desktop/main.cjs','desktop/WidgetLauncher.cs','scripts/common.ps1','scripts/start.ps1','scripts/stop.ps1','scripts/apply-update.ps1','runtime/mcp.cjs'])write(path.join(app,f),'candidate '+f);
+  for(const f of ['desktop/supervisor.ps1','desktop/bridge-cleanup.ps1','desktop/main.cjs','desktop/WidgetLauncher.cs','scripts/common.ps1','scripts/start.ps1','scripts/stop.ps1','scripts/apply-update.ps1','runtime/mcp.cjs'])write(path.join(app,f),'candidate '+f);
   write(path.join(app,'package.json'),JSON.stringify({name:'codex-quota-widget',version:'0.2.0'}));write(path.join(app,'package-lock.json'),'{}');write(path.join(app,'.codex-plugin/plugin.json'),JSON.stringify({name:'codex-quota-widget',version:'0.1.0'}));write(path.join(app,'.mcp.json'),'{}');
   write(path.join(data,'installation.json'),JSON.stringify({sourceRoot:root,marketplace:'personal',installedAt:'original'}));write(path.join(data,'characters','art.png'),'keep artwork');write(path.join(data,'panel-preferences.json'),'keep settings');write(path.join(data,'desktop-runtime','node_modules','electron','dist','electron.exe'),'old runtime');write(path.join(job,'runtime','node_modules','electron','dist','electron.exe'),'new runtime');write(path.join(cache,'runtime','mcp.cjs'),'old cached code');write(path.join(cache,'unrelated.txt'),'keep cached extra');
   const plan={version:'0.2.0',previousVersion:'0.1.0',commit:'a'.repeat(40),appRoot:app,runtimeRoot:path.join(job,'runtime'),cacheRoot:cache,oldLauncherPid:0};write(path.join(job,'plan.json'),JSON.stringify(plan));
@@ -24,6 +24,14 @@ function harness(f,body){return `. ${quote(path.join(root,'scripts','apply-updat
 test('transaction installs a release without changing checkout or user data and preserves startup opt-out',()=>fixture(dir=>{
   const f=transactionFixture(dir);powershell(harness(f,`function Set-ScheduledTask { throw 'Startup opt-out changed' }; Invoke-CodiUpdate; if($script:startedRoot -notlike '*releases*') { throw 'Release not started' }`));
   const receipt=JSON.parse(fs.readFileSync(path.join(f.data,'installation.json'))),state=JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json')));assert.equal(receipt.sourceRoot,root);assert.equal(receipt.installedAt,'original');assert.match(receipt.activeRoot,/releases/);assert.equal(state.status,'complete');assert.ok(state.ownerPid>0);assert.equal(fs.readFileSync(path.join(f.cache,'runtime','mcp.cjs'),'utf8'),'candidate runtime/mcp.cjs');assert.equal(fs.readFileSync(path.join(f.cache,'unrelated.txt'),'utf8'),'keep cached extra');assert.equal(fs.readFileSync(path.join(f.data,'desktop-runtime','node_modules','electron','dist','electron.exe'),'utf8'),'new runtime');assert.equal(fs.readFileSync(path.join(f.data,'characters','art.png'),'utf8'),'keep artwork');assert.equal(fs.readFileSync(path.join(f.data,'panel-preferences.json'),'utf8'),'keep settings');assert.equal(fs.existsSync(path.join(f.data,'update-pending.json')),false);
+}));
+test('release without its pipe recovery helper is rejected before replacing the active installation',()=>fixture(dir=>{
+  const f=transactionFixture(dir);
+  fs.rmSync(path.join(f.app,'desktop','bridge-cleanup.ps1'));
+  powershell(harness(f,'Invoke-CodiUpdate'));
+  const state=JSON.parse(fs.readFileSync(path.join(f.data,'update-state.json'),'utf8'));
+  assert.equal(state.status,'failed');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(f.data,'installation.json'),'utf8')).activeRoot,undefined);
 }));
 test('Windows PowerShell installs a release whose BOMless UTF-8 manifest contains Chinese text',()=>fixture(dir=>{
   const f=transactionFixture(dir);

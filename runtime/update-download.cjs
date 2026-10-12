@@ -128,7 +128,7 @@ async function downloadArchive(commit,archivePath,options){
 }
 
 async function validateApplication(appRoot,version){
-  const required=['desktop/main.cjs','desktop/supervisor.ps1','desktop/WidgetLauncher.cs','desktop/WindowApi.cs','desktop/updates.cjs',
+  const required=['desktop/main.cjs','desktop/supervisor.ps1','desktop/bridge-cleanup.ps1','desktop/WidgetLauncher.cs','desktop/WindowApi.cs','desktop/updates.cjs',
     'scripts/start.ps1','scripts/stop.ps1','scripts/common.ps1','scripts/apply-update.ps1','scripts/extract-update.ps1',
     'runtime/mcp.cjs','runtime/update-service.cjs','runtime/update-download.cjs',
     'package.json','package-lock.json','.codex-plugin/plugin.json','.mcp.json'];

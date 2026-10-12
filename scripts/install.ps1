@@ -51,7 +51,7 @@ if (-not $NoStartup) {
     $action=New-ScheduledTaskAction -Execute $launcher -Argument ('--script "'+(Join-Path $SourceRoot 'desktop\supervisor.ps1')+'" --data "'+$DataRoot+'"')
     $trigger=New-ScheduledTaskTrigger -AtLogOn -User ([Security.Principal.WindowsIdentity]::GetCurrent().Name)
     $principal=New-ScheduledTaskPrincipal -UserId ([Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
-    $settings=New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero)
+    $settings=New-CodiTaskSettings
     Register-ScheduledTask -TaskName 'Codex Quota Widget' -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 }
 if (-not $NoStart) { & (Join-Path $PSScriptRoot 'start.ps1') }

@@ -45,7 +45,7 @@ function Get-PreviousUpdateRoot($Plan,$Receipt) {
 }
 function Assert-UpdateApp($Root,$Version) {
     Assert-UpdateTree $Root
-    foreach ($file in @('package.json','package-lock.json','.codex-plugin\plugin.json','.mcp.json','desktop\WidgetLauncher.cs','desktop\main.cjs','desktop\supervisor.ps1','scripts\common.ps1','scripts\start.ps1','scripts\stop.ps1','scripts\apply-update.ps1','runtime\mcp.cjs')) {
+    foreach ($file in @('package.json','package-lock.json','.codex-plugin\plugin.json','.mcp.json','desktop\WidgetLauncher.cs','desktop\main.cjs','desktop\supervisor.ps1','desktop\bridge-cleanup.ps1','scripts\common.ps1','scripts\start.ps1','scripts\stop.ps1','scripts\apply-update.ps1','runtime\mcp.cjs')) {
         if (-not (Test-Path -LiteralPath (Join-Path $Root $file) -PathType Leaf)) { throw 'Release files are incomplete.' }
     }
     $package=Get-Content -LiteralPath (Join-Path $Root 'package.json') -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -75,7 +75,7 @@ function Set-UpdateTask($Actions) {
         if ($action.workingDirectory) { $parameters.WorkingDirectory=$action.workingDirectory }
         New-ScheduledTaskAction @parameters
     })
-    Set-ScheduledTask -TaskName 'Codex Quota Widget' -Action $nativeActions | Out-Null
+    Set-ScheduledTask -TaskName 'Codex Quota Widget' -Action $nativeActions -Settings (New-CodiTaskSettings) | Out-Null
 }
 function Stop-UpdateMonitor {
     [IO.File]::WriteAllText((Join-Path $DataDir 'stop.request'),'stop',$Utf8)

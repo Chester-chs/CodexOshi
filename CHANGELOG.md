@@ -4,6 +4,15 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6) — 2026-10-12
+
+- Recover the Codex bridge after broken-pipe writes or cleanup, instead of letting the supervisor exit.
+- Retry the Windows background task after a crash, and keep it eligible while the laptop runs on battery power.
+- Require the bridge recovery helper in update packages so an incomplete download cannot replace a working installation.
+- 修复桥接管道写入或清理时断线导致监控进程退出的问题，并自动重连。
+- 后台任务崩溃后自动重试；笔记本使用电池时仍允许挂件运行。
+- 更新包必须包含桥接恢复文件，避免不完整的下载替换正常安装。
+
 ## [0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5) — 2026-10-11
 
 - Settings keyboard mode now turns on automatically whenever the card opens, and the bilingual README lists its shortcuts.
