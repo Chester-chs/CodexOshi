@@ -45,10 +45,50 @@ function Get-CodiActiveRoot {
     } catch { }
     return $FallbackRoot
 }
+function Get-CodiSourceHash {
+    param([string]$Path)
+    $sha=[Security.Cryptography.SHA256]::Create();$stream=[IO.File]::OpenRead($Path)
+    try { return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-','').Substring(0,16) }
+    finally { $stream.Dispose();$sha.Dispose() }
+}
+function Get-CodiWindowApiCache {
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    $hash=Get-CodiSourceHash (Join-Path $Root 'desktop\WindowApi.cs')
+    return Join-Path $DataDirectory ('native\QuotaWindows-'+$hash+'.dll')
+}
+function Build-CodiWindowApi {
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    $assembly=Get-CodiWindowApiCache -Root $Root -DataDirectory $DataDirectory
+    if (-not (Test-Path -LiteralPath $assembly)) {
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $assembly)) | Out-Null
+        $temporary=$assembly+'.'+$PID+'.tmp.dll'
+        $compiler=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+        try {
+            & $compiler /nologo /target:library /platform:x64 /optimize+ /reference:System.Core.dll "/out:$temporary" (Join-Path $Root 'desktop\WindowApi.cs') | Out-Null
+            if ($LASTEXITCODE) { throw 'Window API compilation failed.' }
+            if (-not (Test-Path -LiteralPath $assembly)) { [IO.File]::Move($temporary,$assembly) }
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+    }
+    return $assembly
+}
+function Import-CodiWindowApi {
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    $assembly=Get-CodiWindowApiCache -Root $Root -DataDirectory $DataDirectory
+    if (-not (Test-Path -LiteralPath $assembly)) {
+        # Older updaters do not prebuild this assembly; migrate on first launch.
+        try { Build-CodiWindowApi -Root $Root -DataDirectory $DataDirectory | Out-Null } catch { }
+    }
+    if (Test-Path -LiteralPath $assembly) {
+        try { Add-Type -Path $assembly; return } catch { }
+    }
+    # Source launches and a damaged local cache remain usable.
+    Add-Type -Path (Join-Path $Root 'desktop\WindowApi.cs')
+}
 function Build-Launcher {
     param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    Build-CodiWindowApi -Root $Root -DataDirectory $DataDirectory | Out-Null
     $source = Join-Path $Root 'desktop\WidgetLauncher.cs'
-    $hash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.Substring(0,16)
+    $hash = Get-CodiSourceHash $source
     $native = Join-Path $DataDirectory 'native'
     [IO.Directory]::CreateDirectory($native) | Out-Null
     $exe = Join-Path $native "QuotaLauncher-$hash.exe"

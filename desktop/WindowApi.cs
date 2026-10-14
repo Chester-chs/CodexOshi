@@ -155,7 +155,7 @@ public static class QuotaWindows {
         StopFollowing();
         follower = new NativeFollower(overlay, owner);
         follower.Start();
-        return true;
+        return follower.Running;
     }
     static NativeFollower follower;
     // A process-wide monotonic epoch survives reattachment. A short minimize /

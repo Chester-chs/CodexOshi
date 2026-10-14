@@ -29,7 +29,7 @@ function files(version='0.2.0'){
     'package-lock.json':JSON.stringify({name:'codex-quota-widget',version,lockfileVersion:3,packages:{'':{name:'codex-quota-widget',version}}}),
     '.codex-plugin/plugin.json':JSON.stringify({name:'codex-quota-widget',version:'0.1.0'}),
     '.mcp.json':'{}',
-    'desktop/main.cjs':'main','desktop/supervisor.ps1':'supervisor','desktop/bridge-cleanup.ps1':'bridge cleanup','desktop/WidgetLauncher.cs':'launcher',
+    'desktop/main.cjs':'main','desktop/supervisor.ps1':'supervisor','desktop/bridge-cleanup.ps1':'bridge cleanup','desktop/bridge-health.cjs':'bridge health','desktop/WidgetLauncher.cs':'launcher',
     'desktop/WindowApi.cs':'window api','desktop/updates.cjs':'update bridge',
     'scripts/start.ps1':'start','scripts/common.ps1':'common','scripts/apply-update.ps1':'apply',
     'scripts/stop.ps1':'stop','scripts/extract-update.ps1':'extract','runtime/mcp.cjs':'mcp',
@@ -177,7 +177,7 @@ test('existing job contents are never overwritten by staging',async t=>{
 });
 
 test('release must include monitor controls and its own next-update runtime',async t=>{
-  for(const missing of ['.mcp.json','scripts/stop.ps1','desktop/WindowApi.cs','desktop/bridge-cleanup.ps1','desktop/updates.cjs','runtime/update-service.cjs','runtime/update-download.cjs','scripts/extract-update.ps1']){
+  for(const missing of ['.mcp.json','scripts/stop.ps1','desktop/WindowApi.cs','desktop/bridge-cleanup.ps1','desktop/bridge-health.cjs','desktop/updates.cjs','runtime/update-service.cjs','runtime/update-download.cjs','scripts/extract-update.ps1']){
     const entries=files().filter(file=>!file.name.endsWith('/'+missing));
     await assert.rejects(prepareRelease({jobDir:job(t),currentVersion:'0.1.0',fetch:publicFetch(zip(entries))}),code('invalid_release'),missing);
   }

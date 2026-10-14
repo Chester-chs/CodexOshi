@@ -11,6 +11,7 @@ const {portraitSize}=require('./ui/portrait-size.js');
 const {QuotaReader}=require('../runtime/quota.cjs');
 const {Worker}=require('node:worker_threads');
 const {visibility}=require('./visibility.cjs');
+const {bridgeHealth}=require('./bridge-health.cjs');
 const {CharacterStore}=require('../runtime/characters.cjs');
 const {installCharacters}=require('./characters.cjs');
 const panelModel=require('./ui/panel-model.js');
@@ -25,7 +26,7 @@ app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-features','CalculateNativeWinOcclusion');
 let win,ready=false,host={},region=[{x:0,y:0,width:1,height:1}],widget=null,clicks=0,dragging=false;
 let dip={width:1,height:1};
-let bridge,receivedAt=Date.now(),expanded=false,viewLayout=null,pollTimer,tokenTimer,tokenWorker;
+let bridge,health,bridgeTimer,expanded=false,viewLayout=null,pollTimer,tokenTimer,tokenWorker,pollStartTimer,pollingStarted=false;
 let tokens={values:null,coverage:'indexing',filesIndexed:0,filesDiscovered:0};
 let savedQuota=null;
 let characterSize={...COMPACT};
@@ -35,6 +36,14 @@ let freePosition=null;
 let diagnosticTimer,layoutTimer,checkpointTimer,news,newsTimer,updates;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
+const lifecycleFile=path.join(data,'lifecycle.log');
+function recordLifecycle(event,details={}){
+  try{
+    if(fs.existsSync(lifecycleFile)&&fs.statSync(lifecycleFile).size>65536)fs.writeFileSync(lifecycleFile,'');
+    fs.appendFileSync(lifecycleFile,JSON.stringify({at:new Date().toISOString(),pid:process.pid,event,...details})+'\n');
+  }catch{}
+}
+recordLifecycle('process-start');
 const panelStore=new PanelPreferencesStore(data);
 let panelPreferences=panelModel.defaults(),panelOffset=null,panelResizing=false;
 const dialogueStore=new DialoguePreferencesStore(data);
@@ -211,9 +220,10 @@ app.whenReady().then(async()=>{
       updateShape();
     }
     show({...host,ready});
+    if(win.isVisible())startPolling();
     diagnostic();
   }
-  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;win.webContents.send('quota',reader.snapshot);win.webContents.send('tokens',tokens);sync()});
+  ipcMain.on('ready',event=>{if(event.sender!==win.webContents)return;ready=true;recordLifecycle('renderer-ready');win.webContents.send('quota',reader.snapshot);win.webContents.send('tokens',tokens);sync()});
   ipcMain.on('read-tokens',event=>{if(event.sender===win.webContents)readTokens();});
   ipcMain.on('panel-scroll',(event,value)=>{
     if(event.sender!==win.webContents||!value||!['top','height','clientHeight','wheelEvents'].every(k=>Number.isInteger(value[k])&&value[k]>=0&&value[k]<=100000))return;
@@ -271,7 +281,7 @@ app.whenReady().then(async()=>{
     diagnostic();
   });
   try {const saved=JSON.parse(fs.readFileSync(path.join(data,'position.json'),'utf8'));if(Number.isFinite(saved.x)&&Number.isFinite(saved.y)){widget=freePosition=saved;defaultPlacement=false;}}catch{}
-  await win.loadFile(path.join(__dirname,'ui','index.html'));
+  // Polling is scheduled only after the first visible frame can be presented.
   function readTokens(){
     if(!widgetEnabled())return;
     if(!tokenWorker){
@@ -286,14 +296,23 @@ app.whenReady().then(async()=>{
     }
     tokenWorker.postMessage({type:'read'});
   }
-  readTokens();tokenTimer=setInterval(readTokens,30000);
+
   async function refresh(){
     if(!widgetEnabled())return;
     const quota=await reader.refresh();if(win.isDestroyed()||!widgetEnabled())return;
     if(dragging)pendingQuota=quota;else saveSnapshot('quota-state.json',quota);
     if(ready){win.webContents.send('quota',quota);updateShape();}diagnostic();
   }
-  refresh().catch(()=>{});pollTimer=setInterval(()=>refresh().catch(()=>{}),30000);
+  function startPolling(){
+    if(pollingStarted||pollStartTimer)return;
+    recordLifecycle('first-visible');
+    pollStartTimer=setTimeout(()=>{
+      pollStartTimer=null;if(quitting||win.isDestroyed()||!win.isVisible())return;
+      pollingStarted=true;
+      readTokens();tokenTimer=setInterval(readTokens,30000);
+      refresh().catch(()=>{});pollTimer=setInterval(()=>refresh().catch(()=>{}),30000);
+    },150);
+  }
   const pipeName='codex-quota-widget-'+process.pid+'-'+crypto.randomBytes(12).toString('hex');
   const token=crypto.randomBytes(32).toString('hex');
   bridge=net.createServer(socket=>{
@@ -307,7 +326,7 @@ app.whenReady().then(async()=>{
         try{
           const message=JSON.parse(line);
           if(message.token!==token){socket.destroy();return;}
-          receivedAt=Date.now();
+          health?.received();
           if(message.state.stop){app.quit();return;}
           const {nativeWheel=[],outsideClick=false,...state}=message.state;host=state;
           if(outsideClick===true&&!dragging&&!panelResizing)dismiss();sync();
@@ -321,8 +340,20 @@ app.whenReady().then(async()=>{
     });
     socket.on('error',()=>{});
   });
-  bridge.listen('\\\\.\\pipe\\'+pipeName,()=>fs.writeFileSync(path.join(data,'bridge.json'),JSON.stringify({pid:process.pid,pipe:pipeName,token,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString()})));
-  setInterval(()=>{if(quitting)return;if(win.isDestroyed()){app.quit();return;}if(Date.now()-receivedAt>3500){win.hide();app.quit();}},1000);
+  bridge.listen('\\\\.\\pipe\\'+pipeName,()=>{
+    health=bridgeHealth();
+    fs.writeFileSync(path.join(data,'bridge.json'),JSON.stringify({pid:process.pid,pipe:pipeName,token,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString()}));
+    recordLifecycle('bridge-listening');
+    let previous='starting';
+    bridgeTimer=setInterval(()=>{
+      if(quitting)return;if(win.isDestroyed()){app.quit();return;}
+      const status=health.check();
+      if(status!==previous){recordLifecycle('bridge-'+status);previous=status;}
+      if(status==='stale'||status==='expired'){win.hide();diagnostic();}
+      if(status==='expired')app.quit();
+    },500);
+  });
+  await win.loadFile(path.join(__dirname,'ui','index.html'));
   // While shaped, only visible widget pixels can ever receive a click.
   // Cursor polling switches hit reception before the first mouse-down.
   let accepting=false;
@@ -335,4 +366,4 @@ app.whenReady().then(async()=>{
   },16);
 });
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{quitting=true;clearInterval(newsTimer);news?.close();updates?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
+app.on('before-quit',()=>{quitting=true;recordLifecycle('process-quit');clearInterval(bridgeTimer);clearTimeout(pollStartTimer);clearInterval(newsTimer);news?.close();updates?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});

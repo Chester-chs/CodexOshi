@@ -8,6 +8,8 @@ $sourceFiles=@(& git -C $SourceRoot ls-files --cached --others --exclude-standar
 $forbidden=@($sourceFiles | Where-Object { $_ -match '(^|/)(auth\.json|node_modules|userdata|cache|dist|build|characters|assets/user|assets/uploads)(/|$)|\.token$|(^|/)\.env' })
 if ($forbidden.Count) { throw ('Forbidden source files: '+($forbidden -join ', ')) }
 if ($Native) {
+    & $node (Join-Path $SourceRoot 'tests\lifecycle-native.cjs')
+    if ($LASTEXITCODE) { throw 'Electron lifecycle tests failed.' }
     Add-Type -Path (Join-Path $SourceRoot 'desktop\WindowApi.cs')
     $output=Join-Path $DataRoot 'shape-smoke.json'
     if (Test-Path -LiteralPath $output) { Remove-Item -LiteralPath $output }

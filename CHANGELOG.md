@@ -4,6 +4,19 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7) — 2026-10-14
+
+- Reconcile actual window visibility so an unexpected native hide does not leave the widget invisible.
+- Recover short heartbeat interruptions without replacing Electron, and give cold startup its own handshake budget.
+- Retry a failed native follower on the same Codex window, with a bounded retry rate.
+- Compile and cache the native window component during install/update; older updaters create the cache on first launch. Show the widget before starting quota reads and token scans.
+- Keep a bounded local lifecycle log for diagnosing future startup or visibility issues.
+- 检查窗口的实际可见状态，意外隐藏后能自动恢复。
+- 短暂心跳停顿后复用原 Electron 进程恢复；冷启动有独立握手等待时间。
+- 同一个 Codex 窗口的原生跟随线程失效后，也会限速重试挂接。
+- 安装和更新时缓存原生窗口组件；旧版更新器升级后首次启动会补建缓存。优先显示挂件，再读取额度和扫描 token。
+- 新增有大小上限的本机生命周期日志，便于追查后续启动或隐藏问题。
+
 ## [0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6) — 2026-10-12
 
 - Recover the Codex bridge after broken-pipe writes or cleanup, instead of letting the supervisor exit.

@@ -12,6 +12,7 @@
 
 ## 更新记录
 
+- **[0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7)**：修复意外隐藏、短暂心跳停顿和跟随线程失效；缓存原生组件、优先显示窗口，缩短启动等待。
 - **[0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6)**：Codex 桥接断线后自动恢复；后台任务崩溃时自动重试，使用电池时也保持挂件运行。
 - **[0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5)**：设置卡片自动开启键盘操作；语言按钮等宽显示。兼容旧本机朗读测试设置。
 - **[0.3.4](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.4)**：Codi 更名为 CodexOshi，意为喜欢的角色陪你使用 Codex；原有角色与设置继续保留。

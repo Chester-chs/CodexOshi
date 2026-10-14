@@ -14,6 +14,18 @@ function Send-CodiBridge {
     try { $Writer.WriteLine($Message); return $true } catch { return $false }
 }
 
+function Update-CodiAttachment {
+    param([long]$Overlay,[string]$HostWindow,[string]$Attached,[DateTime]$LastAttempt,[DateTime]$Now=[DateTime]::UtcNow)
+    if ($Overlay -and $HostWindow -and $HostWindow -ne '0' -and
+        ($Attached -ne $HostWindow -or -not [QuotaWindows]::IsFollowing()) -and
+        ($Now-$LastAttempt).TotalMilliseconds -ge 1000) {
+        $LastAttempt=$Now
+        if ([QuotaWindows]::Attach($Overlay,[long]$HostWindow) -and [QuotaWindows]::IsFollowing()) { $Attached=$HostWindow }
+        else { $Attached='' }
+    }
+    return @{window=$Attached;lastAttempt=$LastAttempt}
+}
+
 function Read-CodiBridgeCandidate {
     param([string]$Path)
     try {

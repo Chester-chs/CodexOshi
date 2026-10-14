@@ -69,11 +69,21 @@ test('edge snap and viewport shrink keep every supported role size inside reserv
   }
 });
 test('visibility changes only at lifecycle boundaries; restore is inactive', () => {
-  const calls=[];const win={showInactive(){calls.push('inactive')},hide(){calls.push('hide')}};
+  const calls=[];let visible=false;const win={isVisible:()=>visible,showInactive(){visible=true;calls.push('inactive')},hide(){visible=false;calls.push('hide')}};
   const update=visibility(win);
   update({ready:true,hostAlive:true,visible:true,attached:true,modal:false});
   update({ready:true,hostAlive:true,visible:true,attached:true,modal:false});
   update({ready:true,hostAlive:true,visible:false,attached:true,modal:false});
   update({ready:true,hostAlive:true,visible:true,attached:true,modal:false});
   assert.deepEqual(calls,['inactive','hide','inactive']);
+});
+
+test('visibility restores a window hidden outside the last host update without stealing focus', () => {
+  let visible=false,shown=0,hidden=0;
+  const win={isVisible:()=>visible,showInactive(){visible=true;shown++;},hide(){visible=false;hidden++;}};
+  const update=visibility(win),host={ready:true,hostAlive:true,visible:true,attached:true,modal:false};
+  update(host);visible=false;update(host);
+  assert.equal(visible,true);assert.equal(shown,2);
+  update(host);assert.equal(shown,2,'healthy visibility should not be reapplied');
+  update({...host,visible:false});assert.equal(visible,false);assert.equal(hidden,1);
 });

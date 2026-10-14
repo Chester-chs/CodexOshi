@@ -12,6 +12,7 @@ Your Codex desktop companion: use a favorite anime or game character alongside q
 
 ## Release history
 
+- **[0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7):** restores unexpectedly hidden windows, recovers temporary bridge/follower failures, and speeds startup with cached native code and deferred background reads.
 - **[0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6):** recovers when the Codex bridge disconnects, retries the background task after a crash, and keeps the widget running on battery power.
 - **[0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5):** settings keyboard mode starts automatically; language choices now have equal-width fills. Old local voice-test settings remain compatible.
 - **[0.3.4](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.4):** renamed Codi to CodexOshi, with the same local characters and settings. The name reflects your own favorite anime or game character alongside Codex.

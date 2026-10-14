@@ -1,11 +1,13 @@
 param([Parameter(Mandatory=$true)][string]$DataDir)
 $ErrorActionPreference = 'Stop'
-Add-Type -Path (Join-Path $PSScriptRoot 'WindowApi.cs')
+. (Join-Path $PSScriptRoot '../scripts/common.ps1')
+Import-CodiWindowApi -Root (Split-Path -Parent $PSScriptRoot) -DataDirectory $DataDir
 . (Join-Path $PSScriptRoot 'bridge-cleanup.ps1')
 [QuotaWindows]::DetachConsole()
 $utf8 = New-Object Text.UTF8Encoding($false)
 $process = $null
 $attached = ''
+$lastAttachAttempt=[DateTime]::MinValue
 $errorTask = $null
 $pipe = $null
 $writer = $null
@@ -68,9 +70,8 @@ try {
                         }
                     }
                 }
-                if ($overlay -and $hostState.window -ne '0' -and $attached -ne $hostState.window) {
-                    if ([QuotaWindows]::Attach($overlay,[long]$hostState.window)) { $attached=$hostState.window }
-                }
+                $attachment=Update-CodiAttachment -Overlay $overlay -HostWindow $hostState.window -Attached $attached -LastAttempt $lastAttachAttempt
+                $attached=$attachment.window; $lastAttachAttempt=$attachment.lastAttempt
                 $hostState['attached']=($attached -eq $hostState.window -and [QuotaWindows]::IsFollowing())
                 $hostState['revision']=[QuotaWindows]::VisibilityRevision()
                 $hostState['nativeWheel']=[QuotaWindows]::DrainWheels()
