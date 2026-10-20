@@ -67,6 +67,10 @@ async function readLocal(codexHome=home()){
   await walk(path.join(codexHome,'sessions'));return newest;
 }
 function findCodex(){
+  if(process.platform==='darwin'){
+    const candidates=[process.env.CODEX_CLI_PATH,...[path.join(os.homedir(),'Applications'),'/Applications'].flatMap(dir=>['codex-cli/bin/codex','codex-cli/CodexCLI.app/Contents/MacOS/codex','codex'].map(file=>path.join(dir,'Codex.app/Contents/Resources',file))),...(process.env.PATH||'').split(path.delimiter).filter(Boolean).map(dir=>path.join(dir,'codex'))];
+    return candidates.find(file=>{try{return file&&fs.statSync(file).isFile()&&(fs.accessSync(file,fs.constants.X_OK),true);}catch{return false;}})||null;
+  }
   const base=path.join(process.env.LOCALAPPDATA || '', 'OpenAI','Codex','bin');
   try{return fs.readdirSync(base).map(name=>path.join(base,name,'codex.exe')).filter(file=>fs.existsSync(file)).sort((a,b)=>fs.statSync(b).mtimeMs-fs.statSync(a).mtimeMs)[0];}catch{return null;}
 }
