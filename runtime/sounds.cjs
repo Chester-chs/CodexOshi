@@ -19,7 +19,7 @@ async function readAudio(file){
 }
 class SoundStore{
   constructor(root){this.root=path.resolve(root);this.file=path.join(this.root,'active.json');this.active=null;this.source='preset';this.pending=new Map();}
-  async checked(){const stat=await fs.lstat(this.root);if(!stat.isDirectory()||stat.isSymbolicLink()||path.resolve(await fs.realpath(this.root))!==this.root)throw Error('音效目录无效。');}
+  async checked(){const stat=await fs.lstat(this.root);const expected=path.join(await fs.realpath(path.dirname(this.root)),path.basename(this.root));if(!stat.isDirectory()||stat.isSymbolicLink()||path.resolve(await fs.realpath(this.root))!==expected)throw Error('音效目录无效。');}
   assetPath(id){if(typeof id!=='string'||!ID.test(id))throw Error('音效无效。');return path.join(this.root,id+'.audio');}
   public(value){return value?{...value,url:'sound://local/'+value.id}:null;}
   async init(){await fs.mkdir(this.root,{recursive:true});await this.checked();try{

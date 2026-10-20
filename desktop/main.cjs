@@ -17,11 +17,15 @@ const {installCharacters}=require('./characters.cjs');
 const panelModel=require('./ui/panel-model.js');
 const {PanelPreferencesStore}=require('../runtime/panel-preferences.cjs');
 const dialogueModel=require('./ui/dialogue-model.js');
+const isMac=process.platform==='darwin';
+let macFollower;
+function applyRegion(value){if(!isMac)win.setShape(value);}
 const {DialoguePreferencesStore}=require('../runtime/dialogue-preferences.cjs');
 protocol.registerSchemesAsPrivileged(['character','sound'].map(scheme=>({scheme,privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}})));
 const data=process.argv[process.argv.indexOf('--data')+1];
 if (!data || process.argv.indexOf('--data')<0) throw new Error('Launcher required');
 app.setPath('userData',path.join(data,'chromium'));
+if(isMac&&!app.requestSingleInstanceLock())app.quit();
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch('disable-features','CalculateNativeWinOcclusion');
 let win,ready=false,host={},region=[{x:0,y:0,width:1,height:1}],widget=null,clicks=0,dragging=false;
@@ -89,14 +93,14 @@ function updateShape(){
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   if(!widgetEnabled()){
     viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42});
-    region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);win.setShape(region);notifyLayout();return;
+    region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);applyRegion(region);notifyLayout();return;
   }
   const previous=widget;
   const resident=currentResident();
   viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
-  win.setShape(region);
+  applyRegion(region);
   notifyLayout();
 }
 function wheelInput(wheel,host,region){
@@ -110,7 +114,11 @@ app.whenReady().then(async()=>{
   win=new BrowserWindow({title:'Codex Quota Widget',width:1,height:1,type:'toolbar',transparent:true,frame:false,thickFrame:false,
     resizable:false,maximizable:false,fullscreenable:false,hasShadow:false,skipTaskbar:true,focusable:true,show:false,backgroundColor:'#00000000',
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
-  win.setShape([{x:0,y:0,width:1,height:1}]);
+  applyRegion([{x:0,y:0,width:1,height:1}]);
+  if(isMac){
+    app.dock?.hide();win.setAlwaysOnTop(true,'floating');
+    win.setVisibleOnAllWorkspaces(true,{visibleOnFullScreen:true});
+  }
   win.setIgnoreMouseEvents(true,{forward:true});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
@@ -216,6 +224,7 @@ app.whenReady().then(async()=>{
     if(quitting||win.isDestroyed())return;
     if(host.bounds&&host.visible!==false&&host.attached!==false){
       dip=viewport(host.bounds.width,host.bounds.height,host.dpi);
+      if(isMac)win.setPosition(Math.round(host.bounds.x),Math.round(host.bounds.y),false);
       if(win.getSize()[0]!==dip.width || win.getSize()[1]!==dip.height) win.setSize(dip.width,dip.height,false);
       updateShape();
     }
@@ -340,7 +349,7 @@ app.whenReady().then(async()=>{
     });
     socket.on('error',()=>{});
   });
-  bridge.listen('\\\\.\\pipe\\'+pipeName,()=>{
+  if(!isMac)bridge.listen('\\\\.\\pipe\\'+pipeName,()=>{
     health=bridgeHealth();
     fs.writeFileSync(path.join(data,'bridge.json'),JSON.stringify({pid:process.pid,pipe:pipeName,token,hwnd:win.getNativeWindowHandle().readBigUInt64LE().toString()}));
     recordLifecycle('bridge-listening');
@@ -353,7 +362,15 @@ app.whenReady().then(async()=>{
       if(status==='expired')app.quit();
     },500);
   });
+  if(isMac){
+    macFollower=require('./macos/follower.cjs').follow({screen,onState:state=>{host=state;sync();}});
+    win.on('blur',()=>{if(!dragging&&!panelResizing)dismiss();});
+    app.on('before-quit',()=>macFollower?.close());
+  }
   await win.loadFile(path.join(__dirname,'ui','index.html'));
+  if(isMac&&process.argv.includes('--smoke-test'))setTimeout(async()=>{
+    try{const image=await win.webContents.capturePage();fs.writeFileSync(path.join(data,'smoke.png'),image.toPNG());recordLifecycle('smoke-complete');}finally{app.quit();}
+  },4000);
   // While shaped, only visible widget pixels can ever receive a click.
   // Cursor polling switches hit reception before the first mouse-down.
   let accepting=false;

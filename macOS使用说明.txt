@@ -1,0 +1,35 @@
+CodexOshi macOS 实验移植版
+
+当前状态
+已实现 macOS 启动、原生窗口观察、透明区域点击穿透、Codex CLI 路径查找，
+修复角色与音效存储对 macOS 路径别名的误判。保留原项目角色、额度、Token 界面。
+Windows 自更新已在 Mac 上禁用。没有改动已安装的 Codex，也没有配置开机启动。
+
+已验证
+1. Apple Silicon Mac 上 Swift 窗口观察程序编译成功。
+2. 原生程序实际运行，正确返回未授权辅助功能状态。
+3. 34 项核心测试通过：窗口状态解析、角色、音效、额度读取、Token 统计。
+4. JavaScript 和 shell 语法检查通过。
+5. Electron 已成功启动，应用截图显示占位角色、额度条和设置齿轮。
+6. 正常启动日志确认窗口可见，并通过 Codex app-server RPC 读取到额度。
+
+尚未完成
+还需要验证点击、拖动、辅助功能授权后的跟随和设置面板交互。
+这不是已验收的正式 Mac 安装包；全套上游测试包含仅支持 Windows 的测试，未全通过。
+多显示器、全屏、Spaces 和窗口遮挡行为仍需实机验收。
+
+在项目目录的终端运行
+sh scripts/install-macos.sh
+sh scripts/start-macos.sh
+
+安装完成后也可以双击 Start-CodexOshi.command。终端按 Control-C 退出。
+初始显示占位角色，可以通过齿轮设置上传自己的图片。数据目录：~/.codex/codexoshi-macos。
+如果设置了 CODEX_HOME，则在该目录下的 codexoshi-macos 中保存。
+
+窗口跟随权限
+系统设置 > 隐私与安全性 > 辅助功能，添加本目录下
+desktop/macos/window-observer。未授权时使用主显示器独立悬浮模式。
+授权后跟随第一个未最小化的 Codex 窗口。无需屏幕录制权限。
+
+不包含签名、公证、DMG、开机启动和 macOS 自动更新。
+请保留此文件夹，后续可继续调试、完善和打包。
