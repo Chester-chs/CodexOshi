@@ -198,6 +198,10 @@ Detailed records: [pin switch state](docs/pin-switch-verification.md), [default 
 
 Use the installation and data paths listed above. The `v1.0` tag preserves an earlier rollback snapshot; it is not the plugin manifest version.
 
+## Contributors
+
+- [@dennis940](https://github.com/dennis940) — contributed the experimental macOS source port, including launch scripts, a native window observer and platform compatibility changes ([PR #1](https://github.com/Chester-chs/CodexOshi/pull/1)). See [macOS installation and validation status](README.macOS.md); native interaction testing is still pending.
+
 ## License
 
 [MIT](LICENSE). Third-party notices and bundled font licensing are documented in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

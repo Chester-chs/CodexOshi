@@ -198,6 +198,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\verify.ps1 -Nati
 
 安装与数据目录请使用上面列出的路径。`v1.0` 标签是早期回退快照，不是插件清单中的版本号。
 
+## 贡献者
+
+- [@dennis940](https://github.com/dennis940) — 贡献了实验性 macOS 源码移植，包括启动脚本、原生窗口观察程序和平台兼容调整（[PR #1](https://github.com/Chester-chs/CodexOshi/pull/1)）。安装方式与验收范围见 [macOS 使用说明](macOS使用说明.txt)；原生交互仍待真机验证。
+
 ## 许可证
 
 [MIT](LICENSE)。第三方代码及内置字体许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
