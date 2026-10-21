@@ -4,6 +4,16 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.8](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.8) — 2026-10-21
+
+- Remove Tibo reset announcements, their background requests and notifications. Keep release checks, update notifications and one-click updates.
+- Preserve account quota reset countdowns and reset-credit data.
+- Serialize preference saves, roll back failed setting changes, retain useful quota when a response has no data, and clean failed update writes.
+- Recheck character storage links before access. Include experimental macOS support contributed by @dennis940; Mac behavior still needs device validation.
+- 移除 Tibo 重置公告及其后台请求和通知，保留版本检查、更新提醒及一键更新；账户额度倒计时和重置卡数据继续保留。
+- 修复并发设置保存、失败回退、空配额响应覆盖有效数据、更新临时文件残留及角色目录链接边界。
+- 包含 @dennis940 贡献的实验性 macOS 支持，仍需 Mac 真机验证。
+
 ## [0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7) — 2026-10-14
 
 - Reconcile actual window visibility so an unexpected native hide does not leave the widget invisible.

@@ -12,6 +12,7 @@
 
 ## 更新记录
 
+- **[0.3.8](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.8)**：移除重置公告检查，保留版本更新；修复设置保存、额度回退与角色目录边界，并包含 @dennis940 贡献的实验性 macOS 支持。
 - **[0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7)**：修复意外隐藏、短暂心跳停顿和跟随线程失效；缓存原生组件、优先显示窗口，缩短启动等待。
 - **[0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6)**：Codex 桥接断线后自动恢复；后台任务崩溃时自动重试，使用电池时也保持挂件运行。
 - **[0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5)**：设置卡片自动开启键盘操作；语言按钮等宽显示。兼容旧本机朗读测试设置。
@@ -36,7 +37,6 @@
 - **配色与语言**：七套双配色、自定义底色和强调色，支持简体中文／English，设置保存在本机。
 - **一键更新**：每 6 小时自动检查新版本。发现新版后，在 CodexOshi 设置中点「一键更新」，自动下载、安装并重启 CodexOshi，保留角色与设置。
 - **点击音效**：默认使用「星光双音」。在「CodexOshi 设置 → 角色 → 点击音效」可试听、上传自己的声音，音量可调为 0–100%；切回默认音效时会保留上传文件。支持 WAV / MP3 / OGG / M4A / FLAC，最长 30 秒、最大 10 MiB；文件和选择均保存在本机。
-- **Tibo 重置公告**：每 30 分钟读取 @thsottiaux 的免费公开时间线，有明确时间的重置公告按系统时区显示，支持夏令时和跨日换算；新公告提醒一次。
 - **可见开关**：在设置卡片内关闭挂件后，Codex 窗口内保留小开关，方便再次开启。
 
 ## 设置卡片快捷键
@@ -69,7 +69,7 @@
 - Windows x64，系统自带 Windows PowerShell 5.1 与 .NET Framework C# 编译器。
 - 已安装并登录 Codex 桌面应用，安装程序可找到其 CLI。
 - 初次安装需要联网：安装包自带一份 Node.js 24，并下载 Electron。不会修改系统级 Node 安装或 PATH。
-- 账户额度读取、版本检查和可选公告检查需要联网，无需另外填写 API Key。
+- 账户额度读取和版本检查需要联网，无需另外填写 API Key。
 
 不需要 MSVC、C++ 原生模块或额外 C# SDK。当前实现不支持 macOS、Linux。
 
@@ -122,17 +122,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 
 安装后默认随 Windows 登录启动。不需要自启，可在安装命令末尾加 `-NoStartup`；加 `-NoStart` 则不立即启动。之后更新 MCP 服务，也需要重新打开 Codex 并新建聊天。
 
-## 更新与重置公告
+## 更新
 
-打开 **CodexOshi 设置 → 额度管理**，向下找到 **更新与公告**。可以手动「检查更新」「检查公告」，也可以用「自动检查」开关控制后台检查。自动检查在 CodexOshi 开启、Codex 窗口可见时进行；系统允许时会显示静默通知，齿轮旁的小圆点也会提示新消息。
+打开 **CodexOshi 设置 → 额度管理**，向下找到 **更新**。可以手动「检查更新」，也可以用「自动检查」开关控制后台版本检查。CodexOshi 开启且 Codex 窗口可见时，每 6 小时自动检查；发现新版时可显示静默通知和齿轮旁的小圆点。
 
-![CodexOshi 设置中的一键更新（版本号为测试示例）](docs/images/one-click-update.png)
+![CodexOshi 设置中的一键更新（版本号为测试示例）](docs/images/updates-0.3.8-zh.png)
 
 - **版本**：点「检查更新」，发现新版后点「一键更新」即可。CodexOshi 会先下载并准备好新版本，再自动重启。准备失败时继续运行当前版本；安装失败时尝试恢复原版。立绘、对话、配色和位置都会保留。公开仓库更新无需 Git 或 GitHub 登录。不会重启 Codex；MCP 服务的更新在下次重启 Codex 后生效。
 - **更新存储**：新版本和恢复备份保存在本机 CodexOshi 数据目录，源码文件夹保持原样。维护者发布新版时需提高 `package.json` 和 `package-lock.json` 中的应用版本号；插件注册版本单独管理。
-- **公告**：来源为 [Tibo @thsottiaux](https://x.com/thsottiaux)，免费、无需 X API 密钥。公开时间线可能限流或失效；失败会保留上次结果，限流至少等待 30 分钟再试。手动检查也有 1 分钟间隔。
-- **时间**：读取明确日期／今天／明天／星期、UTC 或美东／太平洋时区，以及「几小时后」等常见表达。模糊、条件式或无法确认的时间不会猜测，会显示原文供查看。公告时间与账户实际额度分开展示，时间到达不会自行认定额度已恢复。
-- **提醒**：只提醒近期的新公告，记录已提醒的公告，重启后不重复；公告正文作为文本展示。系统时区变更后会重新换算。
+- **提醒**：每个新版本只提醒一次，去重记录在重启后保留。
 
 ## 在 Codex 中开启与关闭
 
@@ -174,7 +172,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\plugin
 ## 数据与隐私
 
 - **不启动模型任务**：额度读取限制为固定额度 HTTP GET、本机 `auth.json` 与 `sessions/**/*.jsonl`，以及 app-server 的 `initialize`／`account/rateLimits/read`。不生成补全、不启动 agent turn，因此不会因挂件读取而消耗模型额度。
-- **更新与公告联网**：额外读取固定的公开 GitHub 仓库及 X 公开时间线；点击「一键更新」后下载仓库更新包，依赖变化时下载所需运行环境。不会向这些地址发送 Codex 令牌、对话或立绘，也无需 GitHub 登录。
+- **更新联网**：读取固定的公开 GitHub 仓库；点击「一键更新」后下载仓库更新包，依赖变化时下载所需运行环境。不会向这些地址发送 Codex 令牌、对话或立绘，也无需 GitHub 登录。
 - **图片仅在本机**：按内容校验 PNG、JPEG、WebP、GIF、BMP，单文件最多 10 MiB、单边最多 4096 像素；不支持 HEIC。上传入口只复制本机原图，替换保留此前副本，没有图片上传到网络的入口。
 - **旧角色兼容**：明确选择的单张立绘优先；否则按 `ready > tired > low > exhausted` 选择第一张可用图。读取不删除旧图、不改写旧设置。
 - **token 统计范围**：汇总本机现存 Codex 会话的 token-count 正增量，非账户官方总量，不含已删除会话和其他电脑的数据。索引中／部分覆盖提示表示统计尚不完整。

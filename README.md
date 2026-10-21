@@ -12,6 +12,7 @@ Your Codex desktop companion: use a favorite anime or game character alongside q
 
 ## Release history
 
+- **[0.3.8](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.8):** update checks only, reliable preference saves and quota fallback, safer character storage, and experimental macOS support contributed by @dennis940.
 - **[0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7):** restores unexpectedly hidden windows, recovers temporary bridge/follower failures, and speeds startup with cached native code and deferred background reads.
 - **[0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6):** recovers when the Codex bridge disconnects, retries the background task after a crash, and keeps the widget running on battery power.
 - **[0.3.5](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.5):** settings keyboard mode starts automatically; language choices now have equal-width fills. Old local voice-test settings remain compatible.
@@ -36,7 +37,6 @@ See the bilingual [changelog](CHANGELOG.md) for details.
 - **Bar-only mode:** under **CodexOshi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
 - **One-click updates:** CodexOshi checks for new versions every 6 hours. When an update is available, click **Update now** in CodexOshi Settings to download, install, and restart CodexOshi while keeping your characters and settings.
-- **Tibo reset announcements:** checks @thsottiaux’s free public timeline every 30 minutes, converts explicit reset times to the system timezone, and notifies once per recent announcement.
 - **Visible on/off control:** switch off from the settings card; a small CodexOshi switch remains inside the Codex window so you can turn it back on.
 
 ## Settings keyboard shortcuts
@@ -69,7 +69,7 @@ These are English CodexOshi UI captures with synthetic quota/token values. The o
 - Windows x64, Windows PowerShell 5.1, and the built-in .NET Framework C# compiler.
 - Codex desktop installed and signed in, with its CLI available to the installer.
 - An internet connection during installation: the installer includes a private copy of Node.js 24 and downloads Electron. It does not modify your system-wide Node installation or PATH.
-- Network access for account quota reads, update checks, and optional announcement checks. No separate API key is required.
+- Network access for account quota reads and update checks. No separate API key is required.
 
 MSVC, C++ native modules, and an additional C# SDK are not required. macOS and Linux are not supported by this implementation.
 
@@ -122,17 +122,15 @@ Use the folder shown above: the source installer checks its location. Git is onl
 
 Installation also enables Windows login startup by default. To skip that, add `-NoStartup` to the installation command; add `-NoStart` to skip starting immediately. After a later MCP service update, restart Codex and open a new chat again.
 
-## Updates and reset announcements
+## Updates
 
-Open **CodexOshi Settings → Quota** and scroll to **Updates & announcements**. Use **Check for updates**, **Check announcements**, or the **Check automatically** toggle. Automatic checks run while CodexOshi is enabled and the Codex window is visible. Silent system notifications appear when supported, and a dot beside the gear indicates new information.
+Open **CodexOshi Settings → Quota** and scroll to **Updates**. Use **Check for updates** or the **Check automatically** toggle. Automatic checks run every six hours while CodexOshi is enabled and the Codex window is visible. A new release can produce a silent system notification and a dot beside the gear.
 
-![One-click update in CodexOshi Settings (synthetic version numbers)](docs/images/one-click-update.png)
+![One-click update in CodexOshi Settings (synthetic version numbers)](docs/images/updates-0.3.8-en.png)
 
 - **Versions:** click **Check for updates → Update now** when a new version is found. CodexOshi downloads a fixed revision, prepares it before stopping, and restarts automatically. Failed preparation leaves the current version running; failed installation attempts to restore the previous version. Your characters, dialogue, colors, and position are preserved. Public updates need no Git or GitHub login. Codex itself is not restarted. An updated MCP service takes effect when you next restart Codex.
 - **Update storage:** application releases and a recovery backup stay in the local CodexOshi data folder. Your source checkout is preserved. Maintainers must increase the application version in `package.json` and `package-lock.json` when publishing a new version; the plugin registration version remains separate.
-- **Announcements:** reads [Tibo @thsottiaux](https://x.com/thsottiaux) through the free public timeline, with no X API key. This endpoint can be rate limited or unavailable. Failures retain the previous result; rate limits delay retries by at least 30 minutes. Manual checks have a one-minute cooldown.
-- **Times:** recognizes common explicit dates, today/tomorrow/weekdays, UTC or US Eastern/Pacific zones, and relative hours/minutes. Vague, conditional or unconfirmed times are shown with the original text rather than guessed. Announcements do not replace account quota data or mark quota as restored when the announced time passes.
-- **Notifications:** only recent new announcements trigger notifications; deduplication survives restarts. Post content is displayed as text. Displayed times update when the system timezone changes.
+- **Notifications:** each new release is announced once; deduplication survives restarts.
 
 ## On / off inside Codex
 
@@ -174,7 +172,7 @@ Quota colors retain their thresholds: normal above 20%, orange above 10% through
 ## Data and privacy
 
 - **No model turns:** quota reads are restricted to the fixed quota HTTP GET endpoint, local `auth.json` and `sessions/**/*.jsonl`, and app-server `initialize` / `account/rateLimits/read`. CodexOshi does not generate completions or start agent turns.
-- **Update and announcement requests:** additionally reads the fixed public GitHub repository and public X timeline. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. CodexOshi does not need a GitHub login.
+- **Update requests:** reads the fixed public GitHub repository. Clicking Update now downloads the repository archive and, only when dependencies change, the required runtime packages. Codex tokens, conversations, and artwork are never sent to these services. CodexOshi does not need a GitHub login.
 - **Local images:** PNG, JPEG, WebP, GIF, and BMP are checked by content, up to 10 MiB and 4096 pixels per side. HEIC is unsupported. Import copies the original; replacement preserves earlier copies. No image upload endpoint is used.
 - **Legacy characters:** an explicit single portrait takes priority. Otherwise, the first available image in `ready > tired > low > exhausted` order is used. Reading does not delete old images or rewrite their settings.
 - **Token scope:** charts summarize token-count increments in this computer's existing Codex session files. They are not official account-wide totals and exclude deleted sessions and other computers. Indexing or partial-coverage notices identify incomplete data.

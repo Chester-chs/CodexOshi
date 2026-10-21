@@ -9,7 +9,7 @@
     prepare_failed:'更新准备失败，请重试。',install_failed:'更新安装失败，请重试。',rollback_failed:'更新未完成，恢复旧版本失败。请重新安装 CodexOshi。',
     unsupported_installation:'当前安装方式不支持一键更新，请重新安装 CodexOshi。',update_in_progress:'更新正在进行，请稍候。',no_update:'暂时没有新版本，请重新检查更新。'
   };
-  const statuses={unchecked:'尚未检查',available:'发现新版本 {version}',current:'已是当前版本',ahead:'本机版本领先于仓库',ok:'检查完成', 'rate-limited':'请求受限，稍后自动重试','network-unavailable':'暂时无法连接，保留上次结果','github-access':'仓库为私有或不可访问，请登录有权限的 GitHub CLI 账号','timeline-unavailable':'公开时间线暂不可读取，稍后重试','invalid-version':'版本信息无效','response-too-large':'数据源响应异常'};
+  const statuses={unchecked:'尚未检查',available:'发现新版本 {version}',current:'已是当前版本',ahead:'本机版本领先于仓库', 'rate-limited':'请求受限，稍后自动重试','network-unavailable':'暂时无法连接，保留上次结果','github-access':'仓库为私有或不可访问，请登录有权限的 GitHub CLI 账号','invalid-version':'版本信息无效','response-too-large':'数据源响应异常'};
   function renderUpdate(){
     const busy=updatePending||activeUpdates.has(update.status),available=snapshot?.version.status==='available';
     const completedAvailable=update.status==='complete'&&update.version===snapshot?.version.latest;
@@ -23,13 +23,10 @@
     result.textContent=message;result.hidden=!message;result.classList.toggle('update-error',update.status==='failed');
   }
   function render(){
-    renderUpdate();if(!snapshot)return;const {version,tibo}=snapshot,notice=window.newsModel.recentNotice(tibo.notice);$('news-auto').checked=snapshot.enabled;
+    renderUpdate();if(!snapshot)return;const {version}=snapshot;$('news-auto').checked=snapshot.enabled;
     $('codi-version').textContent='CodexOshi '+version.current;$('version-result').textContent=t(statuses[version.status]||'暂时无法连接，保留上次结果',{version:version.latest});
-    $('tibo-result').textContent=t(statuses[tibo.status]||'暂时无法连接，保留上次结果');
-    $('tibo-notice').textContent=window.newsModel.noticeText(notice,window.uiText.language);
-    $('tibo-quote').textContent=notice?.text?.slice(0,500)||'';$('tibo-quote').hidden=!notice;
-    for(const kind of ['version','tibo']){const item=snapshot[kind];$(kind+'-checked').textContent=item.checkedAt?t('上次检查：{time}',{time:window.newsModel.localTime(item.checkedAt,window.uiText.language)}):'';}
-    $('settings-open').classList.toggle('has-news',version.status==='available'||Boolean(notice&&notice.createdAt>Date.now()-2*86400000));
+    for(const kind of ['version']){const item=snapshot[kind];$(kind+'-checked').textContent=item.checkedAt?t('上次检查：{time}',{time:window.newsModel.localTime(item.checkedAt,window.uiText.language)}):'';}
+    $('settings-open').classList.toggle('has-news',version.status==='available');
   }
   async function check(kind){const button=$(kind+'-check');button.disabled=true;$(kind+'-result').textContent=t('正在检查…');try{const result=await window.widget.newsCheck(kind);if(!result.ok)throw Error();snapshot=result.state;render();}catch{$(kind+'-result').textContent=t('检查未完成，请重试。');}finally{button.disabled=false;}}
   $('version-update').onclick=async()=>{
@@ -42,7 +39,7 @@
     }catch{if(update.status!=='complete')update={status:'failed'};}
     finally{updatePending=false;renderUpdate();}
   };
-  for(const kind of ['version','tibo']){$(kind+'-check').onclick=()=>check(kind);$(kind+'-open').onclick=async()=>{try{if(!(await window.widget.newsOpen(kind)).ok)throw Error();}catch{$(kind+'-result').textContent=t('链接无法打开，请重试。');}};}
+  for(const kind of ['version']){$(kind+'-check').onclick=()=>check(kind);$(kind+'-open').onclick=async()=>{try{if(!(await window.widget.newsOpen(kind)).ok)throw Error();}catch{$(kind+'-result').textContent=t('链接无法打开，请重试。');}};}
   $('news-auto').onchange=async()=>{try{const result=await window.widget.newsEnabled($('news-auto').checked);if(!result.ok)throw Error();snapshot=result.state;render();}catch{render();$('version-result').textContent=t('设置未能保存，请重试。');}};
   window.widget.newsState(value=>{snapshot=value;render();});window.widget.newsRead().then(value=>{snapshot=value;render();}).catch(()=>{$('version-result').textContent=t('检查未完成，请重试。');});
   window.widget.updateState(value=>{updateRevision++;update=value;updateReadFailed=false;renderUpdate();});
