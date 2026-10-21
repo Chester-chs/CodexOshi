@@ -54,10 +54,11 @@ test('a pending click sound save preserves concurrent language changes and its p
   h.run('globalThis.originalSave=panelStore.save.bind(panelStore);globalThis.releaseSound=null;panelStore.save=value=>{const saved=originalSave(value);return value.language==="zh-CN"?new Promise(resolve=>{globalThis.releaseSound=()=>saved.then(resolve);}):saved;};');
   const pending=h.ipc('panel-click-sound',false);
   await Promise.resolve();
-  assert.equal((await h.ipc('panel-language','en-US')).ok,true);
+  const language=h.ipc('panel-language','en-US');
+  h.run('globalThis.releaseSound();');await pending;
+  assert.equal((await language).ok,true);
   const languageSave=JSON.parse(h.writes.filter(w=>w.file==='panel-preferences.json').at(-1).value);
   assert.equal(languageSave.clickSoundEnabled,false,'concurrent preference snapshots include the sound choice');
-  h.run('globalThis.releaseSound();');await pending;
   assert.equal((await h.ipc('panel-preferences-read')).language,'en-US');
   assert.equal((await h.ipc('panel-preferences-read')).clickSoundEnabled,false);
 });
@@ -77,10 +78,10 @@ test('overlapping dock, power and sound saves preserve all choices and later lan
     h.run('globalThis.originalSave=panelStore.save.bind(panelStore);globalThis.releaseFirst=null;let first=true;panelStore.save=value=>{const saved=originalSave(value);if(!first)return saved;first=false;return new Promise(resolve=>{globalThis.releaseFirst=()=>saved.then(resolve);});};');
     const pending=h.ipc(first,first==='panel-dock');await Promise.resolve();
     const other=h.ipc(first==='panel-dock'?'widget-enabled':'panel-dock',first!=='panel-dock'),sound=h.ipc('panel-click-sound',false),volume=h.ipc('panel-sound-volume',25);
-    await h.ipc('panel-language','en-US');
+    const language=h.ipc('panel-language','en-US');
     h.ipc('open-settings');h.ipc('panel-resize',{type:'begin'});h.ipc('panel-resize',{type:'update',width:620,height:700});h.ipc('panel-resize',{type:'end'});
     h.run('globalThis.releaseFirst();');
-    for(const result of await Promise.all([pending,other,sound,volume]))assert.equal(result.ok,true);
+    for(const result of await Promise.all([pending,other,sound,volume,language]))assert.equal(result.ok,true);
     const expected={width:620,height:700,language:'en-US',dockBottomRight:true,widgetEnabled:false,clickSoundEnabled:false,clickSoundVolume:25};
     assert.deepEqual(JSON.parse(JSON.stringify(await h.ipc('panel-preferences-read'))),expected);
     assert.deepEqual(JSON.parse(h.writes.filter(w=>w.file==='panel-preferences.json').at(-1).value),expected);

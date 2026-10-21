@@ -3,7 +3,7 @@ const {execFile}=require('node:child_process'),{promisify}=require('node:util');
 const BUSY=new Set(['preparing','downloading','installing','restarting']);
 const ERRORS=new Set(['network_error','authentication_required','invalid_release','archive_unsafe','download_too_large','prepare_failed','install_failed','rollback_failed','unsupported_installation','update_in_progress','no_update']);
 const read=file=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch{return null;}};
-function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const temp=file+'.'+crypto.randomUUID()+'.tmp';fs.writeFileSync(temp,JSON.stringify(value));fs.renameSync(temp,file);}
+function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});const temp=file+'.'+crypto.randomUUID()+'.tmp';try{fs.writeFileSync(temp,JSON.stringify(value));fs.renameSync(temp,file);}finally{try{fs.unlinkSync(temp);}catch{}}}
 function alive(pid){if(!Number.isSafeInteger(pid)||pid<1)return false;try{process.kill(pid,0);return true;}catch{return false;}}
 function sameDependencies(a,b){
   const normalize=value=>{const copy=structuredClone(value);delete copy.version;if(copy.packages?.[''])delete copy.packages[''].version;return JSON.stringify(copy);};

@@ -145,7 +145,7 @@ app.whenReady().then(async()=>{
   });
   const dismiss=()=>{endPanelFocus();if(!expanded&&!speechVisible)return;if(panelResizing){panelResizing=false;savePanel();}expanded=false;speechVisible=false;updateShape();diagnostic();};
   ipcMain.on('open-settings',event=>{if(event.sender!==win.webContents||dragging||!widgetEnabled())return;speechVisible=false;panelOffset=null;expanded=true;keyboardMode=true;setTextEditing(fieldEditing);updateShape();win.focus();diagnostic();});
-  const savePanel=()=>panelStore.save({...panelPreferences}).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
+  const savePanel=()=>queueBooleanPreference(()=>panelStore.save({...panelPreferences})).catch(()=>{if(!quitting&&!win.isDestroyed())win.webContents.send('panel-error','卡片设置未能保存，请检查本机文件权限。');});
   let booleanPreferenceQueue=Promise.resolve();
   const queueBooleanPreference=operation=>{const result=booleanPreferenceQueue.then(operation);booleanPreferenceQueue=result.catch(()=>{});return result;};
   ipcMain.handle('panel-preferences-read',event=>event.sender===win.webContents?{...panelPreferences}:null);
@@ -162,8 +162,14 @@ app.whenReady().then(async()=>{
   });
   ipcMain.handle('panel-language',async(event,language)=>{
     if(event.sender!==win.webContents||!panelModel.LANGUAGES.includes(language))return {ok:false};
-    panelPreferences={...panelPreferences,language};notifyLayout();
-    try{await panelStore.save({...panelPreferences});return {ok:true};}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+    return queueBooleanPreference(async()=>{
+      const previous=panelPreferences.language;
+      panelPreferences={...panelPreferences,language};notifyLayout();
+      try{await panelStore.save({...panelPreferences});return {ok:true};}catch{
+        panelPreferences={...panelPreferences,language:previous};notifyLayout();
+        return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};
+      }
+    });
   });
   ipcMain.handle('panel-click-sound',async(event,value)=>{
     if(event.sender!==win.webContents||typeof value!=='boolean')return {ok:false};
@@ -204,7 +210,7 @@ app.whenReady().then(async()=>{
       try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
       const previousHeight=viewLayout?.regions?.[0]?.height||currentResident().height;
       const panel=expanded?viewLayout?.regions?.[1]:null;
-      panelPreferences=next;
+      panelPreferences={...panelPreferences,compactOnly:value};
       if(!docked()&&widget){const newHeight=currentResident().height;widget={x:widget.x,y:widget.y+previousHeight-newHeight};}
       if(panel&&host.bounds&&dip.width>32&&dip.height>32){
         const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,currentResident(),panelPreferences).widget;

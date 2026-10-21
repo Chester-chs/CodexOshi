@@ -36,7 +36,9 @@ async function readHttp(options={}){
     if(!response.ok)throw Error('http-'+response.status);
     let value;try{value=await response.json();}catch{throw Error('http-invalid-json');}
     if(!value?.rate_limit || typeof value.rate_limit!=='object')throw Error('http-invalid-quota');
-    return normalize(value,'http',(options.now || Date.now)());
+    const quota=normalize(value,'http',(options.now || Date.now)());
+    if(!quota.windows.some(w=>w.remainingPercent!==null))throw Error('http-invalid-quota');
+    return quota;
   }
 }
 async function readLocal(codexHome=home()){
@@ -109,7 +111,7 @@ class QuotaReader{
       if((!quota||this.readResetCredits)&&(this.lastRpcAttemptAt===null||this.now()-this.lastRpcAttemptAt>=300000)){
         this.lastRpcAttemptAt=this.now();try{
           const rpc=await this.rpc();
-          if(!quota||(errorCode&&rpc.windows.some(w=>w.remainingPercent!==null)&&Number.isFinite(rpc.observedAt)&&(!Number.isFinite(quota.observedAt)||rpc.observedAt>quota.observedAt)))quota=rpc;
+          if(rpc.windows.some(w=>w.remainingPercent!==null)&&(!quota||(errorCode&&Number.isFinite(rpc.observedAt)&&(!Number.isFinite(quota.observedAt)||rpc.observedAt>quota.observedAt))))quota=rpc;
           resetCredits=rpc.resetCredits||null;
         }catch{if(resetCredits)resetCredits={...resetCredits,stale:true};}
       }

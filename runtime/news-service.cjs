@@ -20,7 +20,7 @@ class NewsService {
     return result;
   }
   save(){fs.mkdirSync(path.dirname(this.file),{recursive:true});const temporary=this.file+'.tmp';fs.writeFileSync(temporary,JSON.stringify(this.state));fs.renameSync(temporary,this.file);}
-  configure(enabled){if(typeof enabled!=='boolean')throw Error('invalid-preference');this.state.enabled=enabled;this.save();return this.snapshot();}
+  configure(enabled){if(typeof enabled!=='boolean')throw Error('invalid-preference');const previous=this.state.enabled;this.state.enabled=enabled;try{this.save();}catch(error){this.state.enabled=previous;throw error;}return this.snapshot();}
   deliver(kind){
     const state=this.state[kind],now=this.now();let key,notification;
     if(kind==='version'&&state.status==='available'){key='version:'+state.latest;notification={type:'version',version:state.latest};}
