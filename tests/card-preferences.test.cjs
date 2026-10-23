@@ -35,9 +35,9 @@ test('bar-only preference persists and rejects invalid values',async()=>{
   try{const store=new PanelPreferencesStore(root);await store.save({width:480,height:560,language:'zh-CN',compactOnly:true});assert.equal((await new PanelPreferencesStore(root).read()).compactOnly,true);await assert.rejects(store.save({width:480,height:560,language:'zh-CN',compactOnly:'yes'}));}finally{await fs.rm(root,{recursive:true,force:true});}
 });
 test('bar-only mode keeps the footer at its free-position baseline and restores portrait height',async()=>{
-  const h=await mainHarness();h.run('updateShape()');const before=h.shapes.at(-1)[0];assert.equal(before.height,280);
+  const h=await mainHarness();h.run('updateShape()');const before=h.shapes.at(-1)[0];assert.equal(before.height,168);
   assert.equal((await h.ipc('panel-compact-only',true)).ok,true);
-  const bar=h.shapes.at(-1)[0];assert.equal(bar.height,52);assert.equal(bar.width,199);assert.equal(bar.y+bar.height,before.y+before.height);
+  const bar=h.shapes.at(-1)[0];assert.equal(bar.height,31);assert.equal(bar.width,119);assert.equal(bar.y+bar.height,before.y+before.height);
   assert.equal(JSON.parse(h.writes.find(w=>w.file==='panel-preferences.json').value).compactOnly,true);
   assert.equal((await h.ipc('panel-compact-only',false)).ok,true);
   const restored=h.shapes.at(-1)[0];assert.deepEqual(restored,before);

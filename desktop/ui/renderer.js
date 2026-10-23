@@ -44,11 +44,12 @@ window.widget.layout(value=>{
   const base=value.residentSize||value.regions[0],scale=Math.min(value.regions[0].width/base.width,value.regions[0].height/base.height);
   width=base.width;
   resident.style.width=base.width+'px';resident.style.height=base.height+'px';resident.style.transform=`scale(${scale})`;residentDocked=Boolean(value.docked);button.style.cursor=residentDocked?'pointer':'grab';
-  resident.style.left=(residentDocked?value.regions[0].width-base.width*scale:0)+'px';
-  document.getElementById('character-canvas').style.transformOrigin=residentDocked?'100% 60%':'50% 60%';
+  const alignRight=!Boolean(value.mirrored);
+  resident.style.left=(alignRight?value.regions[0].width-base.width*scale:0)+'px';
+  document.getElementById('character-canvas').style.transformOrigin=alignRight?'100% 60%':'50% 60%';
   layoutDragging=Boolean(value.dragging);
   document.getElementById('character-stage').style.transform=value.mirrored?'scaleX(-1)':'none';
-  window.resizeCharacter?.(base.width,base.height,residentDocked,Boolean(value.mirrored));
+  window.resizeCharacter?.(base.width,base.height,alignRight,Boolean(value.mirrored));
   const opening=value.expanded&&details.hidden;
   if(opening)selectTab('quota');
   details.hidden=!value.expanded;
@@ -86,6 +87,8 @@ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!details.hi
 document.getElementById('close').addEventListener('click',()=>window.widget.collapse());
 const gear=document.getElementById('settings-open');
 gear.addEventListener('pointerdown',event=>event.stopPropagation());
+const pinControl=document.getElementById('pin-control');
+for(const type of ['pointerdown','pointerup','click'])pinControl.addEventListener(type,event=>event.stopPropagation());
 gear.addEventListener('click',event=>{event.stopPropagation();window.widget.openSettings();});
 function renderSpeech(){
   if(speech.hidden)return;
@@ -107,7 +110,7 @@ function render(){
   document.getElementById('window-label').textContent=view.compact.label;
   button.setAttribute('aria-label',text('{label}，剩余 {value}，点击对话，拖动移动',{label:view.compact.label,value:view.compact.text})+(view.compact.stale?' · '+text('数据待更新'):''));
   document.getElementById('status').textContent=view.compact.text;
-  const freshness=document.getElementById('freshness');freshness.hidden=!view.compact.stale;freshness.textContent=view.compact.freshness;
+  const freshness=document.getElementById('freshness');freshness.hidden=!view.compact.stale;freshness.textContent=view.compact.freshness;freshness.title=text('数据待更新');freshness.setAttribute('aria-label',text('数据待更新'));
   document.getElementById('compact-track').hidden=!view.showCompactBar;
   bar(document.getElementById('compact-track'),document.getElementById('compact-fill'),view.compact.remainingPercent,view.compact.tone);
   button.title=view.compact.label+' · '+text(view.compact.stale?'数据待更新':'实时额度');

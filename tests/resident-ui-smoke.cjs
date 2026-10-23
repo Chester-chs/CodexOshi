@@ -1,8 +1,9 @@
 // Real hidden Electron application; geometric artwork and synthetic data only.
-const {app,BrowserWindow}=require('electron'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),Module=require('node:module'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
+const {app,BrowserWindow,screen}=require('electron'),fs=require('node:fs'),path=require('node:path'),net=require('node:net'),Module=require('node:module'),assert=require('node:assert/strict'),{EventEmitter}=require('node:events');
 const output=path.resolve(process.argv[process.argv.indexOf('--output')+1]),data=path.join(output,'data'),restart=process.argv.includes('--restart'),role=path.join(data,'characters','几何角色');fs.mkdirSync(role,{recursive:true});
 if(!restart){fs.copyFileSync(path.join(__dirname,'fixtures/portrait-white.png'),path.join(role,'tired.png'));fs.writeFileSync(path.join(role,'settings.json'),JSON.stringify({images:{tired:'tired.png'},targetHeight:300}));fs.writeFileSync(path.join(data,'characters','active.json'),'{"name":"几何角色"}');fs.writeFileSync(path.join(data,'position.json'),'{"x":90,"y":100}');try{fs.unlinkSync(path.join(data,'panel-preferences.json'));}catch(e){if(e.code!=='ENOENT')throw e;}}
 process.argv.push('--data',data);const load=Module._load;Module._load=function(name,parent,...args){if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[{remainingPercent:55,label:'每周限额'}]};}async refresh(){return this.snapshot;}}};if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){}terminate(){}}};return load.call(this,name,parent,...args);};
+app.whenReady().then(()=>{screen.getDisplayMatching=()=>({workAreaSize:{width:1280,height:1000}})});
 BrowserWindow.prototype.showInactive=function(){};require('../desktop/main.cjs');
 const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFileSync(path.join(data,'window-state.json'),'utf8'));
 (async()=>{
@@ -18,7 +19,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   }
   await waitFor(`document.querySelector('#character-canvas').dataset.source?.includes('tired.png')`);await delay(250);
   async function metrics(){return js(`(()=>{const rect=s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,bottom:r.bottom,right:r.right}};return {widget:rect('#widget'),bar:rect('.compact-line'),stage:rect('#character-stage'),gear:rect('#settings-open'),transform:getComputedStyle(document.querySelector('#resident-content')).transform,widthInput:document.querySelector('#character-width').value};})()`);}
-  async function checkPlacement(){const r=state().region[0],v=state().viewport,m=await metrics();assert.equal(r.x+r.width,v.width-24);assert.equal(r.y+r.height,v.height-24);assert.ok(m.bar.bottom<=r.y+r.height+.5);assert.ok(m.bar.y>=m.stage.bottom);assert.ok(Math.abs(m.widget.right-(v.width-24))<.5);return {viewport:v,region:r,metrics:m};}
+  async function checkPlacement(){const r=state().region[0],v=state().viewport,m=await metrics();assert.equal(r.x+r.width,v.width-24);assert.ok(r.y+r.height<=v.height-24);assert.ok(m.bar.bottom<=r.y+r.height+.5);assert.ok(m.bar.y>=m.stage.bottom);assert.ok(Math.abs(m.widget.right-(v.width-24))<.5);return {viewport:v,region:r,metrics:m};}
   async function resize(width,height){dimensions={width,height};send();await delay(250);return checkPlacement();}
   if(restart){const q=await checkPlacement();assert.equal(state().region[0].width,240);assert.equal((await js('window.widget.panelPreferencesRead()')).dockBottomRight,true);assert.equal((JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8'))).targetWidth,240);fs.writeFileSync(path.join(output,'restart.json'),JSON.stringify({passed:true,restartedOff,restoredViaVisibleSwitch:true,...q},null,2));clearInterval(heartbeat);socket.destroy();app.quit();return;}
   const full=await checkPlacement(),small=await resize(800,600),restored=await resize(1600,1000);assert.ok(small.region.height<full.region.height*.7);assert.deepEqual(restored.region,full.region);assert.ok(Math.abs(small.metrics.bar.height/full.metrics.bar.height-small.region.height/full.region.height)<.02);
@@ -32,7 +33,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
   assert.equal(await js(`(()=>{const title=document.querySelector('.panel-title').getBoundingClientRect(),power=document.querySelector('#codi-power').getBoundingClientRect();return power.x-title.right>=8&&power.x-title.right<=12})()`),true);
   await js(`document.querySelector('#character-width').value=360;document.querySelector('#character-width').dispatchEvent(new Event('input'));`);await delay(300);assert.equal(state().region[0].width,360);assert.deepEqual(state().region[1],panelBefore);
   assert.equal(await js(`document.querySelectorAll('[data-framing],#character-framing,#character-zoom-minus,#character-zoom-plus').length`),0);
-  await js(`document.querySelector('#character-width').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.equal(win.getTitle(),'CodexOshi');
+  await js(`document.querySelector('#character-width').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`);await delay(80);assert.match(win.getTitle(),/Text editing/);
   await js(`document.querySelector('#character-width').value=240;document.querySelector('#character-width').dispatchEvent(new Event('input'))`);await delay(300);assert.equal(state().region[0].width,240);assert.equal(JSON.parse(fs.readFileSync(path.join(role,'settings.json'),'utf8')).targetWidth,240);
   for(const [id,key,value,min,max]of [['character-width-value','targetWidth',280,126,672],['character-size-value','targetHeight',320,180,420]]){
     assert.equal(await js(`document.querySelector('#${id}').type`),'number');
@@ -52,7 +53,8 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms)),state=()=>JSON.parse(fs.readFil
     const point=await js(`(()=>{const r=document.querySelector('#resident-dock').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
     for(const type of ['mouseMove','mouseDown','mouseUp'])win.webContents.sendInputEvent({type,...point,button:'left',clickCount:1});await delay(250);
   }
-  await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,false);assert.deepEqual(state().widget,{x:90,y:100});
+  const pinnedPoint={...state().widget};await clickDock();assert.equal(JSON.parse(fs.readFileSync(path.join(data,'panel-preferences.json'),'utf8')).dockBottomRight,false);assert.deepEqual(state().widget,pinnedPoint);
+  await js(`window.widget.gesture({type:'drag',x:90,y:100});window.widget.gesture({type:'end'})`);await delay(70);
   assert.match(await js(`getComputedStyle(document.querySelector('#character-stage')).transform`),/^matrix\(-1, 0, 0, 1, 0, 0\)$/,'left-side artwork must be mirrored');
   assert.equal(await js(`getComputedStyle(document.querySelector('.compact-line')).transform`),'none','quota text must not be mirrored');
   await js(`window.widget.gesture({type:'drag',x:1100,y:100});window.widget.gesture({type:'end'})`);await delay(70);

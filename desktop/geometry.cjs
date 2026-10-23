@@ -5,12 +5,15 @@ const {DEFAULT:COMPACT,LIMIT:ROLE_LIMIT}=require('./ui/portrait-size.js');
 const {DEFAULT:PANEL,MAX:PANEL_LIMIT,validSize}=require('./ui/panel-model.js');
 const MAX_AREA=ROLE_LIMIT.width*ROLE_LIMIT.height+PANEL_LIMIT.width*PANEL_LIMIT.height;
 const EDGE = 24;
-function residentSize(requested,width,height,docked=true){
+function residentSize(requested,width,height,docked=true,reference={width:1280,height:1000}){
   // Host-window shrink is independent of the user's width and size controls.
   // A size-dependent cap would scale the other axis down when a slider grows.
-  const scale=docked?Math.min(1,width/1280,height/1000):1;
+  if(!reference||!['width','height'].every(k=>Number.isFinite(reference[k])&&reference[k]>0))reference={width:1280,height:1000};
+  const scale=docked?Math.min(1,width/reference.width,height/reference.height):1;
   return {width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
 }
+// The user keeps the widget near the window bottom with the same outer margin.
+const inputInset=()=>EDGE;
 function shape(value,width,height,sizes=[SIZE]) {
   if(!Array.isArray(sizes)||!sizes.length||sizes.length>2||!sizes.every((s,i)=>{const cap=i?PANEL_LIMIT:ROLE_LIMIT;return s&&Number.isInteger(s.width)&&Number.isInteger(s.height)&&s.width>0&&s.height>0&&s.width<=cap.width&&s.height<=cap.height;}))return tiny();
   if (!Number.isInteger(width) || !Number.isInteger(height) || width<1 || height<1 || width>32768 || height>32768 || !Array.isArray(value) || !value.length || value.length>64) return tiny();
@@ -39,11 +42,12 @@ function snap(widget,width,height,size){
     const end=Math.max(8,total-side-EDGE);if(point[axis]-8<=12)point[axis]=8;else if(end-point[axis]<=12)point[axis]=end;
   }return point;
 }
-function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null,speech=false){
+function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPACT,requestedPanel=PANEL,panelOffset=null,speech=false,bottomInset=EDGE){
   if(!requested||!['width','height'].every(k=>Number.isInteger(requested[k])&&requested[k]>0&&requested[k]<=ROLE_LIMIT[k]))requested=COMPACT;
-  const scale=Math.min(1,Math.max(1,width-EDGE-8)/requested.width,Math.max(1,height-EDGE-8)/requested.height);
+  bottomInset=Math.max(EDGE,Math.min(Number.isFinite(bottomInset)?bottomInset:EDGE,Math.max(EDGE,height-9)));
+  const scale=Math.min(1,Math.max(1,width-EDGE-8)/requested.width,Math.max(1,height-bottomInset-8)/requested.height);
   const compact={width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
-  const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-EDGE,width,height,compact);
+  const point=position(widget?.x??width-compact.width-EDGE,widget?.y??height-compact.height-bottomInset,width,height,compact);
   const regions=[{...point,...compact}],sizes=[compact];
   if(expanded){
     if(speech){requestedPanel={width:280,height:152};}else if(!validSize(requestedPanel))requestedPanel=PANEL;
@@ -57,4 +61,4 @@ function layout(widget,width,height,expanded=false,windowCount=0,requested=COMPA
   }
   return {widget:point,regions,sizes,expanded};
 }
-module.exports={shape,viewport,position,layout,snap,residentSize,SIZE,COMPACT,PANEL,EDGE,ROLE_LIMIT,PANEL_LIMIT,MAX_AREA};
+module.exports={shape,viewport,position,layout,snap,residentSize,inputInset,SIZE,COMPACT,PANEL,EDGE,ROLE_LIMIT,PANEL_LIMIT,MAX_AREA};

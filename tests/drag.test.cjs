@@ -22,8 +22,8 @@ test('drag diagnostics coalesce at 500ms and layout updates at 16ms without even
   h.gesture({type:'drag',x:370,y:180});h.advance(499);assert.equal(h.writes.filter(w=>w.file==='window-state.json').length,1);h.advance(1);assert.equal(h.writes.filter(w=>w.file==='window-state.json').length,2);
 });
 test('long drags checkpoint once per second after three seconds; end cancels timers and keeps snapping',async()=>{
-  const h=await mainHarness();h.gesture({type:'drag',x:570,y:290});h.advance(2999);assert.equal(h.writes.filter(w=>w.file==='position.json').length,0);
-  h.advance(1);assert.equal(h.writes.filter(w=>w.file==='position.json').length,1);h.gesture({type:'drag',x:571,y:291});h.advance(1000);assert.equal(h.writes.filter(w=>w.file==='position.json').length,2);
-  h.gesture({type:'end'});assert.deepEqual(JSON.parse(h.writes.filter(w=>w.file==='position.json').at(-1).value),{x:577,y:296});
+  const h=await mainHarness();h.gesture({type:'drag',x:650,y:402});h.advance(2999);assert.equal(h.writes.filter(w=>w.file==='position.json').length,0);
+  h.advance(1);assert.equal(h.writes.filter(w=>w.file==='position.json').length,1);h.gesture({type:'drag',x:651,y:403});h.advance(1000);assert.equal(h.writes.filter(w=>w.file==='position.json').length,2);
+  h.gesture({type:'end'});assert.deepEqual(JSON.parse(h.writes.filter(w=>w.file==='position.json').at(-1).value),{x:657,y:408});
   h.reset();h.advance(1500);assert.equal(h.writes.filter(w=>w.file==='position.json').length,0);assert.equal(h.writes.filter(w=>w.file==='window-state.json').length,0);
 });

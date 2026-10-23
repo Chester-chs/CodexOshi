@@ -12,6 +12,7 @@ Your Codex desktop companion: use a favorite anime or game character alongside q
 
 ## Release history
 
+- **[0.3.9](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.9):** one-click pin beside settings, consistent window scaling in both modes, and no position or artwork shift when unpinning.
 - **[0.3.8](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.8):** update checks only, reliable preference saves and quota fallback, safer character storage, and experimental macOS support contributed by @dennis940.
 - **[0.3.7](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.7):** restores unexpectedly hidden windows, recovers temporary bridge/follower failures, and speeds startup with cached native code and deferred background reads.
 - **[0.3.6](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.6):** recovers when the Codex bridge disconnects, retries the background task after a crash, and keeps the widget running on battery power.
@@ -32,7 +33,7 @@ See the bilingual [changelog](CHANGELOG.md) for details.
 - **Two click dialogues:** clicking the character always shows the first dialogue with reset information. Click the bubble to cycle between the two lines. Closing the bubble starts the sequence over. Edit both lines in the settings page or choose a preset.
 - **Click sound:** Starlight duo is the default sound. Under **CodexOshi Settings → Character → Click sound**, preview it or upload your own sound, with volume adjustable from 0–100%. Switching back to the default retains your uploaded sound. WAV, MP3, OGG, M4A and FLAC clips up to 30 seconds / 10 MiB are supported; files and choices stay on this computer.
 - **Character controls:** height and width sit together, each with a slider and numeric input. Restore defaults returns to height 280, automatic width, and centered framing. The progress bar stays below the character.
-- **Window following:** pinning moves the character to the lower-right corner with a 24 px right margin and scales it down in smaller windows. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
+- **Window following:** click the pin beside the settings gear; a highlighted pin means fixed mode is on. The character sits near the lower-right corner, with 24 px right and bottom margins. The portrait and quota bar shrink together as the Codex window gets smaller, including bar-only mode. Pinning only changes placement; toggling it does not change the current size. The width control visibly changes the character's width while preserving its proportions. Turn off pinning to drag the character; it faces inward when moved across the window midpoint.
 - **One settings card:** use the gear beside the progress bar to open quota, token usage, character, and appearance settings. Resize the card; clicking outside closes it. Every new opening starts on Quota with keyboard mode enabled automatically.
 - **Bar-only mode:** under **CodexOshi Settings → Character**, select **Show quota bar only** to hide the portrait temporarily in a narrow window. The quota bar and settings gear remain available; switching it off restores the portrait.
 - **Appearance and language:** seven paired themes, custom background/accent colors, and Simplified Chinese or English. Settings are saved locally.
@@ -81,7 +82,7 @@ MSVC, C++ native modules, and an additional C# SDK are not required. macOS and L
 
 1. Install and sign in to the Codex desktop app.
 2. Download the **CodexOshi-Setup-*-win-x64.exe** file from [the latest release](https://github.com/Chester-chs/CodexOshi/releases/latest) and run it. The installer is currently unsigned, so Windows may ask you to confirm that you trust the download. The first install downloads Electron and may take several minutes.
-3. Fully quit and reopen Codex, then start a new chat. CodexOshi appears near the bottom-right; click its gear for settings.
+3. Fully quit and reopen Codex, then start a new chat. CodexOshi appears near the lower-right corner; click its gear for settings.
 
 The installer keeps its own Node.js copy under the CodexOshi data directory. It adds CodexOshi to Codex, starts the widget, and enables Windows login startup. It does not overwrite an existing source checkout; if CodexOshi is already installed, use **CodexOshi Settings → Quota → Check for updates → Update now**.
 
@@ -116,7 +117,7 @@ Set-Location "$env:USERPROFILE\plugins\codex-quota-widget"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\install.ps1
 ```
 
-3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. CodexOshi should appear at the bottom-right.
+3. Wait for installation to finish. Fully quit and reopen Codex, then open a new chat. CodexOshi should appear near the lower-right corner.
 
 Use the folder shown above: the source installer checks its location. Git is only used to clone the source. You can instead use **Code → Download ZIP** and extract it into the same folder. If CodexOshi is already installed, update from CodexOshi Settings rather than cloning over it.
 
@@ -136,7 +137,7 @@ Open **CodexOshi Settings → Quota** and scroll to **Updates**. Use **Check for
 
 1. Click the gear beside the progress bar to open settings.
 2. Click the **CodexOshi switch at the top** to turn the character widget off. The character, bar, dialogue, and settings card disappear; new quota reads and token indexing pause. A quota request already in flight may finish.
-3. A small **CodexOshi switch** remains at the bottom-right of the Codex window. Click it to turn the widget back on and restore its dimensions and position.
+3. A small **CodexOshi switch** remains near the lower-right corner. Click it to turn the widget back on and restore its dimensions and position.
 
 The switch state is saved across restarts. This is CodexOshi's own overlay control inside the Codex window, not an added control in Codex's native settings page. The × button closes the settings card only. The Codex plugin toggle controls the MCP service separately.
 

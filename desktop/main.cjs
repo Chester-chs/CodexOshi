@@ -6,7 +6,7 @@ const path=require('node:path');
 const fs=require('node:fs');
 const net=require('node:net');
 const crypto=require('node:crypto');
-const {shape,viewport,layout,snap,residentSize,COMPACT}=require('./geometry.cjs');
+const {shape,viewport,layout,snap,residentSize,inputInset,COMPACT}=require('./geometry.cjs');
 const {portraitSize}=require('./ui/portrait-size.js');
 const {QuotaReader}=require('../runtime/quota.cjs');
 const {Worker}=require('node:worker_threads');
@@ -72,7 +72,12 @@ function diagnostic(){
 const docked=()=>panelPreferences.dockBottomRight!==false;
 const widgetEnabled=()=>panelPreferences.widgetEnabled!==false;
 const displaySize=(portrait=characterSize)=>panelPreferences.compactOnly?{width:Math.min(280,Math.max(180,portrait.width)),height:52}:portrait;
-const currentResident=(portrait=characterSize)=>residentSize(displaySize(portrait),dip.width,dip.height,docked()&&!panelPreferences.compactOnly);
+function displayReference(){
+  try{return screen.getDisplayMatching(win.getBounds()).workAreaSize;}catch{return undefined;}
+}
+// Pinning controls placement only; both free and pinned modes follow host scale.
+const currentResident=(portrait=characterSize)=>residentSize(displaySize(portrait),dip.width,dip.height,true,displayReference());
+const residentInset=()=>docked()?inputInset(dip.height):undefined;
 function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
 function sendLayout(){if(ready){const portrait=viewLayout?.regions?.[0];win.webContents.send('layout',{...viewLayout,residentSize:displaySize(),docked:docked(),mirrored:Boolean(!docked()&&portrait&&portrait.x+portrait.width/2<dip.width/2),widgetEnabled:widgetEnabled(),expanded,keyboardMode,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}}
 function notifyLayout(){
@@ -92,12 +97,12 @@ function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   if(!widgetEnabled()){
-    viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42});
+    viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42},undefined,null,false,inputInset(dip.height));
     region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);applyRegion(region);notifyLayout();return;
   }
   const previous=widget;
   const resident=currentResident();
-  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible);widget=viewLayout.widget;
+  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible,residentInset());widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   applyRegion(region);
@@ -199,7 +204,9 @@ app.whenReady().then(async()=>{
       if(dragging||panelResizing)return {ok:false};
       const next={...panelPreferences,dockBottomRight:value};
       try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
-      panelPreferences={...panelPreferences,dockBottomRight:value};if(!value){widget=freePosition;defaultPlacement=widget===null;}updateShape();diagnostic();return {ok:true};
+      panelPreferences={...panelPreferences,dockBottomRight:value};
+      if(!value){freePosition=widget?{...widget}:null;defaultPlacement=widget===null;}
+      updateShape();if(!value&&widget)savePosition();diagnostic();return {ok:true};
     });
   });
   ipcMain.handle('panel-compact-only',async(event,value)=>{
@@ -213,7 +220,7 @@ app.whenReady().then(async()=>{
       panelPreferences={...panelPreferences,compactOnly:value};
       if(!docked()&&widget){const newHeight=currentResident().height;widget={x:widget.x,y:widget.y+previousHeight-newHeight};}
       if(panel&&host.bounds&&dip.width>32&&dip.height>32){
-        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,currentResident(),panelPreferences).widget;
+        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,currentResident(),panelPreferences,null,false,residentInset()).widget;
         panelOffset={x:panel.x-point.x,y:panel.y-point.y};
       }
       updateShape();if(!docked())savePosition();diagnostic();return {ok:true};
@@ -261,7 +268,7 @@ app.whenReady().then(async()=>{
       // The existing layout/position clamp still bounds the settings region.
       if(panel){
         const resident=currentResident(next);
-        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences).widget;
+        const point=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,true,reader.snapshot.windows.length,resident,panelPreferences,null,false,residentInset()).widget;
         panelOffset={x:panel.x-point.x,y:panel.y-point.y};
       }
       updateShape();diagnostic();

@@ -4,6 +4,17 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.9](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.9) — 2026-10-23
+
+- Move the pin beside the settings gear for one-click access; highlighted means pinned.
+- Scale the portrait and quota bar together against the current display work area, including free mode and bar-only mode. Unpinning no longer enlarges the widget.
+- Preserve current coordinates when unpinning. Use consistent portrait and footer alignment so toggling without dragging does not shift artwork or controls left.
+- Keep pinned placement near the lower-right window edge with 24 DIP margins. Keep narrow-footer controls within the quota bar.
+- 将固定图钉放到额度条齿轮旁，单击切换，亮起表示固定。
+- 人物和额度条一起随窗口缩放，自由移动及仅显示额度条模式同样适用；取消固定不再突然放大。
+- 取消固定保留当前坐标，统一人物与额度条对齐方式，未拖动时来回切换不再向左偏移。
+- 固定位置靠近窗口右下角，右侧和底部各留 24 DIP；窄额度条保留可点击的图钉和齿轮。
+
 ## [0.3.8](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.8) — 2026-10-21
 
 - Remove Tibo reset announcements, their background requests and notifications. Keep release checks, update notifications and one-click updates.
