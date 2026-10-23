@@ -120,12 +120,32 @@ function Build-Launcher {
     return $exe
 }
 function New-CodiTaskSettings {
-    return New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 20 -RestartInterval (New-TimeSpan -Minutes 1)
+    # An update worker may still belong to the previous task instance while it
+    # waits for its replacement. The launcher's per-data mutex prevents duplicates.
+    return New-ScheduledTaskSettingsSet -MultipleInstances Parallel -ExecutionTimeLimit ([TimeSpan]::Zero) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 20 -RestartInterval (New-TimeSpan -Minutes 1)
 }
 function Start-CodiMonitor {
     param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
     if (-not (Test-Path -LiteralPath (Join-Path $DataDirectory 'desktop-runtime\node_modules\electron\dist\electron.exe'))) { throw 'Install the plugin first.' }
     Write-JsonAtomic (Join-Path $DataDirectory 'enabled.json') @{enabled=$true}
     $launcher=Build-Launcher -Root $Root -DataDirectory $DataDirectory
-    Start-Process -FilePath $launcher -ArgumentList ('--script "'+(Join-Path $Root 'desktop\supervisor.ps1')+'" --data "'+$DataDirectory+'"') -WindowStyle Hidden
+    $arguments='--script "'+(Join-Path $Root 'desktop\supervisor.ps1')+'" --data "'+$DataDirectory+'"'
+    $task=Get-ScheduledTask -TaskName 'Codex Quota Widget' -ErrorAction SilentlyContinue
+    if ($task -and $task.State.ToString() -ne 'Disabled') {
+        # Do not take over an unrelated task or silently revert to a child owned
+        # by Codex's process job. Such children can disappear when Codex closes.
+        $actions=@($task.Actions)
+        $native=[IO.Path]::GetFullPath((Join-Path $DataDirectory 'native'))
+        if ($actions.Count -ne 1 -or (Split-Path -Parent $actions[0].Execute) -ine $native -or
+            (Split-Path -Leaf $actions[0].Execute) -notmatch '^QuotaLauncher-[A-Fa-f0-9]{16}\.exe$' -or
+            -not $actions[0].Arguments.EndsWith(('--data "'+$DataDirectory+'"'),[StringComparison]::OrdinalIgnoreCase)) {
+            throw 'The Codex Quota Widget task does not belong to this installation.'
+        }
+        $action=New-ScheduledTaskAction -Execute $launcher -Argument $arguments
+        Set-ScheduledTask -TaskName 'Codex Quota Widget' -Action $action -Settings (New-CodiTaskSettings) | Out-Null
+        Start-ScheduledTask -TaskName 'Codex Quota Widget' -ErrorAction Stop
+        return
+    }
+    # Explicit no-startup / disabled-task installations retain manual operation.
+    Start-Process -FilePath $launcher -ArgumentList $arguments -WindowStyle Hidden
 }
