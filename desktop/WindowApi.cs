@@ -104,6 +104,15 @@ public static class QuotaWindows {
         return candidates.Where(pid => !candidates.Contains(parents[pid])).ToArray();
     }
     static IntPtr lastWindow = IntPtr.Zero;
+    public static bool ForegroundWithin(long ownerValue) {
+        return ForegroundWithin(GetForegroundWindow(), new IntPtr(ownerValue));
+    }
+    static bool ForegroundWithin(IntPtr foreground, IntPtr owner) {
+        // Include the owned overlay and its native dialogs, but never another
+        // application's windows (even when Codex remains visible behind them).
+        return owner != IntPtr.Zero && foreground != IntPtr.Zero &&
+            (foreground == owner || GetAncestor(foreground, 3) == owner);
+    }
     static Dictionary<string, object> Capture(int[] roots) {
         var windows = new List<IntPtr>(); var fg = GetForegroundWindow();
         EnumWindows((h, p) => {
@@ -121,7 +130,7 @@ public static class QuotaWindows {
         return new Dictionary<string, object> {
             { "hostAlive", roots.Length > 0 }, { "hostPid", ownerPid != 0 ? (int)ownerPid : roots.FirstOrDefault() },
             { "window", chosen.ToInt64().ToString() }, { "visible", visible }, { "dpi", chosen == IntPtr.Zero ? 96 : GetDpiForWindow(chosen) },
-            { "modal", chosen != IntPtr.Zero && !IsWindowEnabled(chosen) },
+            { "modal", chosen != IntPtr.Zero && !IsWindowEnabled(chosen) }, { "active", ForegroundWithin(fg, chosen) },
             { "bounds", new { x = point.X, y = point.Y, width = Math.Max(1, rect.Right), height = Math.Max(1, rect.Bottom) } }
         };
     }

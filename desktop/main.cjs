@@ -40,6 +40,18 @@ let freePosition=null;
 let diagnosticTimer,layoutTimer,checkpointTimer,news,newsTimer,updates;
 let pendingQuota=null,pendingTokens=null;
 let quitting=false;
+let accepting=false,forwarding=false;
+function updateMouseReception(){
+  if(!win||win.isDestroyed())return;
+  const interactive=!!(ready&&host.hostAlive&&host.visible&&host.attached&&!host.modal&&host.active!==false&&win.isVisible());
+  const cursor=screen.getCursorScreenPoint(),bounds=win.getBounds();
+  const x=cursor.x-bounds.x,y=cursor.y-bounds.y;
+  const hit=interactive&&(dragging||panelResizing||region.some(r=>x>=r.x&&y>=r.y&&x<r.x+r.width&&y<r.y+r.height));
+  if(forwarding&&!interactive)win.webContents.sendInputEvent({type:'mouseLeave',x:0,y:0});
+  if(hit!==accepting||interactive!==forwarding){
+    accepting=hit;forwarding=interactive;win.setIgnoreMouseEvents(!hit,{forward:interactive});
+  }
+}
 const lifecycleFile=path.join(data,'lifecycle.log');
 function recordLifecycle(event,details={}){
   try{
@@ -131,7 +143,7 @@ app.whenReady().then(async()=>{
     app.dock?.hide();win.setAlwaysOnTop(true,'floating');
     win.setVisibleOnAllWorkspaces(true,{visibleOnFullScreen:true});
   }
-  win.setIgnoreMouseEvents(true,{forward:true});
+  win.setIgnoreMouseEvents(true,{forward:false});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.session.setPermissionRequestHandler((wc,permission,callback)=>callback(false));
@@ -253,7 +265,9 @@ app.whenReady().then(async()=>{
       if(win.getSize()[0]!==dip.width || win.getSize()[1]!==dip.height) win.setSize(dip.width,dip.height,false);
       updateShape();
     }
+    updateMouseReception();
     show({...host,ready});
+    updateMouseReception();
     if(win.isVisible())startPolling();
     diagnostic();
   }
@@ -369,7 +383,7 @@ app.whenReady().then(async()=>{
               const input=wheelInput(wheel,host,region);if(input)win.webContents.sendInputEvent(input);
             }
           }
-        }catch(error){process.stderr.write(error.message+'\n');if(!win.isDestroyed())win.hide();socket.destroy();}
+        }catch(error){process.stderr.write(error.message+'\n');if(!win.isDestroyed()){win.hide();updateMouseReception();}socket.destroy();}
       }
     });
     socket.on('error',()=>{});
@@ -383,7 +397,7 @@ app.whenReady().then(async()=>{
       if(quitting)return;if(win.isDestroyed()){app.quit();return;}
       const status=health.check();
       if(status!==previous){recordLifecycle('bridge-'+status);previous=status;}
-      if(status==='stale'||status==='expired'){win.hide();diagnostic();}
+      if(status==='stale'||status==='expired'){win.hide();updateMouseReception();diagnostic();}
       if(status==='expired')app.quit();
     },500);
   });
@@ -398,14 +412,7 @@ app.whenReady().then(async()=>{
   },4000);
   // While shaped, only visible widget pixels can ever receive a click.
   // Cursor polling switches hit reception before the first mouse-down.
-  let accepting=false;
-  setInterval(()=>{
-    if(!win || win.isDestroyed())return;
-    const cursor=screen.getCursorScreenPoint(),bounds=win.getBounds();
-    const x=cursor.x-bounds.x,y=cursor.y-bounds.y;
-    const hit=dragging || panelResizing || region.some(r=>x>=r.x&&y>=r.y&&x<r.x+r.width&&y<r.y+r.height);
-    if(hit!==accepting){accepting=hit;win.setIgnoreMouseEvents(!hit,{forward:true});}
-  },16);
+  setInterval(updateMouseReception,16);
 });
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',()=>{quitting=true;recordLifecycle('process-quit');clearInterval(bridgeTimer);clearTimeout(pollStartTimer);clearInterval(newsTimer);news?.close();updates?.close();clearTimeout(diagnosticTimer);clearTimeout(layoutTimer);clearTimeout(checkpointTimer);clearInterval(pollTimer);clearInterval(tokenTimer);tokenWorker?.terminate();if(bridge)bridge.close();});
