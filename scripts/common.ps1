@@ -84,9 +84,29 @@ function Import-CodiWindowApi {
     # Source launches and a damaged local cache remain usable.
     Add-Type -Path (Join-Path $Root 'desktop\WindowApi.cs')
 }
+function Import-CodiComposerObserver {
+    param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
+    $source=Join-Path $Root 'desktop\ComposerObserver.cs'
+    $hash=Get-CodiSourceHash $source
+    $assembly=Join-Path $DataDirectory ('native\ComposerObserver-'+$hash+'.dll')
+    if (-not (Test-Path -LiteralPath $assembly)) {
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $assembly)) | Out-Null
+        $temporary=$assembly+'.'+$PID+'.tmp.dll'
+        $framework=Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319'
+        $references=@('UIAutomationClient.dll','UIAutomationTypes.dll','WindowsBase.dll') | ForEach-Object { '/reference:'+(Join-Path $framework ('WPF\'+$_)) }
+        try {
+            & (Join-Path $framework 'csc.exe') /nologo /target:library /platform:x64 /optimize+ @references "/out:$temporary" $source | Out-Null
+            if ($LASTEXITCODE) { throw 'Composer observer compilation failed.' }
+            if (-not (Test-Path -LiteralPath $assembly)) { [IO.File]::Move($temporary,$assembly) }
+        } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
+    }
+    Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
+    Add-Type -Path $assembly
+}
 function Build-Launcher {
     param([string]$Root=$SourceRoot,[string]$DataDirectory=$DataRoot)
     Build-CodiWindowApi -Root $Root -DataDirectory $DataDirectory | Out-Null
+    Import-CodiComposerObserver -Root $Root -DataDirectory $DataDirectory
     $source = Join-Path $Root 'desktop\WidgetLauncher.cs'
     $hash = Get-CodiSourceHash $source
     $native = Join-Path $DataDirectory 'native'

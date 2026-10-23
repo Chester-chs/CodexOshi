@@ -4,6 +4,9 @@ $ErrorActionPreference = 'Stop'
 Import-CodiWindowApi -Root (Split-Path -Parent $PSScriptRoot) -DataDirectory $DataDir
 . (Join-Path $PSScriptRoot 'bridge-cleanup.ps1')
 [QuotaWindows]::DetachConsole()
+$composerObserver=$false
+try { Import-CodiComposerObserver -Root (Split-Path -Parent $PSScriptRoot) -DataDirectory $DataDir; $composerObserver=$true }
+catch { [IO.File]::WriteAllText((Join-Path $DataDir 'composer-observer-error.log'),$_.Exception.Message) }
 $utf8 = New-Object Text.UTF8Encoding($false)
 $process = $null
 $attached = ''
@@ -23,6 +26,10 @@ try {
         $enabledFile = Join-Path $DataDir 'enabled.json'
         $enabled = (Test-Path -LiteralPath $enabledFile) -and ((Get-Content -LiteralPath $enabledFile -Raw | ConvertFrom-Json).enabled -eq $true)
         $hostState = [QuotaWindows]::Probe()
+        if ($composerObserver -and $hostState.visible) {
+            $b=$hostState.bounds
+            $hostState['composer']=[CodiComposerObserver]::Poll([long]$hostState.window,$b.x,$b.y,$b.width,$b.height)
+        }
         $hostState['nativeInput']=[QuotaWindows]::FollowMetrics()
         if ($process -and $process.HasExited) {
             [QuotaWindows]::StopFollowing()

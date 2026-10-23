@@ -12,8 +12,18 @@ function residentSize(requested,width,height,docked=true,reference={width:1280,h
   const scale=docked?Math.min(1,width/reference.width,height/reference.height):1;
   return {width:Math.max(1,Math.round(requested.width*scale)),height:Math.max(1,Math.round(requested.height*scale))};
 }
-// The user keeps the widget near the window bottom with the same outer margin.
-const inputInset=()=>EDGE;
+// UI Automation reports client-relative physical bounds. Normalize against its
+// sampled viewport, including while a fresh measurement follows a host resize.
+function inputInset(height,width,requested,composer){
+  if(!composer||!requested||!['x','y','width','height','viewportWidth','viewportHeight'].every(k=>Number.isFinite(composer[k]))||
+    composer.x<0||composer.y<0||composer.width<=0||composer.height<=0||composer.viewportWidth<=0||composer.viewportHeight<=0||
+    composer.x+composer.width>composer.viewportWidth+1||composer.y+composer.height>composer.viewportHeight+1)return EDGE;
+  const box={x:composer.x*width/composer.viewportWidth,y:composer.y*height/composer.viewportHeight,
+    width:composer.width*width/composer.viewportWidth,height:composer.height*height/composer.viewportHeight};
+  const r=layout(null,width,height,false,0,requested).regions[0],gap=12;
+  const overlaps=r.x<box.x+box.width&&r.x+r.width>box.x&&r.y<box.y+box.height&&r.y+r.height>box.y;
+  return overlaps?Math.max(EDGE,Math.ceil(height-box.y+gap)):EDGE;
+}
 function shape(value,width,height,sizes=[SIZE]) {
   if(!Array.isArray(sizes)||!sizes.length||sizes.length>2||!sizes.every((s,i)=>{const cap=i?PANEL_LIMIT:ROLE_LIMIT;return s&&Number.isInteger(s.width)&&Number.isInteger(s.height)&&s.width>0&&s.height>0&&s.width<=cap.width&&s.height<=cap.height;}))return tiny();
   if (!Number.isInteger(width) || !Number.isInteger(height) || width<1 || height<1 || width>32768 || height>32768 || !Array.isArray(value) || !value.length || value.length>64) return tiny();

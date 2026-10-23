@@ -76,8 +76,15 @@ function displayReference(){
   try{return screen.getDisplayMatching(win.getBounds()).workAreaSize;}catch{return undefined;}
 }
 // Pinning controls placement only; both free and pinned modes follow host scale.
-const currentResident=(portrait=characterSize)=>residentSize(displaySize(portrait),dip.width,dip.height,true,displayReference());
-const residentInset=()=>docked()?inputInset(dip.height):undefined;
+let unpinnedFit=false;
+const currentResident=(portrait=characterSize)=>{
+  const size=residentSize(displaySize(portrait),dip.width,dip.height,true,displayReference());
+  // Preserve a fitted rectangle on unpin, but recompute it from current space
+  // rather than permanently multiplying the user's chosen dimensions.
+  if(!docked()&&unpinnedFit)return layout(null,dip.width,dip.height,false,0,size,undefined,null,false,inputInset(dip.height,dip.width,size,host.composer)).sizes[0];
+  return size;
+};
+const residentInset=(resident=currentResident())=>docked()?inputInset(dip.height,dip.width,resident,host.composer):undefined;
 function savePosition(){if(docked())return;freePosition={...widget};fs.writeFileSync(path.join(data,'position.json'),JSON.stringify(widget));}
 function sendLayout(){if(ready){const portrait=viewLayout?.regions?.[0];win.webContents.send('layout',{...viewLayout,residentSize:displaySize(),docked:docked(),mirrored:Boolean(!docked()&&portrait&&portrait.x+portrait.width/2<dip.width/2),widgetEnabled:widgetEnabled(),expanded,keyboardMode,speechVisible,speechIndex,dialoguePreferences,dragging,resizing:panelResizing,panelPreferences});}}
 function notifyLayout(){
@@ -97,12 +104,12 @@ function updateShape(){
   // Placeholder bounds must not turn an absent/saved position into (8,8).
   if(!host.bounds||host.visible===false||host.attached===false||dip.width<=1||dip.height<=1)return;
   if(!widgetEnabled()){
-    viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42},undefined,null,false,inputInset(dip.height));
+    viewLayout=layout(null,dip.width,dip.height,false,0,{width:148,height:42},undefined,null,false,inputInset(dip.height,dip.width,{width:148,height:42},host.composer));
     region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);applyRegion(region);notifyLayout();return;
   }
   const previous=widget;
   const resident=currentResident();
-  viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible,residentInset());widget=viewLayout.widget;
+    viewLayout=layout(docked()||defaultPlacement?null:widget,dip.width,dip.height,expanded||speechVisible,reader.snapshot.windows.length,resident,panelPreferences,speechVisible?null:panelOffset,speechVisible,residentInset(resident));widget=viewLayout.widget;
   if(!dragging&&!panelResizing&&ready&&host.attached&&dip.width>32&&dip.height>32&&(previous?.x!==widget.x||previous?.y!==widget.y))savePosition();
   region=shape(viewLayout.regions,dip.width,dip.height,viewLayout.sizes);
   applyRegion(region);
@@ -204,6 +211,10 @@ app.whenReady().then(async()=>{
       if(dragging||panelResizing)return {ok:false};
       const next={...panelPreferences,dockBottomRight:value};
       try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
+      if(!value&&docked()&&viewLayout?.regions[0]){
+        const base=currentResident(),actual=viewLayout.regions[0];
+        unpinnedFit=actual.width<base.width||actual.height<base.height;
+      }else if(value)unpinnedFit=false;
       panelPreferences={...panelPreferences,dockBottomRight:value};
       if(!value){freePosition=widget?{...widget}:null;defaultPlacement=widget===null;}
       updateShape();if(!value&&widget)savePosition();diagnostic();return {ok:true};
@@ -217,6 +228,7 @@ app.whenReady().then(async()=>{
       try{await panelStore.save(next);}catch{return {ok:false,error:'卡片设置未能保存，请检查本机文件权限。'};}
       const previousHeight=viewLayout?.regions?.[0]?.height||currentResident().height;
       const panel=expanded?viewLayout?.regions?.[1]:null;
+      unpinnedFit=false;
       panelPreferences={...panelPreferences,compactOnly:value};
       if(!docked()&&widget){const newHeight=currentResident().height;widget={x:widget.x,y:widget.y+previousHeight-newHeight};}
       if(panel&&host.bounds&&dip.width>32&&dip.height>32){
@@ -260,7 +272,7 @@ app.whenReady().then(async()=>{
     if(value.targetWidth!==undefined){if(!Number.isInteger(value.targetWidth)||value.targetWidth<126||value.targetWidth>672)return;next.width=value.targetWidth;next.height=Math.round(value.targetHeight);}
     if(next.width===characterSize.width&&next.height===characterSize.height)return;
     const panel=expanded?viewLayout?.regions[1]:null;
-    characterSize=next;
+    characterSize=next;unpinnedFit=false;
     // Decoding can finish before the host handshake; retain the saved position
     // until a real viewport is available instead of clamping it against 1×1.
     if(host.bounds&&dip.width>32&&dip.height>32){
