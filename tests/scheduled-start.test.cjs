@@ -44,3 +44,9 @@ test('manual startup does not re-enable a disabled startup task',()=>run(`
  function Get-ScheduledTask {[pscustomobject]@{State='Disabled'}};Start-CodiMonitor -Root $app -DataDirectory $data;
  if($script:direct -ne 1 -or $script:scheduled -ne 0 -or $script:action){throw 'Disabled startup task changed'}
 `));
+test('an explicitly isolated task name is used for every scheduler operation',()=>run(`
+ function Get-ScheduledTask {param($TaskName);if($TaskName -ne 'fixture-only'){throw 'Wrong lookup task'};[pscustomobject]@{State='Ready';Actions=@([pscustomobject]@{Execute=$launcher;Arguments=('--data "'+$data+'"')})}}
+ function Set-ScheduledTask {param($TaskName,$Action,$Settings);if($TaskName -ne 'fixture-only'){throw 'Wrong update task'}}
+ function Start-ScheduledTask {param($TaskName);if($TaskName -ne 'fixture-only'){throw 'Wrong start task'}}
+ Start-CodiMonitor -Root $app -DataDirectory $data -TaskName 'fixture-only';
+`));
