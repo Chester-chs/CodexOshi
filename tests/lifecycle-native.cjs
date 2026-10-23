@@ -5,7 +5,7 @@ assert.ok(fs.existsSync(electron),'Install the Electron runtime before native ve
 const root=fs.mkdtempSync(path.join(os.tmpdir(),'codioshi-lifecycle-'));
 const env={...process.env};delete env.ELECTRON_RUN_AS_NODE;
 const results=[];
-for(const scenario of ['external-hide','heartbeat-gap','slow-start','startup-work']){
+for(const scenario of ['external-hide','heartbeat-gap','slow-start','startup-work','foreground-hover']){
   const output=path.join(root,scenario);fs.mkdirSync(output);
   const child=spawnSync(electron,[path.join(__dirname,'lifecycle-ui-smoke.cjs'),'--output',output,'--case',scenario],{env,windowsHide:true,encoding:'utf8',timeout:25000});
   let evidence=null;try{evidence=JSON.parse(fs.readFileSync(path.join(output,'result.json'),'utf8'));}catch{}

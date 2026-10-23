@@ -5,6 +5,9 @@ const output=process.argv[process.argv.indexOf('--output')+1],scenario=process.a
 fs.mkdirSync(data,{recursive:true});process.argv.push('--data',data);
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms)),originalLoad=Module._load,startedWork=[];
 const markWork=kind=>startedWork.push({kind,visible:BrowserWindow.getAllWindows()[0]?.isVisible()===true});
+const reception=[],mouseEvents=[];
+const ignoreMouse=BrowserWindow.prototype.setIgnoreMouseEvents;
+BrowserWindow.prototype.setIgnoreMouseEvents=function(ignore,options){reception.push({ignore,forward:options?.forward===true});return ignoreMouse.call(this,ignore,options);};
 Module._load=function(name,parent,...args){
   if(name==='../runtime/quota.cjs')return {QuotaReader:class{constructor(){this.snapshot={windows:[]};}async refresh(){markWork('quota');return this.snapshot;}}};
   if(name==='node:worker_threads')return {Worker:class extends EventEmitter{postMessage(){markWork('tokens');}terminate(){}}};
@@ -22,6 +25,8 @@ async function until(check,message,ms=12000){const deadline=Date.now()+ms;while(
   const state={hostAlive:true,attached:true,visible:true,modal:false,dpi:96,revision:0,bounds:{width:600,height:500}};
   const send=()=>socket.write(JSON.stringify({token:bridge.token,state})+'\n');send();let heartbeat=setInterval(send,150);
   const win=BrowserWindow.getAllWindows()[0];await until(()=>win.isVisible(),'widget failed to appear');
+  const sendInput=win.webContents.sendInputEvent.bind(win.webContents);
+  win.webContents.sendInputEvent=event=>{mouseEvents.push(event);return sendInput(event);};
   if(scenario==='external-hide'){
     win.hide();assert.equal(win.isVisible(),false);
     await until(()=>win.isVisible(),'widget stayed hidden although the host was visible',2500);
@@ -31,6 +36,15 @@ async function until(check,message,ms=12000){const deadline=Date.now()+ms;while(
   }else if(scenario==='startup-work'){
     await until(()=>startedWork.length>=2,'background reads never started');
     assert.ok(startedWork.every(work=>work.visible),'quota/token work competed with the initial window display');
+  }else if(scenario==='foreground-hover'){
+    await until(()=>reception.at(-1)?.forward===true,'active host hover was not enabled');
+    state.active=false;send();await until(()=>!win.isVisible(),'inactive host retained its hover surface');
+    assert.deepEqual(reception.at(-1),{ignore:true,forward:false});
+    assert.ok(mouseEvents.some(event=>event.type==='mouseLeave'),'pending hover was not cleared');
+    await delay(700);assert.equal(win.isVisible(),false,'heartbeat revived the inactive overlay');
+    assert.deepEqual(reception.at(-1),{ignore:true,forward:false});
+    state.active=true;send();await until(()=>win.isVisible(),'returning to Codex did not restore the widget');
+    await until(()=>reception.at(-1)?.forward===true,'returning to Codex did not restore hover');
   }
   assert.equal(win.isFocused(),false,'recovery stole keyboard focus');
   state.visible=false;send();await until(()=>!win.isVisible(),'widget stayed visible after host hid');
