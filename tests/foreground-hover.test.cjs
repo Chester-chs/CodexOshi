@@ -45,7 +45,8 @@ test('a hidden, detached or modal host never enables hover reception',async()=>{
 });
 
 test('a stale bridge disables hover until fresh active-host evidence arrives',async()=>{
-  const {h,send}=await hoverHarness();h.advance(5000);
+  const {h,send}=await hoverHarness();
+  h.run('health={stale:true,received(){this.stale=false;},check(){return this.stale?"stale":"healthy";}}');h.advance(500);
   assert.equal(h.run('win.isVisible()'),false);
   assert.equal(h.run('reception.at(-1).ignore'),true);
   assert.equal(h.run('reception.at(-1).forward'),false);
