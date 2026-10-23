@@ -110,8 +110,13 @@ public static class QuotaWindows {
     static bool ForegroundWithin(IntPtr foreground, IntPtr owner) {
         // Include the owned overlay and its native dialogs, but never another
         // application's windows (even when Codex remains visible behind them).
-        return owner != IntPtr.Zero && foreground != IntPtr.Zero &&
-            (foreground == owner || GetAncestor(foreground, 3) == owner);
+        if (owner == IntPtr.Zero || foreground == IntPtr.Zero) return false;
+        var current = GetAncestor(foreground, 2);
+        for (int i = 0; i < 64 && current != IntPtr.Zero; i++) {
+            if (current == owner) return true;
+            current = GetWindow(current, 4);
+        }
+        return false;
     }
     static Dictionary<string, object> Capture(int[] roots) {
         var windows = new List<IntPtr>(); var fg = GetForegroundWindow();

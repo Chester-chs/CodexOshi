@@ -15,6 +15,7 @@ try {
     $hostForm=$forms[0];$overlay=$forms[1];$foreign=$forms[2];$dialog=$forms[3]
     $overlay.Owner=$hostForm;$dialog.Owner=$overlay
     foreach($form in $forms){$form.Show()}
+    [Windows.Forms.Application]::DoEvents()
     foreach($item in @(
         @{form=$hostForm;expected=$true;name='host'},
         @{form=$overlay;expected=$true;name='owned-overlay'},
@@ -24,7 +25,14 @@ try {
     )) {
         if(-not [QuotaMouseProbe]::ActivateHost($item.form.Handle.ToInt64())){throw ('Could not activate fixture '+$item.name)}
         [Windows.Forms.Application]::DoEvents()
-        if([QuotaWindows]::ForegroundWithin($hostForm.Handle.ToInt64()) -ne $item.expected){throw ('Incorrect foreground classification: '+$item.name)}
+        # Drain queued WinForms activation before sampling the exact target.
+        if([QuotaMouseProbe]::Foreground() -ne $item.form.Handle.ToInt64()){
+            if(-not [QuotaMouseProbe]::ActivateHost($item.form.Handle.ToInt64())){throw ('Fixture activation changed: '+$item.name)}
+        }
+        if([QuotaWindows]::ForegroundWithin($hostForm.Handle.ToInt64()) -ne $item.expected){
+            foreach($form in $forms){[QuotaWindows]::Audit($form.Handle.ToInt64())|ConvertTo-Json -Depth 4 -Compress}
+            throw ('Incorrect foreground classification: '+$item.name)
+        }
     }
     if([QuotaWindows]::ForegroundWithin(0)){throw 'No host was classified active.'}
     Write-Output '{"check":"real-Windows-foreground-ownership","cases":6,"passed":true}'
