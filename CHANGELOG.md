@@ -4,6 +4,13 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.12](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.12) — 2026-10-23
+
+- On Windows, hide the widget and stop mouse forwarding while another app is in the foreground, preventing quota tooltips from appearing over browsers or videos.
+- Clear pending hover on deactivation, minimized/detached/modal hosts and stale communication; restore normal interaction when returning to Codex.
+- Windows 下切换到其他应用时，隐藏挂件并停止鼠标事件转发，修复浏览器或视频上方出现额度悬浮提示的问题。
+- 离开 Codex、最小化、失去窗口关联、打开模态窗口或通信超时时清除悬停，回到 Codex 后恢复交互。
+
 ## [0.3.11](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.11) — 2026-10-23
 
 - Start the installed Windows monitor through its existing scheduled task so its lifetime is independent of the Codex process that requested startup.
