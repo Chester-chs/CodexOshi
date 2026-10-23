@@ -4,6 +4,15 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.10](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.10) — 2026-10-23
+
+- On Windows, move the pinned portrait and quota bar above the input box only when they overlap; return to the lower-right corner when there is room.
+- Follow the actual input-box bounds, including multiline input, without reading its text. Keep position and size stable when unpinning and restore normal dimensions as space becomes available.
+- Simplify the bilingual README; move detailed help into separate user guides.
+- Windows 下固定的人物与额度条只有遮挡输入框时才上移，空间足够后回到右下角。
+- 根据实际输入框边界避让，支持多行输入，不读取输入内容；取消固定保持位置和大小，空间恢复后恢复正常尺寸。
+- 精简中英文 README，详细说明移至独立使用指南。
+
 ## [0.3.9](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.9) — 2026-10-23
 
 - Move the pin beside the settings gear for one-click access; highlighted means pinned.
