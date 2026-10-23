@@ -4,6 +4,13 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.11](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.11) — 2026-10-23
+
+- Start the installed Windows monitor through its existing scheduled task so its lifetime is independent of the Codex process that requested startup.
+- Allow the update worker to hand off to a new scheduled instance; the launcher's existing mutex prevents duplicate monitors. Keep explicit startup opt-outs and disabled tasks unchanged.
+- 安装了启动任务的 Windows 用户，挂件改由任务计划程序启动，避免启动进程随 Codex 退出而丢失。
+- 更新时允许新旧任务实例交接，由已有互斥锁防止重复挂件；保留用户明确关闭自启动或禁用任务的选择。
+
 ## [0.3.10](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.10) — 2026-10-23
 
 - On Windows, move the pinned portrait and quota bar above the input box only when they overlap; return to the lower-right corner when there is room.
