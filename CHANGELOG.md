@@ -4,6 +4,13 @@ This page records published CodexOshi versions. The project was called Codi thro
 
 这里记录已正式发布的 CodexOshi 版本；0.3.3 及以前的名称为 Codi。下载和安装请使用对应的 GitHub 发布页。
 
+## [0.3.13](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.13) — 2026-10-25
+
+- Keep the complete quota percentage visible, including `100%`, by reserving room for three digits and the percent sign. Let the progress bar shrink before the numeric label.
+- Preserve the portrait/footer size and keep the pin and settings buttons inside the bar.
+- 修复额度达到 `100%` 时被截为 `10…` 的问题，为三位数字和百分号保留完整空间，优先缩短进度条。
+- 保持人物和额度条整体尺寸，固定及设置按钮仍在条内正常显示。
+
 ## [0.3.12](https://github.com/Chester-chs/CodexOshi/releases/tag/v0.3.12) — 2026-10-23
 
 - On Windows, hide the widget and stop mouse forwarding while another app is in the foreground, preventing quota tooltips from appearing over browsers or videos.
