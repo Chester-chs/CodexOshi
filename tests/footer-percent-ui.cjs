@@ -17,6 +17,7 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let heartbeat;
   const win=BrowserWindow.getAllWindows()[0],js=code=>win.webContents.executeJavaScript(code);await delay(600);
   const cases=await js(`(()=>{
     const cases=[],footer=document.querySelector('.compact-line'),status=document.querySelector('#status');
+    Object.assign(button.style,{left:'24px',top:'24px',width:'672px',height:'420px'});
     const rect=element=>{const r=element.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width};};
     for(const language of ['zh-CN','en-US'])for(const scale of [.5,1])for(const remainingPercent of [0,99,100])for(const stale of [false,true])for(const footerWidth of [118,126,140,170,180,199,240,280,420]){
       window.uiText.setLanguage(language);quota={windows:[{remainingPercent,label:'每周限额'}],stale};render();
@@ -24,12 +25,17 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let heartbeat;
       Object.assign(footer.style,{left:'0px',right:'auto',width:footerWidth+'px'});
       const bar=rect(footer),number=rect(status),pin=rect(document.querySelector('#pin-control')),gear=rect(document.querySelector('#settings-open'));
       const range=document.createRange();range.selectNodeContents(status);const text=range.getBoundingClientRect();
-      const passed=status.textContent===remainingPercent+'%'&&status.scrollWidth<=status.clientWidth&&text.right<=number.right+.5&&number.right<=pin.left+.5&&pin.right<=gear.left+.5&&gear.right<=bar.right+.5&&number.left>=bar.left-.5;
+      const widget=rect(button);
+      const passed=status.textContent===remainingPercent+'%'&&status.scrollWidth<=status.clientWidth&&text.right<=number.right+.5&&number.right<=pin.left+.5&&pin.right<=gear.left+.5&&gear.right<=bar.right+.5&&number.left>=bar.left-.5&&bar.right<=widget.right+.5&&bar.bottom<=widget.bottom+.5;
       cases.push({language,scale,remainingPercent,stale,footerWidth,passed,clientWidth:status.clientWidth,scrollWidth:status.scrollWidth,textWidth:text.width,bar,number,pin,gear});
     }
     return cases;
   })()`);
   const failures=cases.filter(c=>!c.passed);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:failures.length===0,cases,failures},null,2));
   assert.equal(failures.length,0,'Incomplete quota percentage: '+JSON.stringify(failures[0]));
-  clearInterval(heartbeat);socket.destroy();app.quit();
+  clearInterval(heartbeat);socket.destroy();
+  const capture=await js(`(()=>{window.uiText.setLanguage('zh-CN');quota={windows:[{remainingPercent:100,label:'每周限额'}]};render();resident.style.transform='scale(1)';const f=document.querySelector('.compact-line');Object.assign(f.style,{left:'0px',right:'auto',width:'240px'});const r=f.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)};})()`);
+  win.setShape([capture]);await delay(80);
+  fs.writeFileSync(path.join(output,'100-percent.png'),(await win.webContents.capturePage(capture,{stayHidden:true,stayAwake:true})).toPNG());
+  app.quit();
 })().catch(error=>{fs.writeFileSync(path.join(output,'error.txt'),error.stack);clearInterval(heartbeat);app.exit(1);});

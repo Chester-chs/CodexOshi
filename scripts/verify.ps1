@@ -8,6 +8,8 @@ $sourceFiles=@(& git -C $SourceRoot ls-files --cached --others --exclude-standar
 $forbidden=@($sourceFiles | Where-Object { $_ -match '(^|/)(auth\.json|node_modules|userdata|cache|dist|build|characters|assets/user|assets/uploads)(/|$)|\.token$|(^|/)\.env' })
 if ($forbidden.Count) { throw ('Forbidden source files: '+($forbidden -join ', ')) }
 if ($Native) {
+    & $node (Join-Path $SourceRoot 'tests\footer-percent-native.cjs')
+    if ($LASTEXITCODE) { throw 'Quota footer percentage tests failed.' }
     & powershell.exe -NoProfile -STA -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $SourceRoot 'tests\foreground-window-native.ps1')
     if ($LASTEXITCODE) { throw 'Foreground window ownership tests failed.' }
     & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File (Join-Path $SourceRoot 'tests\scheduled-start-native.ps1')
