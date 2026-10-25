@@ -34,8 +34,5 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));let heartbeat;
   const failures=cases.filter(c=>!c.passed);fs.writeFileSync(path.join(output,'result.json'),JSON.stringify({passed:failures.length===0,cases,failures},null,2));
   assert.equal(failures.length,0,'Incomplete quota percentage: '+JSON.stringify(failures[0]));
   clearInterval(heartbeat);socket.destroy();
-  const capture=await js(`(()=>{window.uiText.setLanguage('zh-CN');quota={windows:[{remainingPercent:100,label:'每周限额'}]};render();resident.style.transform='scale(1)';const f=document.querySelector('.compact-line');Object.assign(f.style,{left:'0px',right:'auto',width:'240px'});const r=f.getBoundingClientRect();return {x:Math.round(r.x),y:Math.round(r.y),width:Math.round(r.width),height:Math.round(r.height)};})()`);
-  win.setShape([capture]);await delay(80);
-  fs.writeFileSync(path.join(output,'100-percent.png'),(await win.webContents.capturePage(capture,{stayHidden:true,stayAwake:true})).toPNG());
   app.quit();
 })().catch(error=>{fs.writeFileSync(path.join(output,'error.txt'),error.stack);clearInterval(heartbeat);app.exit(1);});
